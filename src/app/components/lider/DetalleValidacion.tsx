@@ -1,0 +1,276 @@
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+    ChevronLeft,
+    CheckCircle2,
+    XCircle,
+    MapPin,
+    FileText,
+    Image as ImageIcon,
+    ShieldCheck,
+    Navigation,
+    Save,
+    AlertCircle,
+    ExternalLink,
+} from 'lucide-react';
+import { Button } from '../ui/button';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
+import { Badge } from '../ui/badge';
+import { cn } from '../ui/utils';
+import { toast } from 'sonner';
+
+interface ValidationData {
+    id: string;
+    agricultor: string;
+    municipio: string;
+    cordenadas: { lat: string; long: string };
+    archivos: { label: string; date: string; type: 'doc' | 'img' }[];
+}
+
+const MOCK_DETAIL: ValidationData = {
+    id: '1',
+    agricultor: 'María González',
+    municipio: 'San Agustín, Huila',
+    cordenadas: { lat: '1.88452', long: '-76.29712' },
+    archivos: [
+        { label: 'Certificado de Libertad y Tradición', date: '28 Feb 2024', type: 'doc' },
+        { label: 'Mapa de zonificación forestal', date: '27 Feb 2024', type: 'doc' },
+        { label: 'Foto Lote El Naranjo - Pesaje', date: '28 Feb 2024', type: 'img' },
+    ],
+};
+
+const ValidationItem = ({ label, children, status, onToggle }: { label: string; children: React.ReactNode; status: boolean; onToggle: (s: boolean) => void }) => (
+    <div className="bg-white rounded-[32px] border border-slate-100 p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm hover:border-blue-200 transition-all group overflow-hidden relative">
+        <div className="relative">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">{label}</span>
+            <div className="flex items-center gap-4">{children}</div>
+        </div>
+
+        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-10 relative">
+            <div className="flex items-center gap-4 bg-slate-50/80 p-1.5 rounded-full border border-slate-100 shadow-inner">
+                <button
+                    onClick={() => onToggle(false)}
+                    className={cn(
+                        "h-10 px-4 rounded-full flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all",
+                        !status ? "bg-red-500 text-white shadow-lg" : "text-slate-400 hover:text-red-500"
+                    )}
+                >
+                    <XCircle size={14} /> Rechazar
+                </button>
+                <button
+                    onClick={() => onToggle(true)}
+                    className={cn(
+                        "h-10 px-4 rounded-full flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all",
+                        status ? "bg-green-600 text-white shadow-lg" : "text-slate-400 hover:text-green-600"
+                    )}
+                >
+                    <CheckCircle2 size={14} /> Aprobar
+                </button>
+            </div>
+        </div>
+
+        {/* Status indicator line */}
+        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-500", status ? "bg-green-500" : "bg-red-500")} />
+    </div>
+);
+
+export function DetalleValidacion() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Validation states
+    const [valNombre, setValNombre] = useState(true);
+    const [valUbicacion, setValUbicacion] = useState(true);
+    const [valCoordenadas, setValCoordenadas] = useState(true);
+    const [valArchivos, setValArchivos] = useState(true);
+    const [gpsCapturado, setGpsCapturado] = useState(false);
+
+    const handleSave = () => {
+        setIsSaving(true);
+        setTimeout(() => {
+            setIsSaving(false);
+            toast.success('Validación guardada con éxito', {
+                description: 'La información del agricultor ha sido actualizada.',
+                style: { borderRadius: '24px', background: '#FDFDF8', padding: '20px' }
+            });
+            navigate('/lider/validaciones');
+        }, 1500);
+    };
+
+    const handleCaptureGps = () => {
+        toast.info('Capturando GPS...', { icon: <Navigation className="animate-pulse" /> });
+        setTimeout(() => {
+            setGpsCapturado(true);
+            toast.success('GPS Capturado con éxito', { description: 'Lat: 1.88448, Long: -76.29715' });
+        }, 800);
+    };
+
+    return (
+        <div className="max-w-[1200px] mx-auto pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Header nav */}
+            <div className="flex items-center gap-6 mb-12">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 rounded-full border-2 border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-90"
+                    onClick={() => navigate('/lider/validaciones')}
+                >
+                    <ChevronLeft size={24} className="text-slate-500" />
+                </Button>
+                <div>
+                    <h1 className="text-3xl font-serif font-black text-slate-900 tracking-tight leading-none mb-1">Revisión de Predio</h1>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">ID: {id || '001'}</span>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Expediente Digital TraceCafé</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                {/* Left Side: Summary / Producer Info (READ ONLY) */}
+                <div className="lg:col-span-4 space-y-8">
+                    <div className="bg-slate-900 rounded-[40px] p-10 text-white relative overflow-hidden shadow-2xl">
+                        <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
+
+                        <div className="relative space-y-8">
+                            <div className="flex flex-col items-center justify-center text-center">
+                                <div className="h-24 w-24 rounded-full border-4 border-slate-700 bg-slate-800 flex items-center justify-center text-4xl mb-4 text-slate-400 font-serif font-black">
+                                    {MOCK_DETAIL.agricultor.charAt(0)}
+                                </div>
+                                <h3 className="text-2xl font-serif font-black">{MOCK_DETAIL.agricultor}</h3>
+                                <p className="text-blue-400 text-xs font-black uppercase tracking-widest mt-2">Agricultor Senior</p>
+                            </div>
+
+                            <div className="space-y-6 pt-6 border-t border-slate-800">
+                                <div className="group">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1 block">Ubicación</span>
+                                    <p className="font-bold flex items-center gap-2"><MapPin size={16} className="text-slate-600" /> {MOCK_DETAIL.municipio}</p>
+                                </div>
+                                <div className="group">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1 block">Geo-Coordenadas (GPS)</span>
+                                    <p className="font-mono text-xs font-bold bg-slate-800 px-3 py-2 rounded-xl border border-slate-700 flex justify-between items-center group-hover:border-blue-400/30 transition-all">
+                                        Lat: {MOCK_DETAIL.cordenadas.lat} / Long: {MOCK_DETAIL.cordenadas.long}
+                                        <Navigation size={12} className="text-blue-500 opacity-50" />
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Alert / Notice for EUDR */}
+                            <div className="bg-amber-900/40 rounded-3xl p-6 border border-amber-500/20">
+                                <AlertCircle size={20} className="text-amber-400 mb-2" />
+                                <p className="text-[10px] uppercase font-black tracking-widest text-amber-200/50 mb-1">Nota Crítica EUDR</p>
+                                <p className="text-xs text-amber-100/70 leading-relaxed font-medium">Este predio se encuentra en zona de alta montaña. Verifica que la poligonal no solape con reservas naturales.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Side: Validation Controls (PERMISO V) */}
+                <div className="lg:col-span-8 space-y-6">
+                    <div className="mb-6">
+                        <h2 className="text-xl font-serif font-black text-slate-900 tracking-tight">Criterios de Verificación</h2>
+                        <p className="text-sm text-slate-400 font-medium">Revisa cada item y valida contra evidencia física en campo o documental.</p>
+                    </div>
+
+                    <ValidationItem label="Nombre del Agricultor" status={valNombre} onToggle={setValNombre}>
+                        <span className="text-xl font-serif font-black text-slate-700">{MOCK_DETAIL.agricultor}</span>
+                    </ValidationItem>
+
+                    <ValidationItem label="Punto Geográfico" status={valUbicacion} onToggle={setValUbicacion}>
+                        <span className="text-lg font-bold text-slate-600 leading-none">{MOCK_DETAIL.municipio}</span>
+                    </ValidationItem>
+
+                    {/* Coordinate Validation with GPS CAPTURE */}
+                    <div className="bg-white rounded-[32px] border border-slate-100 p-8 flex flex-col gap-6 shadow-sm hover:border-blue-600 transition-all group overflow-hidden relative">
+                        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-500", valCoordenadas ? "bg-green-500" : "bg-red-500")} />
+
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="relative">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Validación en Terreno (GPS)</span>
+                                <div className="space-y-4">
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-10">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm"><Navigation size={14} /></div>
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase text-slate-400">Capturado por Agricultor</p>
+                                                <p className="text-xs font-mono font-bold text-slate-800">{MOCK_DETAIL.cordenadas.lat}, {MOCK_DETAIL.cordenadas.long}</p>
+                                            </div>
+                                        </div>
+                                        <div className="h-8 w-px bg-slate-200" />
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shadow-sm", gpsCapturado ? "bg-green-100 text-green-600" : "bg-slate-200 text-slate-400")}>
+                                                <ShieldCheck size={14} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase text-slate-400">Contrapeso Líder (GPS)</p>
+                                                <p className="text-xs font-mono font-bold text-slate-800">{gpsCapturado ? "1.88448, -76.29715" : "---"}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handleCaptureGps}
+                                        variant="secondary"
+                                        className="h-12 w-full sm:w-auto rounded-xl bg-blue-600 text-white hover:bg-blue-700 gap-2 font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20"
+                                    >
+                                        <MapPin size={16} /> Capturar mi coordenada actual
+                                    </Button>
+                                    <p className="text-[10px] font-medium text-slate-400 italic">Captura automática del sensor del celular (Simulada para demo).</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 bg-slate-50/80 p-1.5 rounded-full border border-slate-100 shadow-inner h-fit">
+                                <button onClick={() => setValCoordenadas(false)} className={cn("h-10 px-4 rounded-full flex items-center gap-2 text-xs font-black uppercase tracking-widest", !valCoordenadas ? "bg-red-500 text-white shadow-lg" : "text-slate-400")}><XCircle size={14} /> Rechazar</button>
+                                <button onClick={() => setValCoordenadas(true)} className={cn("h-10 px-4 rounded-full flex items-center gap-2 text-xs font-black uppercase tracking-widest", valCoordenadas ? "bg-green-600 text-white shadow-lg" : "text-slate-400")}><CheckCircle2 size={14} /> Aprobar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Files Validation */}
+                    <div className="bg-white rounded-[32px] border border-slate-100 p-8 flex flex-col gap-8 shadow-sm group overflow-hidden relative">
+                        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-500", valArchivos ? "bg-green-500" : "bg-red-500")} />
+
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-10">
+                            <div className="flex-1 space-y-4">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Archivos Adjuntos (Digitalizados)</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {MOCK_DETAIL.archivos.map((file, idx) => (
+                                        <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-50 bg-[#F8FAFC] hover:border-slate-200 transition-all cursor-pointer group/file">
+                                            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover/file:text-blue-600 shadow-sm transition-colors">
+                                                {file.type === 'doc' ? <FileText size={20} /> : <ImageIcon size={20} />}
+                                            </div>
+                                            <div className="flex-1 overflow-hidden">
+                                                <p className="text-[10px] font-black text-slate-900 truncate uppercase tracking-tighter">{file.label}</p>
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">{file.date}</p>
+                                            </div>
+                                            <ExternalLink size={12} className="text-slate-300 opacity-0 group-hover/file:opacity-100 transition-opacity" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 bg-slate-50/80 p-1.5 rounded-full border border-slate-100 shadow-inner h-fit">
+                                <button onClick={() => setValArchivos(false)} className={cn("h-10 px-4 rounded-full flex items-center gap-2 text-xs font-black uppercase tracking-widest", !valArchivos ? "bg-red-500 text-white shadow-lg" : "text-slate-400")}><XCircle size={14} /> Rechazar</button>
+                                <button onClick={() => setValArchivos(true)} className={cn("h-10 px-4 rounded-full flex items-center gap-2 text-xs font-black uppercase tracking-widest", valArchivos ? "bg-green-600 text-white shadow-lg" : "text-slate-400")}><CheckCircle2 size={14} /> Aprobar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Final Action Button */}
+                    <div className="pt-8">
+                        <Button
+                            disabled={isSaving}
+                            onClick={handleSave}
+                            className="h-20 w-full rounded-[32px] bg-[#1A365D] hover:bg-[#11243e] text-white font-black text-xl shadow-2xl shadow-blue-900/40 transition-all active:scale-95 flex items-center justify-center gap-4"
+                        >
+                            <Save size={24} /> Guardar Validación Final
+                        </Button>
+                        <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6">Certifico que la información revisada es veraz y cumple la política de TraceCafé.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
