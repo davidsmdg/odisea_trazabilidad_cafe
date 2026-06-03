@@ -152,7 +152,7 @@ export function NuevaCosecha() {
                     variant="ghost"
                     size="icon"
                     className="rounded-full h-14 w-14 hover:bg-white active:scale-90 transition-all text-gray-400 border border-gray-100"
-                    onClick={() => navigate('/producer/dashboard')}
+                    onClick={() => navigate(-1)}
                 >
                     <ChevronLeft size={28} />
                 </Button>
@@ -419,14 +419,14 @@ export function NuevaCosecha() {
                             <Button
                                 onClick={handleSave}
                                 disabled={isLoading}
-                                className="w-full h-24 rounded-[32px] bg-[#5f705f] hover:bg-[#234d24] text-white font-black text-2xl shadow-2xl shadow-[#5f705f]/40 transition-all active:scale-95 mt-4 flex items-center justify-center gap-6 group cursor-pointer"
+                                className="w-full h-16 sm:h-24 rounded-2xl sm:rounded-[32px] bg-[#5f705f] hover:bg-[#234d24] text-white font-black text-lg sm:text-2xl shadow-2xl shadow-[#5f705f]/40 transition-all active:scale-95 mt-4 flex items-center justify-center gap-3 sm:gap-6 group cursor-pointer"
                             >
                                 {isLoading ? (
-                                    <Loader2 className="animate-spin" size={32} />
+                                    <Loader2 className="animate-spin h-6 w-6 sm:h-8 sm:w-8" />
                                 ) : (
                                     <>
                                         <span>Guardar Lote de Producción</span>
-                                        <ArrowRight className="group-hover:translate-x-2 transition-transform" />
+                                        <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform shrink-0" />
                                     </>
                                 )}
                             </Button>

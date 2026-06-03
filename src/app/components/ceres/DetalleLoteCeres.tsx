@@ -262,9 +262,9 @@ export function DetalleLoteCeres() {
                         <Button
                             onClick={handleSave}
                             disabled={isSaving}
-                            className="h-24 w-full rounded-[32px] bg-slate-900 border-none hover:bg-black text-white font-black text-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-6 group overflow-hidden"
+                            className="h-16 sm:h-24 w-full rounded-2xl sm:rounded-[32px] bg-slate-900 border-none hover:bg-black text-white font-black text-lg sm:text-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 sm:gap-6 group overflow-hidden"
                         >
-                            <Save size={28} className="text-blue-400 group-hover:scale-125 transition-transform" />
+                            <Save size={20} className="text-blue-400 group-hover:scale-125 transition-transform shrink-0 sm:h-7 sm:w-7" />
                             {isSaving ? 'Sincronizando ERP...' : 'Sincronizar y Actualizar Expediente'}
                         </Button>
                         <p className="text-center text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-8">Ceres Logistics Control — Secure Ledger Write OK</p>

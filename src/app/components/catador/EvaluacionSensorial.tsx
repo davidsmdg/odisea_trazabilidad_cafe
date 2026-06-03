@@ -291,13 +291,13 @@ export function EvaluacionSensorial() {
                                 />
                             </div>
 
-                            <Button
+                             <Button
                                 type="submit"
                                 disabled={isSaving}
-                                className="h-24 w-full rounded-[32px] bg-[#5D4037] hover:bg-[#3E2723] text-white font-black text-2xl shadow-[0_20px_50px_rgba(93,64,55,0.3)] transition-all active:scale-95 flex items-center justify-center gap-6 group overflow-hidden relative border-none"
+                                className="h-16 sm:h-24 w-full rounded-2xl sm:rounded-[32px] bg-[#5D4037] hover:bg-[#3E2723] text-white font-black text-lg sm:text-2xl shadow-[0_20px_50px_rgba(93,64,55,0.3)] transition-all active:scale-95 flex items-center justify-center gap-3 sm:gap-6 group overflow-hidden relative border-none"
                             >
                                 <div className="absolute inset-0 bg-white/5 group-hover:bg-transparent transition-colors" />
-                                <Save size={28} className="text-[#D7CCC8] group-hover:scale-125 transition-transform" />
+                                <Save size={20} className="text-[#D7CCC8] group-hover:scale-125 transition-transform shrink-0 sm:h-7 sm:w-7" />
                                 {isSaving ? 'Registrando Protocolo...' : 'Guardar Resultados de Cata'}
                             </Button>
 

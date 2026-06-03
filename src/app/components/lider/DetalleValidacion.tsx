@@ -316,9 +316,9 @@ export function DetalleValidacion() {
                         <Button
                             disabled={isSaving}
                             onClick={handleSave}
-                            className="h-20 w-full rounded-[32px] bg-[#1A365D] hover:bg-[#11243e] text-white font-black text-xl shadow-2xl shadow-blue-900/40 transition-all active:scale-95 flex items-center justify-center gap-4"
+                            className="h-16 sm:h-20 w-full rounded-2xl sm:rounded-[32px] bg-[#1A365D] hover:bg-[#11243e] text-white font-black text-lg sm:text-xl shadow-2xl shadow-blue-900/40 transition-all active:scale-95 flex items-center justify-center gap-3 sm:gap-4"
                         >
-                            <Save size={24} /> Guardar Validación Final
+                            <Save size={20} className="shrink-0 sm:h-6 sm:w-6" /> Guardar Validación Final
                         </Button>
                         <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6">Certifico que la información revisada es veraz y cumple la política de TraceCafé.</p>
                     </div>

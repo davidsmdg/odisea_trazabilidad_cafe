@@ -196,9 +196,9 @@ export function CalidadControlCeres() {
                                     <Button
                                         onClick={handleSaveRecata}
                                         disabled={isSaving}
-                                        className="h-24 w-full rounded-[32px] bg-blue-600 hover:bg-black text-white font-black text-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-6 group overflow-hidden border-none"
+                                        className="h-16 sm:h-24 w-full rounded-2xl sm:rounded-[32px] bg-blue-600 hover:bg-black text-white font-black text-lg sm:text-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 sm:gap-6 group overflow-hidden border-none"
                                     >
-                                        <Save size={28} className="group-hover:scale-125 transition-transform" />
+                                        <Save size={20} className="group-hover:scale-125 transition-transform shrink-0 sm:h-7 sm:w-7" />
                                         {isSaving ? 'Guardando Calibración...' : 'Fijar Resultado de Recata'}
                                     </Button>
                                     <div className="flex items-center justify-center gap-3 text-[9px] font-black text-slate-600 uppercase tracking-widest mt-8">

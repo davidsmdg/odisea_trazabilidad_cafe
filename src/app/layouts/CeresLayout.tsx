@@ -124,10 +124,6 @@ export function CeresLayout() {
         <div className="min-h-screen bg-[#f8fafc] flex flex-col md:flex-row font-sans">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-6 h-16 bg-[#1e293b] text-white border-b border-slate-700 sticky top-0 z-40">
-                <div className="flex items-center gap-2">
-                    <Building2 className="h-6 w-6 text-blue-400" />
-                    <span className="text-lg font-sans font-black">ODISEA COFFEE</span>
-                </div>
                 <Button
                     variant="ghost"
                     size="icon"
@@ -136,6 +132,10 @@ export function CeresLayout() {
                 >
                     {mobileMenuOpen ? <X /> : <Menu />}
                 </Button>
+                <div className="flex items-center gap-2">
+                    <Building2 className="h-6 w-6 text-blue-400" />
+                    <span className="text-lg font-sans font-black">ODISEA COFFEE</span>
+                </div>
             </header>
 
             {/* Mobile Menu Overlay */}

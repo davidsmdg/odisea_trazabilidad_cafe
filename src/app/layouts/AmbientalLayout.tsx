@@ -120,10 +120,6 @@ export function AmbientalLayout() {
         <div className="min-h-screen bg-[#FDFDFB] flex flex-col md:flex-row font-sans">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-6 h-16 bg-white border-b border-gray-100 sticky top-0 z-40">
-                <div className="flex items-center gap-2">
-                    <Shield className="h-6 w-6 text-[#4A5B4A]" />
-                    <span className="text-lg font-sans font-black text-[#4A5B4A]">ODISEA COFFEE</span>
-                </div>
                 <Button
                     variant="ghost"
                     size="icon"
@@ -132,6 +128,10 @@ export function AmbientalLayout() {
                 >
                     {mobileMenuOpen ? <X /> : <Menu />}
                 </Button>
+                <div className="flex items-center gap-2">
+                    <Shield className="h-6 w-6 text-[#4A5B4A]" />
+                    <span className="text-lg font-sans font-black text-[#4A5B4A]">ODISEA COFFEE</span>
+                </div>
             </header>
 
             {/* Mobile Menu Overlay */}

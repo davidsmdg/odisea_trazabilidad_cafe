@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router';
-import { Coffee, Search, HelpCircle, LogIn, LayoutDashboard } from 'lucide-react';
+import { Coffee, Search, HelpCircle, LogIn, LayoutDashboard, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import {
   Tooltip,
@@ -18,6 +19,7 @@ export function TopBar({ activeItem }: TopBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
     { label: 'Inicio', path: '/' },
@@ -133,6 +135,7 @@ export function TopBar({ activeItem }: TopBarProps) {
               ) : (
                 // Sin sesión
                 <>
+                  {/* Vista Desktop */}
                   <button
                     onClick={() => navigate('/auth/register')}
                     className="hidden md:block px-5 py-2 border border-[#5f705f] text-[#5f705f] rounded-full text-sm font-bold hover:bg-[#5f705f]/5 transition-all cursor-pointer"
@@ -141,11 +144,51 @@ export function TopBar({ activeItem }: TopBarProps) {
                   </button>
                   <button
                     onClick={() => navigate('/auth/login')}
-                    className="flex items-center gap-2 px-5 py-2 bg-[#5f705f] text-white rounded-full text-sm font-bold hover:bg-[#bb8d3b] transition-all cursor-pointer"
+                    className="hidden md:flex items-center gap-2 px-5 py-2 bg-[#5f705f] text-white rounded-full text-sm font-bold hover:bg-[#bb8d3b] transition-all cursor-pointer"
                   >
                     <LogIn className="h-4 w-4" />
-                    <span className="hidden sm:inline">Ingresar</span>
+                    <span>Ingresar</span>
                   </button>
+
+                  {/* Vista Móvil (Dropdown) */}
+                  <div className="relative md:hidden">
+                    <button
+                      onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                      className="p-2.5 hover:bg-black/5 rounded-full border border-black/10 transition-all cursor-pointer flex items-center justify-center bg-[#5f705f]/5 text-[#5f705f]"
+                    >
+                      <User className="h-5 w-5" />
+                    </button>
+                    {isMobileMenuOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        />
+                        <div className="absolute right-0 mt-3 w-44 bg-[#FDFDF8] rounded-2xl shadow-xl border border-black/5 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                          <button
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              navigate('/auth/login');
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm font-bold text-[#5f705f] hover:bg-[#5f705f]/5 transition-colors cursor-pointer flex items-center gap-2"
+                          >
+                            <LogIn className="h-4 w-4" />
+                            Ingresar
+                          </button>
+                          <div className="h-px bg-black/5 mx-2" />
+                          <button
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              navigate('/auth/register');
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-[#5f705f]/5 transition-colors cursor-pointer flex items-center gap-2"
+                          >
+                            Regístrate
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </>
               )}
             </div>

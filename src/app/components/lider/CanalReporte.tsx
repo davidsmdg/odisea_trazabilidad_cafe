@@ -121,13 +121,13 @@ export function CanalReporte() {
                             <Button
                                 disabled={isSending || !message.trim()}
                                 type="submit"
-                                className="h-20 w-full rounded-[28px] bg-[#1A365D] hover:bg-black text-white font-black text-lg gap-4 shadow-xl shadow-blue-900/20 active:scale-95 transition-all"
+                                className="h-16 sm:h-20 w-full rounded-2xl sm:rounded-[28px] bg-[#1A365D] hover:bg-black text-white font-black text-base sm:text-lg gap-3 sm:gap-4 shadow-xl shadow-blue-900/20 active:scale-95 transition-all"
                             >
                                 {isSending ? (
                                     <span className="animate-pulse">Encriptando y Enviando...</span>
                                 ) : (
                                     <>
-                                        Enviar Reporte Prioritario <Send size={20} />
+                                        Enviar Reporte Prioritario <Send size={16} className="shrink-0 sm:h-5 sm:w-5" />
                                     </>
                                 )}
                             </Button>

@@ -128,10 +128,6 @@ export function TostadorLayout() {
         <div className="min-h-screen bg-[#FAF9F6] flex flex-col md:flex-row font-sans">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-6 h-16 bg-[#5f705f] text-white border-b border-white/10 sticky top-0 z-40">
-                <div className="flex items-center gap-2">
-                    <Coffee className="h-5 w-5 text-[#bb8d3b]" />
-                    <span className="text-base font-black tracking-tight">ODISEA TRACE</span>
-                </div>
                 <Button
                     variant="ghost"
                     size="icon"
@@ -140,6 +136,10 @@ export function TostadorLayout() {
                 >
                     {mobileMenuOpen ? <X /> : <Menu />}
                 </Button>
+                <div className="flex items-center gap-2">
+                    <Coffee className="h-5 w-5 text-[#bb8d3b]" />
+                    <span className="text-base font-black tracking-tight">ODISEA TRACE</span>
+                </div>
             </header>
 
             {/* Mobile Menu Overlay */}

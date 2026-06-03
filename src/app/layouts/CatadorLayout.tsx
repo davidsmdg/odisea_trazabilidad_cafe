@@ -115,10 +115,6 @@ export function CatadorLayout() {
         <div className="min-h-screen bg-[#FDFBF9] flex flex-col md:flex-row font-sans">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-6 h-16 bg-[#EADDCA] border-b border-[#D7CCC8] sticky top-0 z-40">
-                <div className="flex items-center gap-2">
-                    <Microscope className="h-6 w-6 text-[#5D4037]" />
-                    <span className="text-lg font-sans font-black text-[#5D4037]">LABSENSORY</span>
-                </div>
                 <Button
                     variant="ghost"
                     size="icon"
@@ -127,6 +123,10 @@ export function CatadorLayout() {
                 >
                     {mobileMenuOpen ? <X /> : <Menu />}
                 </Button>
+                <div className="flex items-center gap-2">
+                    <Microscope className="h-6 w-6 text-[#5D4037]" />
+                    <span className="text-lg font-sans font-black text-[#5D4037]">LABSENSORY</span>
+                </div>
             </header>
 
             {/* Mobile Menu Overlay */}

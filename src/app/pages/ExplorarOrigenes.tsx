@@ -53,7 +53,7 @@ export function ExplorarOrigenes() {
               </div>
             </div>
 
-            <div className="lg:col-span-8 bg-white/40 backdrop-blur-sm rounded-3xl p-12 shadow-2xl border border-white/60">
+            <div className="lg:col-span-8 bg-white/40 backdrop-blur-sm rounded-3xl p-4 sm:p-12 shadow-2xl border border-white/60">
               <ColombiaMap
                 onDepartmentClick={handleDepartmentClick}
                 selectedDepartment={selectedDepartment}

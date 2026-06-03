@@ -112,10 +112,6 @@ export function ProducerLayout() {
         <div className="min-h-screen bg-[#FDFDF8] flex flex-col md:flex-row">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-6 h-16 bg-white border-b border-gray-100 sticky top-0 z-40">
-                <div className="flex items-center gap-2">
-                    <Coffee className="h-6 w-6 text-[#5f705f]" />
-                    <span className="text-xl font-sans font-bold text-[#5f705f]">Odisea Trace</span>
-                </div>
                 <Button
                     variant="ghost"
                     size="icon"
@@ -124,6 +120,10 @@ export function ProducerLayout() {
                 >
                     {mobileMenuOpen ? <X /> : <Menu />}
                 </Button>
+                <div className="flex items-center gap-2">
+                    <Coffee className="h-6 w-6 text-[#5f705f]" />
+                    <span className="text-xl font-sans font-bold text-[#5f705f]">Odisea Trace</span>
+                </div>
             </header>
 
             {/* Mobile Menu Overlay */}

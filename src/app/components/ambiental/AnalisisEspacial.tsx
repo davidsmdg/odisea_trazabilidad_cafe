@@ -437,9 +437,9 @@ export function AnalisisEspacial() {
                                 <Button
                                     disabled={isSaving || !(valDeforestacion && valEstatusJuridico && valAgua && valInsumos && valBiodiversidad)}
                                     onClick={handleSave}
-                                    className="h-20 px-12 rounded-[24px] bg-[#4A5B4A] hover:bg-emerald-950 text-white font-black text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="h-16 sm:h-20 px-6 sm:px-12 rounded-2xl sm:rounded-[24px] bg-[#4A5B4A] hover:bg-emerald-950 text-white font-black text-lg sm:text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 sm:gap-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <Save size={24} className={isSaving ? "animate-pulse" : "text-emerald-400"} />
+                                    <Save size={20} className={isSaving ? "animate-pulse shrink-0" : "text-emerald-400 shrink-0 sm:h-6 sm:w-6"} />
                                     {isSaving ? "Guardando Datos..." : "Firmar y Emitir Aprobación"}
                                 </Button>
                             </div>

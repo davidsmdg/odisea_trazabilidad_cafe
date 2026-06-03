@@ -26,7 +26,7 @@ export function HeroHeader() {
   };
 
   return (
-    <div className="relative h-[85vh] min-h-[600px] overflow-hidden">
+    <div className="relative min-h-[600px] sm:h-[85vh] overflow-hidden py-12 sm:py-0">
       <div className="absolute inset-0">
         <ImageWithFallback
           src="https://images.unsplash.com/photo-1635991062422-b3e2f8c36dce?q=80&w=1920"
@@ -46,33 +46,33 @@ export function HeroHeader() {
           <span className="text-[#e3d5b8] font-semibold tracking-widest uppercase text-sm mb-6 block drop-shadow-md">
             Impacto en el Origen
           </span>
-          <h1 className="text-6xl md:text-8xl font-sans leading-[1.1] mb-8 drop-shadow-2xl">
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-sans leading-[1.1] mb-6 sm:mb-8 drop-shadow-2xl">
             Descubre el origen de <br />
             <span className="italic">cada grano.</span>
           </h1>
-          <p className="text-xl md:text-2xl text-white/90 leading-relaxed mb-10 drop-shadow-lg max-w-2xl font-light">
+          <p className="text-base sm:text-xl md:text-2xl text-white/90 leading-relaxed mb-8 sm:mb-10 drop-shadow-lg max-w-2xl font-light">
             Selecciona una región para conocer a los productores que, desde zonas de difícil acceso,
             ofrecen cafés excepcionales a través de relaciones comerciales directas y seguras.
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 mt-8">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6 sm:mt-8">
             <button
               onClick={() => navigate('/banco-cafes')}
-              className="px-8 py-4 bg-[#FDFDF8] text-[#5f705f] rounded-full font-bold text-lg hover:bg-white transition-all shadow-xl cursor-pointer"
+              className="px-8 py-4 bg-[#FDFDF8] text-[#5f705f] rounded-full font-bold text-lg hover:bg-white transition-all shadow-xl cursor-pointer w-full sm:w-auto"
             >
               Ver Portafolio
             </button>
-            <div className="flex bg-white/10 backdrop-blur-md rounded-full border border-white/20 p-1.5 pl-6 items-center shadow-xl w-full max-w-md">
+            <div className="flex flex-col sm:flex-row bg-white/10 backdrop-blur-md rounded-2xl sm:rounded-full border border-white/20 p-2 sm:p-1.5 sm:pl-6 items-stretch sm:items-center shadow-xl w-full max-w-md gap-3 sm:gap-0">
               <input 
                 type="text" 
                 value={loteId}
                 onChange={(e) => setLoteId(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ingresa tu lote (Ej: HUILA-084)"
-                className="bg-transparent border-none text-white outline-none placeholder:text-white/60 text-base flex-1 min-w-0"
+                className="bg-transparent border-none text-white outline-none placeholder:text-white/60 text-base flex-1 min-w-0 px-2 sm:px-0 py-2 sm:py-0"
               />
               <button 
                 onClick={handleValorar}
-                className="px-6 py-3 bg-[#bb8d3b] hover:bg-[#a67c33] text-white rounded-full font-bold transition-all shadow-md whitespace-nowrap"
+                className="px-6 py-3.5 sm:py-3 bg-[#bb8d3b] hover:bg-[#a67c33] text-white rounded-xl sm:rounded-full font-bold transition-all shadow-md whitespace-nowrap"
               >
                 Valorar tu café
               </button>
@@ -81,7 +81,7 @@ export function HeroHeader() {
         </motion.div>
       </div>
 
-      <div className="absolute bottom-0 right-0 p-8 text-white/60 text-sm italic">
+      <div className="hidden sm:block absolute bottom-0 right-0 p-8 text-white/60 text-sm italic">
         Finca Los Arrayanes, Caldas, Colombia
       </div>
     </div>

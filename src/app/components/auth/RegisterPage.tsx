@@ -155,7 +155,7 @@ export function RegisterPage() {
     };
 
     return (
-        <div className="max-w-3xl mx-auto w-full">
+        <div className="max-w-3xl mx-auto w-full px-4 sm:px-0">
             <AnimatePresence mode="wait">
                 {step === 'role-select' && (
                     <motion.div
@@ -166,20 +166,20 @@ export function RegisterPage() {
                         transition={{ duration: 0.3 }}
                     >
                         {/* Header */}
-                        <div className="text-center mb-10 relative">
+                        <div className="text-center mb-10 relative flex flex-col items-center">
                             {/* Option to return to Home */}
                             <Link
                                 to="/"
-                                className="absolute left-0 top-0 inline-flex items-center text-sm font-semibold text-[#5f705f] hover:text-[#bb8d3b] mb-6 group transition-colors"
+                                className="sm:absolute left-0 top-0 inline-flex items-center text-sm font-semibold text-[#5f705f] hover:text-[#bb8d3b] mb-6 group transition-colors"
                             >
                                 <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
                                 Volver al Inicio
                             </Link>
 
-                            <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-4 mt-8 md:mt-0">
+                            <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-4 mt-2 sm:mt-0">
                                 Paso 1 de 2
                             </span>
-                            <h1 className="text-4xl font-sans text-[#5f705f] font-bold leading-tight">
+                            <h1 className="text-3xl sm:text-4xl font-sans text-[#5f705f] font-bold leading-tight">
                                 ¿Cuál es tu rol en la<br />cadena de valor?
                             </h1>
                             <p className="mt-3 text-gray-500 text-sm">
@@ -199,7 +199,7 @@ export function RegisterPage() {
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         className={cn(
-                                            'relative text-left p-6 rounded-2xl border-2 transition-all cursor-pointer bg-white',
+                                            'relative w-full flex flex-col text-left p-6 rounded-2xl border-2 transition-all cursor-pointer bg-white',
                                             isSelected
                                                 ? `${roleCard.borderColor} shadow-lg`
                                                 : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
