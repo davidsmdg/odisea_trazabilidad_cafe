@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { getLotesMaster, isLotePublicado } from '../../utils/loteStore';
+import { getLotes } from '../../../services/lotesService';
+import type { LoteUnificado } from '../../types/lote';
+import { isLotePublicado } from '../../utils/loteStore';
 import {
     Compass,
     Search,
@@ -38,40 +40,50 @@ export function ExplorarCafes() {
     const [lotes, setLotes] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [mercadoDestino, setMercadoDestino] = useState<'EU' | 'USA'>('EU');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const master = getLotesMaster();
-        // Filtrar solo los lotes ofrecidos por el productor, aprobados por Odisea y que estén PUBLICADOS en el Stage Gate
-        const commercialLotes = master.filter(l => l.ofrecidoPorProductor && l.aprobadoComercializacion && isLotePublicado(l.id));
-        const mappedMaster = commercialLotes.map(l => ({
-            id: l.id,
-            codigo: l.id,
-            productor: l.productor,
-            finca: l.finca,
-            municipio: l.municipio ? l.municipio.split(',')[0] : 'San Agustín',
-            departamento: l.municipio ? (l.municipio.split(',')[1]?.trim() || 'Huila') : 'Huila',
-            variedad: l.variedad,
-            proceso: l.proceso,
-            macroperfil: l.macroperfil || 'Balanceado',
-            impacto: 'Comunidad',
-            puntaje: l.calificacion ? l.calificacion.toFixed(2) : 'Sin Evaluar',
-            empaque: '10 Sacos (35 kg verde)',
-            perfilTaza: l.macroperfil ? `Perfil sensorial destacado con notas a ${l.macroperfil.toLowerCase()}.` : 'Perfil de taza con notas frutales y acidez equilibrada.',
-            precioBaseKgUSD: 14.50,
-            avatar: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=800&q=80',
-            regionesDisponibles: l.regionesDisponibles || ['USA', 'EU'],
-        }));
-        
-        const combined = [...mappedMaster];
-        LOTES_MARKET_DEFAULT.forEach(def => {
-            if (!combined.some(c => c.id === def.id)) {
-                combined.push({
-                    ...def,
-                    regionesDisponibles: (def as any).regionesDisponibles || ['USA', 'EU']
+        setIsLoading(true);
+        getLotes()
+            .then((master) => {
+                // Filtrar solo los lotes ofrecidos por el productor, aprobados por Odisea y que estén PUBLICADOS en el Stage Gate
+                const commercialLotes = master.filter(l => l.ofrecidoPorProductor && l.aprobadoComercializacion && isLotePublicado(l.id));
+                const mappedMaster = commercialLotes.map(l => ({
+                    id: l.id,
+                    codigo: l.id,
+                    productor: l.productor,
+                    finca: l.finca,
+                    municipio: l.municipio ? l.municipio.split(',')[0] : 'San Agustín',
+                    departamento: l.municipio ? (l.municipio.split(',')[1]?.trim() || 'Huila') : 'Huila',
+                    variedad: l.variedad,
+                    proceso: l.proceso,
+                    macroperfil: l.macroperfil || 'Balanceado',
+                    impacto: 'Comunidad',
+                    puntaje: l.calificacion ? l.calificacion.toFixed(2) : 'Sin Evaluar',
+                    empaque: '10 Sacos (35 kg verde)',
+                    perfilTaza: l.macroperfil ? `Perfil sensorial destacado con notas a ${l.macroperfil.toLowerCase()}.` : 'Perfil de taza con notas frutales y acidez equilibrada.',
+                    precioBaseKgUSD: 14.50,
+                    avatar: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=800&q=80',
+                    regionesDisponibles: l.regionesDisponibles || ['USA', 'EU'],
+                }));
+                
+                const combined = [...mappedMaster];
+                LOTES_MARKET_DEFAULT.forEach(def => {
+                    if (!combined.some(c => c.id === def.id)) {
+                        combined.push({
+                            ...def,
+                            regionesDisponibles: (def as any).regionesDisponibles || ['USA', 'EU']
+                        });
+                    }
                 });
-            }
-        });
-        setLotes(combined);
+                setLotes(combined);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar lotes comerciales');
+                setIsLoading(false);
+            });
     }, []);
 
     // Filtros de Sourcing Avanzados
@@ -406,7 +418,22 @@ export function ExplorarCafes() {
 
                         {/* Grid de Lotes Ultra Premium agrupado por Finca/Municipio usando el UX público */}
             <div className="space-y-12">
-                {gruposDepartamentos.map((depto: any) => (
+                {isLoading ? (
+                    <div className="space-y-6 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-white rounded-3xl border border-gray-100 p-8 h-48 flex flex-col justify-between">
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="p-12 text-center bg-red-50 rounded-3xl border border-red-100 space-y-4">
+                        <p className="text-red-700/80 font-medium">{error}</p>
+                    </div>
+                ) : (
+                    <>
+                        {gruposDepartamentos.map((depto: any) => (
                     <div key={depto.nombre} className="space-y-6">
                         <div className="flex items-center gap-4">
                             <div className="h-0.5 grow bg-gradient-to-r from-transparent to-[#5f705f]/20" />
@@ -437,9 +464,11 @@ export function ExplorarCafes() {
                         </div>
                     </div>
                 ))}
+                    </>
+                )}
             </div>
 
-            {lotesFiltrados.length === 0 && (
+            {!isLoading && !error && lotesFiltrados.length === 0 && (
                 <div className="text-center py-12 bg-white rounded-3xl border border-gray-100">
                     <Coffee className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-500 font-bold text-sm">No se encontraron lotes en verde con los criterios de filtrado especificados.</p>
