@@ -1,7 +1,7 @@
 import { MOCK_USERS, DEFAULT_USERS } from '../data/usuarios.mock';
 import type { AuthUser, UserRecord } from '../types/usuario';
 
-const KEY = 'odisea_usuarios_admin';
+const KEY = 'odisea_usuarios';
 
 export async function getMockUsers(): Promise<AuthUser[]> {
     await new Promise(r => setTimeout(r, 300));

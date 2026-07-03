@@ -26,30 +26,16 @@ import { Label } from '../ui/label';
 import { toast } from 'sonner';
 import { cn } from '../ui/utils';
 
-export interface UserRecord {
-    id: string;
-    nombre: string;
-    rol: 'Administrador' | 'Agricultor' | 'Líder de Campo' | 'Catador' | 'Tostador';
-    email: string;
-    celular: string;
-    estado: 'Habilitado' | 'Deshabilitado';
-    ultimoAcceso: string;
-}
-
-const DEFAULT_USERS: UserRecord[] = [
-    { id: 'usr-1', nombre: 'Odisea Admin', rol: 'Administrador', email: 'admin@odisea.co', celular: '+57 300 123 4567', estado: 'Habilitado', ultimoAcceso: 'Hoy, 09:12 AM' },
-    { id: 'usr-2', nombre: 'María González', rol: 'Agricultor', email: 'maria.gonzalez@cafe.co', celular: '+57 312 455 9876', estado: 'Habilitado', ultimoAcceso: 'Ayer, 04:30 PM' },
-    { id: 'usr-3', nombre: 'Pedro Nel Giraldo', rol: 'Catador', email: 'pedro.nel@calidad.co', celular: '+57 310 445 1122', estado: 'Habilitado', ultimoAcceso: 'Hoy, 08:00 AM' },
-    { id: 'usr-4', nombre: 'Sofía Andrade', rol: 'Catador', email: 'sofia.andrade@calidad.co', celular: '+57 315 223 9988', estado: 'Habilitado', ultimoAcceso: 'Hace 2 días' },
-    { id: 'usr-5', nombre: 'Carlos Augusto Restrepo', rol: 'Líder de Campo', email: 'carlos.restrepo@lider.co', celular: '+57 314 556 7788', estado: 'Habilitado', ultimoAcceso: 'Hoy, 10:45 AM' },
-    { id: 'usr-6', nombre: 'Blue Bottle Coffee', rol: 'Tostador', email: 'sourcing@bluebottle.com', celular: '+1 415 889 0011', estado: 'Habilitado', ultimoAcceso: 'Hace 3 horas' },
-    { id: 'usr-7', nombre: 'Workshop Coffee', rol: 'Tostador', email: 'roaster@workshop.co.uk', celular: '+44 20 7729 0099', estado: 'Deshabilitado', ultimoAcceso: 'Hace 2 semanas' },
-];
+import type { UserRecord } from '../../types/usuario';
+import { getDefaultUsers, saveDefaultUsers } from '../../../services/usuariosService';
+import { AlertTriangle } from 'lucide-react';
 
 export function GestionUsuariosOdisea() {
     const [usuarios, setUsuarios] = useState<UserRecord[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterRol, setFilterRol] = useState<string>('Todos');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Modals visibility states
     const [isAddEditOpen, setIsAddEditOpen] = useState(false);
@@ -70,22 +56,25 @@ export function GestionUsuariosOdisea() {
 
     // Load users from localStorage
     useEffect(() => {
-        const saved = localStorage.getItem('odisea_usuarios');
-        if (saved) {
-            try {
-                setUsuarios(JSON.parse(saved));
-            } catch (e) {
-                setUsuarios(DEFAULT_USERS);
-            }
-        } else {
-            localStorage.setItem('odisea_usuarios', JSON.stringify(DEFAULT_USERS));
-            setUsuarios(DEFAULT_USERS);
-        }
+        setIsLoading(true);
+        getDefaultUsers()
+            .then((data) => {
+                setUsuarios(data);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar usuarios');
+                setIsLoading(false);
+            });
     }, []);
 
-    const saveUsuariosToDb = (updated: UserRecord[]) => {
+    const saveUsuariosToDb = async (updated: UserRecord[]) => {
         setUsuarios(updated);
-        localStorage.setItem('odisea_usuarios', JSON.stringify(updated));
+        try {
+            await saveDefaultUsers(updated);
+        } catch (err) {
+            toast.error('Error al guardar usuarios');
+        }
     };
 
     // Filtered users list
@@ -311,7 +300,29 @@ export function GestionUsuariosOdisea() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredUsuarios.map((usr) => (
+                            {isLoading ? (
+                                [1, 2, 3].map((i) => (
+                                    <tr key={i} className="animate-pulse border-b border-slate-100">
+                                        <td colSpan={6} className="py-6 px-8">
+                                            <div className="h-6 bg-slate-100 rounded w-1/3"></div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : error ? (
+                                <tr>
+                                    <td colSpan={6} className="text-center py-10 text-rose-500 font-bold">
+                                        <AlertTriangle className="inline mr-2" size={16} /> {error}
+                                    </td>
+                                </tr>
+                            ) : filteredUsuarios.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="text-center py-10 text-slate-400 font-bold">
+                                        No se encontraron usuarios en esta categoría.
+                                    </td>
+                                </tr>
+                            ) : (
+                                <>
+                                    {filteredUsuarios.map((usr) => (
                                 <tr key={usr.id} className="border-b border-slate-55/10 hover:bg-slate-50/50 transition-all duration-300">
                                     {/* Name */}
                                     <td className="py-5 px-8">
@@ -415,6 +426,8 @@ export function GestionUsuariosOdisea() {
                                     </td>
                                 </tr>
                             ))}
+                                </>
+                            )}
                         </tbody>
                     </table>
                 </div>
