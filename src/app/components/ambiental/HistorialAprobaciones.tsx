@@ -20,60 +20,29 @@ import {
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
 
-interface RegistroAuditoria {
-    id: string; // Report ID
-    productor: string;
-    finca: string;
-    ubicacion: string;
-    fecha: string; // ISO or readable
-    verificador: string;
-    verificadorID: string;
-    estado: 'Aprobado' | 'Rechazado' | 'Condicionado';
-    area: string;
-    hashDocumento: string; // To simulate immutable blockchain/timestamp proof
-}
-
-const HISTORIAL_MOCK: RegistroAuditoria[] = [
-    {
-        id: 'DD-EUDR-2024-8842',
-        productor: 'María González',
-        finca: 'Finca La Esperanza',
-        ubicacion: 'San Agustín, Huila',
-        fecha: '2024-03-08 14:30:00 (UTC-5)',
-        verificador: 'Laura Hernández',
-        verificadorID: 'VA-092-COL',
-        estado: 'Aprobado',
-        area: '4.5 Ha',
-        hashDocumento: '8f4c28b9e6db31e7...e5a2b',
-    },
-    {
-        id: 'DD-EUDR-2024-8841',
-        productor: 'Carlos Martínez',
-        finca: 'Lote El Naranjo',
-        ubicacion: 'Acevedo, Huila',
-        fecha: '2024-03-07 09:15:22 (UTC-5)',
-        verificador: 'Laura Hernández',
-        verificadorID: 'VA-092-COL',
-        estado: 'Rechazado',
-        area: '12.0 Ha',
-        hashDocumento: '3a1d9c49f8b2e10c...9f1b4',
-    },
-    {
-        id: 'DD-EUDR-2024-8839',
-        productor: 'Elena Ruiz',
-        finca: 'Finca Santa Helena',
-        ubicacion: 'Pitalito, Huila',
-        fecha: '2024-03-05 16:45:10 (UTC-5)',
-        verificador: 'Andrés Silva',
-        verificadorID: 'VA-045-COL',
-        estado: 'Condicionado',
-        area: '8.2 Ha',
-        hashDocumento: '5b8e1f7c3d9a2b4e...0c7d2',
-    }
-];
+import { useEffect } from 'react';
+import type { RegistroAuditoria } from '../../types/auditoria';
+import { getHistorialAprobaciones } from '../../../services/aprobacionesService';
+import { AlertTriangle } from 'lucide-react';
 
 export function HistorialAprobaciones() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [historial, setHistorial] = useState<RegistroAuditoria[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setIsLoading(true);
+        getHistorialAprobaciones()
+            .then((data) => {
+                setHistorial(data);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar historial de aprobaciones');
+                setIsLoading(false);
+            });
+    }, []);
 
     const handleDownloadPDF = (id: string) => {
         toast.info(`Generando Certificado de Debida Diligencia para ${id}`, {
@@ -144,7 +113,29 @@ export function HistorialAprobaciones() {
 
             {/* 3. TABLA / LISTA DE AUDITORÍAS CON PROTOCOLO STRICTO */}
             <div className="space-y-4">
-                {HISTORIAL_MOCK.map((registro) => (
+                {isLoading ? (
+                    <div className="space-y-4 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-white rounded-[32px] border border-slate-100 p-8 h-40 flex flex-col justify-between">
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="p-12 text-center bg-red-50 rounded-[32px] border border-red-100 space-y-4">
+                        <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                        <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+                        <p className="text-red-700/80 font-medium">{error}</p>
+                        <Button onClick={() => window.location.reload()} className="bg-blue-950 text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
+                    </div>
+                ) : historial.length === 0 ? (
+                    <div className="p-16 text-center rounded-[32px] border border-dashed border-slate-200 bg-slate-50/50">
+                        <p className="text-slate-500 font-bold text-lg">No hay auditorías registradas en el historial.</p>
+                    </div>
+                ) : (
+                    <>
+                        {historial.map((registro) => (
                     <motion.div
                         key={registro.id}
                         initial={{ opacity: 0, y: 10 }}
@@ -224,6 +215,8 @@ export function HistorialAprobaciones() {
                         </div>
                     </motion.div>
                 ))}
+                    </>
+                )}
             </div>
 
             <div className="text-center pt-8">

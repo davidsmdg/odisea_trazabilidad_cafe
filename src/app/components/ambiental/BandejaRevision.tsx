@@ -18,38 +18,27 @@ import {
 import { cn } from '../ui/utils';
 import { Input } from '../ui/input';
 
-const REVISIONES_MOCK = [
-    {
-        id: 'FL-2024-001A',
-        finca: 'Finca La Secreta',
-        municipio: 'Pitalito',
-        fechaSolicitud: '02 Mar 2024',
-        estado: 'Pendiente',
-        prioridad: 'Alta',
-        tipo: 'Predio Nuevo (EUDR)',
-    },
-    {
-        id: 'FL-2024-002B',
-        finca: 'Mirador del Valle',
-        municipio: 'Acevedo',
-        fechaSolicitud: '01 Mar 2024',
-        estado: 'Alerta EUDR',
-        prioridad: 'Alta',
-        tipo: 'Recertificación Anual',
-    },
-    {
-        id: 'FL-2024-005C',
-        finca: 'Lote Las Rocas',
-        municipio: 'Garzón',
-        fechaSolicitud: '28 Feb 2024',
-        estado: 'En Proceso',
-        prioridad: 'Media',
-        tipo: 'Ampliación Lote',
-    }
-];
+import { getRevisiones } from '../../../services/revisionesService';
+import type { RevisionMockItem } from '../../../data/revisiones.mock';
 
 export function BandejaRevision() {
     const navigate = useNavigate();
+    const [revisiones, setRevisiones] = useState<RevisionMockItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setIsLoading(true);
+        getRevisiones()
+            .then((data) => {
+                setRevisiones(data);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar revisiones');
+                setIsLoading(false);
+            });
+    }, []);
 
     return (
         <div className="space-y-12 max-w-[1100px] mx-auto animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-20 px-4">
@@ -97,7 +86,29 @@ export function BandejaRevision() {
 
             {/* 4. LISTA DE REVISIONES (GRANDES BLOQUES) */}
             <div className="space-y-6">
-                {REVISIONES_MOCK.map((item) => (
+                {isLoading ? (
+                    <div className="space-y-6 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-white rounded-[48px] border border-emerald-50 p-10 h-48 flex flex-col justify-between">
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="p-12 text-center bg-red-50 rounded-[48px] border border-red-100 space-y-4">
+                        <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                        <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+                        <p className="text-red-700/80 font-medium">{error}</p>
+                        <Button onClick={() => window.location.reload()} className="bg-emerald-950 text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
+                    </div>
+                ) : revisiones.length === 0 ? (
+                    <div className="p-16 text-center rounded-[48px] border border-dashed border-emerald-250 bg-emerald-50/10">
+                        <p className="text-emerald-800/60 font-bold text-lg">No hay revisiones de cumplimiento EUDR asignadas.</p>
+                    </div>
+                ) : (
+                    <>
+                        {revisiones.map((item) => (
                     <motion.div
                         key={item.id}
                         whileHover={{ y: -4 }}
@@ -158,6 +169,8 @@ export function BandejaRevision() {
                         </div>
                     </motion.div>
                 ))}
+                    </>
+                )}
             </div>
 
             {/* Pagination / Footer Info */}
