@@ -10,18 +10,32 @@ import { QuickViewDrawer } from '../components/QuickViewDrawer';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { LOTES_MARKET_DEFAULT } from '../components/tostador/ExplorarCafes';
+import { LOTES_MARKET_DEFAULT } from '../data/lotes.mock';
+import { getLotesMarket } from '../services/lotesService';
 
 // Generar estructura agrupada dinámica
-const buildGruposDepartamentos = (filtros?: any) => {
+const buildGruposDepartamentos = (
+  lotesList: any[],
+  filtros: any,
+  agruparPor: 'Departamento' | 'Municipio',
+  ordenarPor: string
+) => {
   const deptosMap: Record<string, any> = {};
 
-  const lotesFiltrados = LOTES_MARKET_DEFAULT.filter(lote => {
+  const lotesFiltrados = lotesList.filter(lote => {
     if (!filtros) return true;
     
     // Departamento & Municipio
     if (filtros.departamento !== 'all' && lote.departamento !== filtros.departamento) return false;
     if (filtros.municipio !== 'all' && lote.municipio !== filtros.municipio) return false;
+
+    // EUDR (Solo UE verificado)
+    if (filtros.ueVerificado) {
+      if (lote.verificadoEUDR === false) return false;
+      const lastDigitChar = lote.id.charAt(lote.id.length - 1);
+      const isEven = !isNaN(Number(lastDigitChar)) && Number(lastDigitChar) % 2 === 0;
+      if (isEven) return false;
+    }
 
     // Procesos
     if (filtros.procesosSeleccionados?.length > 0) {
@@ -35,29 +49,30 @@ const buildGruposDepartamentos = (filtros?: any) => {
       if (!hasMatch) return false;
     }
 
-    // Impactos (simplificado: si exige jóvenes, que tenga impacto Jóven, si exige mujeres, impacto Mujeres)
+    // Impactos
     const reqImpactos = filtros.impactos || {};
     if (reqImpactos.jovenes && lote.impacto !== 'Jóven') return false;
     if (reqImpactos.mujeres && lote.impacto !== 'Mujeres') return false;
+    if (reqImpactos.indigenas && lote.impacto !== 'Comunidad') return false;
 
     return true;
   });
 
   lotesFiltrados.forEach(lote => {
-    const depto = lote.departamento;
-    const mun = lote.municipio;
+    const outerGroupKey = agruparPor === 'Municipio' ? lote.municipio : lote.departamento;
+    const innerGroupKey = agruparPor === 'Municipio' ? lote.departamento : lote.municipio;
 
-    if (!deptosMap[depto]) {
-      deptosMap[depto] = {
-        id: `depto-${depto.toLowerCase().replace(/ /g, '-')}`,
-        nombre: depto,
+    if (!deptosMap[outerGroupKey]) {
+      deptosMap[outerGroupKey] = {
+        id: `group-${outerGroupKey.toLowerCase().replace(/ /g, '-')}`,
+        nombre: outerGroupKey,
         municipios: {}
       };
     }
 
-    if (!deptosMap[depto].municipios[mun]) {
-      deptosMap[depto].municipios[mun] = {
-        nombre: mun,
+    if (!deptosMap[outerGroupKey].municipios[innerGroupKey]) {
+      deptosMap[outerGroupKey].municipios[innerGroupKey] = {
+        nombre: innerGroupKey,
         fincasCount: 0,
         altitud: '1.700 - 1.900 msnm',
         impacto: lote.impacto === 'Jóven' ? 'Alto' : 'Estratégico',
@@ -65,10 +80,9 @@ const buildGruposDepartamentos = (filtros?: any) => {
       };
     }
 
-    // Convert availability string to number loosely for availability indicator
-    const extractSacos = parseInt(lote.empaque.split(' ')[0]) || 10;
+    const extractSacos = parseInt(lote.empaque?.split(' ')[0] || '10') || 10;
 
-    deptosMap[depto].municipios[mun].lotes.push({
+    deptosMap[outerGroupKey].municipios[innerGroupKey].lotes.push({
       id: lote.id,
       titulo: `${lote.variedad} - ${lote.productor}`,
       productor: lote.productor,
@@ -83,26 +97,58 @@ const buildGruposDepartamentos = (filtros?: any) => {
       cadena: 'Completa',
       imagen: lote.avatar,
     });
-    
-    // Simplistic count based on lots (assuming each lot might represent a farm state)
-    deptosMap[depto].municipios[mun].fincasCount = deptosMap[depto].municipios[mun].lotes.length;
   });
 
-  return Object.values(deptosMap).map((d: any) => ({
-    ...d,
-    municipios: Object.values(d.municipios)
-  }));
+  const result = Object.values(deptosMap).map((d: any) => {
+    const municipiosArray = Object.values(d.municipios).map((m: any) => {
+      if (ordenarPor === 'puntaje') {
+        m.lotes.sort((a: any, b: any) => b.puntaje - a.puntaje);
+      } else if (ordenarPor === 'disponibilidad') {
+        m.lotes.sort((a: any, b: any) => b.disponibilidad - a.disponibilidad);
+      }
+      return {
+        ...m,
+        fincasCount: m.lotes.length
+      };
+    });
+
+    return {
+      ...d,
+      municipios: municipiosArray
+    };
+  });
+
+  return result;
 };
 
 export function BancoCafes() {
+  const [lotes, setLotes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<any>(null);
-  const gruposDepartamentos = useMemo(() => buildGruposDepartamentos(filtros), [filtros]);
+  const [agruparPor, setAgruparPor] = useState<'Departamento' | 'Municipio'>('Departamento');
+  const [ordenarPor, setOrdenarPor] = useState<string>('relevancia');
+
+  const gruposDepartamentos = useMemo(
+    () => buildGruposDepartamentos(lotes, filtros, agruparPor, ordenarPor),
+    [lotes, filtros, agruparPor, ordenarPor]
+  );
   const [expandAll, setExpandAll] = useState(false);
   const [selectedLote, setSelectedLote] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    setIsLoading(true);
+    getLotesMarket()
+      .then((data) => {
+        setLotes(data);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        setError('Error al cargar cafés del portafolio');
+        setIsLoading(false);
+      });
   }, []);
 
   const handleExpandToggle = () => {
@@ -142,8 +188,8 @@ export function BancoCafes() {
         <BancoHeader departamento="Huila" disponibles={24} ueVerificadoActive={false} />
 
         <ControlBar
-          onAgruparChange={(tipo) => console.log('Agrupar por:', tipo)}
-          onOrdenarChange={(orden) => console.log('Ordenar:', orden)}
+          onAgruparChange={setAgruparPor}
+          onOrdenarChange={setOrdenarPor}
           onFiltroChange={setFiltros}
         />
 
@@ -166,7 +212,23 @@ export function BancoCafes() {
 
         {/* Grupos por Departamentos y Municipios */}
         <div className="space-y-12">
-          {gruposDepartamentos.map((depto) => (
+          {isLoading ? (
+            <div className="space-y-6 animate-pulse">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white rounded-3xl border border-gray-100 p-8 h-48 flex flex-col justify-between">
+                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="p-12 text-center bg-red-50 rounded-3xl border border-red-100 space-y-4">
+              <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+              <p className="text-red-700/80 font-medium">{error}</p>
+            </div>
+          ) : (
+            <>
+              {gruposDepartamentos.map((depto) => (
             <div key={depto.id} className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="h-0.5 grow bg-gradient-to-r from-transparent to-[#5f705f]/20" />
@@ -197,6 +259,8 @@ export function BancoCafes() {
               </div>
             </div>
           ))}
+            </>
+          )}
         </div>
 
         {/* Estado vacío si no hay resultados */}
