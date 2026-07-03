@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
@@ -21,8 +21,11 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { cn } from '../ui/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { getLotesMaster } from '../../utils/loteStore';
+import { useMemo } from 'react';
 
 // Mock data para departamentos (precios y clima robustecido)
 const DEPARTAMENTOS_DATA: Record<string, any> = {
@@ -103,6 +106,76 @@ export function ProducerDashboard() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [departamento, setDepartamento] = useState('Antioquia');
+    const [valoracionesAprobadas, setValoracionesAprobadas] = useState<any[]>([]);
+
+    const lotesMaster = getLotesMaster();
+    const lotesVendidos = useMemo(() => {
+        const prodName = user?.name || 'María González';
+        const filtered = lotesMaster.filter(l => 
+            l.productor.toLowerCase().includes(prodName.toLowerCase().split(' ')[0]) &&
+            l.tostadorAsignado
+        );
+        if (filtered.length === 0) return LOTES_VENDIDOS;
+        return filtered.map(l => ({
+            id: l.id,
+            nombre: l.id,
+            finca: l.finca,
+            clientes: [{ 
+                nombre: l.tostadorAsignado || 'Tostador Especializado', 
+                pais: l.tostadorPais || 'USA', 
+                bandera: l.tostadorPais === 'UK' ? '🇬🇧' : '🇺🇸' 
+            }],
+            puntos: { 
+                catador: l.calificacion || 85.0, 
+                tostador: (l.calificacion || 85.0) + 0.5, 
+                final: 4.8 
+            }
+        }));
+    }, [lotesMaster, user]);
+
+    const [categoriaSimulacion, setCategoriaSimulacion] = useState<'regional' | 'diferenciado' | 'exotico'>('regional');
+    const [sobrepreciosConfig, setSobrepreciosConfig] = useState({ regional: 5, diferenciado: 10, exotico: 30 });
+
+    useEffect(() => {
+        const saved = localStorage.getItem('odisea_sobreprecios_config');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setSobrepreciosConfig({
+                    regional: parsed.regional ?? 5,
+                    diferenciado: parsed.diferenciado ?? 10,
+                    exotico: parsed.exotico ?? 30
+                });
+            } catch (e) {}
+        }
+    }, []);
+
+    useEffect(() => {
+        const loadAprobados = () => {
+            const current = localStorage.getItem('comentarios_publicos_aprobados');
+            if (current) {
+                try {
+                    setValoracionesAprobadas(JSON.parse(current));
+                } catch (e) {}
+            } else {
+                // Mock inicial
+                const initial = [
+                    {
+                        id: 'a1',
+                        loteId: 'HUI-ESP-042',
+                        rating: 5,
+                        selectedNotes: ['chocolate', 'nueces'],
+                        message: '¡El mejor Bourbon Rosado que he probado en mi vida! Lo compramos en Bogotá y nos voló la cabeza.',
+                        fecha: '28/06/2026',
+                        estado: 'Aprobado'
+                    }
+                ];
+                localStorage.setItem('comentarios_publicos_aprobados', JSON.stringify(initial));
+                setValoracionesAprobadas(initial);
+            }
+        };
+        loadAprobados();
+    }, []);
 
     const formatoDinero = (valor: number) => {
         return new Intl.NumberFormat('es-CO', {
@@ -218,7 +291,7 @@ export function ProducerDashboard() {
                             <p className="text-gray-500 text-sm font-medium mt-1">Mira quién disfruta tu café y qué dicen de él.</p>
                         </div>
                         <div className="grid grid-cols-1 gap-4">
-                            {LOTES_VENDIDOS.map((lote) => (
+                            {lotesVendidos.map((lote) => (
                                 <div key={lote.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col sm:flex-row items-center gap-6 group hover:border-[#5f705f]/20 transition-all">
                                     <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
                                         <Coffee size={28} />
@@ -243,6 +316,60 @@ export function ProducerDashboard() {
                             ))}
                         </div>
                     </section>
+
+                    {/* VALORACIONES DE CONSUMIDORES QR */}
+                    <section className="space-y-6">
+                        <div>
+                            <h2 className="text-2xl font-sans font-black text-gray-800 tracking-tight">Mensajes de Consumidores (Código QR)</h2>
+                            <p className="text-gray-500 text-sm font-medium mt-1">Opiniones de compradores finales aprobadas por el equipo de trazabilidad.</p>
+                        </div>
+                        
+                        {valoracionesAprobadas.length === 0 ? (
+                            <div className="bg-white rounded-[32px] border border-dashed border-gray-250 p-8 text-center text-gray-400">
+                                <p className="text-xs font-bold">Aún no hay opiniones de consumidores finales aprobadas para tus lotes.</p>
+                                <p className="text-[9px] uppercase tracking-widest mt-1">Los comentarios escaneados por código QR se mostrarán aquí tras ser validados.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-4">
+                                {valoracionesAprobadas.map((val) => (
+                                    <div key={val.id} className="bg-white rounded-[32px] border border-gray-150 shadow-sm p-6 space-y-4 text-left">
+                                        <div className="flex items-center justify-between">
+                                            <Badge className="bg-[#5f705f]/10 text-[#5f705f] border-none text-[9px] font-black px-2 py-0.5 uppercase tracking-wider">
+                                                Lote: {val.loteId}
+                                            </Badge>
+                                            <span className="text-[9px] font-bold text-gray-400">{val.fecha}</span>
+                                        </div>
+                                        
+                                        <div className="flex gap-1">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <Star
+                                                    key={star}
+                                                    size={12}
+                                                    className={cn(
+                                                        star <= val.rating ? "text-amber-500 fill-amber-500" : "text-gray-200"
+                                                    )}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        <p className="text-xs font-medium text-gray-600 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 italic">
+                                            "{val.message}"
+                                        </p>
+
+                                        {val.selectedNotes && val.selectedNotes.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 pt-1">
+                                                {val.selectedNotes.map((note: string) => (
+                                                    <span key={note} className="text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+                                                        {note.replace('_', ' ')}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 </div>
 
                 {/* COLUMNA DERECHA (Panel Mercado, Clima y Escenarios) */}
@@ -262,6 +389,58 @@ export function ProducerDashboard() {
                                 <Badge className="bg-[#8a9a8a] text-white border-none text-[9px] font-black uppercase">Factor {dData.factorRendimiento}</Badge>
                             </div>
                         </CardContent>
+                    </Card>
+
+                    {/* SIMULADOR DE SOBREPRECIO ODICEA */}
+                    <Card className="bg-white border border-gray-150 shadow-sm rounded-3xl p-6 space-y-6">
+                        <div className="space-y-1">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5f705f] block">Mesa de Ayuda Financiera</span>
+                            <h3 className="text-xl font-sans font-black text-gray-800">Simulador de Sobreprecios</h3>
+                            <p className="text-[11px] text-gray-400 font-bold leading-relaxed">Descubre cuánto valor gana tu café al cumplir con trazabilidad y calidad verificada.</p>
+                        </div>
+
+                        {/* Selector de Categoria */}
+                        <div className="grid grid-cols-3 gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-150">
+                            {[
+                                { id: 'regional', label: 'Regional', pct: sobrepreciosConfig.regional },
+                                { id: 'diferenciado', label: 'Proceso', pct: sobrepreciosConfig.diferenciado },
+                                { id: 'exotico', label: 'Exótico', pct: sobrepreciosConfig.exotico }
+                            ].map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => setCategoriaSimulacion(cat.id as any)}
+                                    className={cn(
+                                        "py-2 px-1 rounded-lg text-[9px] font-black uppercase tracking-wider border-none cursor-pointer transition-all",
+                                        categoriaSimulacion === cat.id
+                                            ? "bg-[#5f705f] text-white shadow-xs"
+                                            : "bg-transparent text-gray-400 hover:text-gray-700"
+                                    )}
+                                >
+                                    {cat.label} (+{cat.pct}%)
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Resultados de la Simulación */}
+                        <div className="space-y-3 pt-2">
+                            <div className="flex justify-between items-center text-xs border-b border-gray-50 pb-2">
+                                <span className="font-bold text-gray-400">Precio Base Referencial</span>
+                                <span className="font-bold text-gray-700">{formatoDinero(dData.precioBase)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs border-b border-gray-50 pb-2">
+                                <span className="font-bold text-emerald-600">Premio por Trazabilidad ({(categoriaSimulacion === 'regional' ? sobrepreciosConfig.regional : categoriaSimulacion === 'diferenciado' ? sobrepreciosConfig.diferenciado : sobrepreciosConfig.exotico)}%)</span>
+                                <span className="font-black text-emerald-600">+{formatoDinero(dData.precioBase * ((categoriaSimulacion === 'regional' ? sobrepreciosConfig.regional : categoriaSimulacion === 'diferenciado' ? sobrepreciosConfig.diferenciado : sobrepreciosConfig.exotico) / 100))}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2">
+                                <span className="text-xs font-black uppercase tracking-wider text-gray-450">Pago Final Estimado</span>
+                                <span className="text-2xl font-sans font-black text-gray-900">{formatoDinero(dData.precioBase + (dData.precioBase * ((categoriaSimulacion === 'regional' ? sobrepreciosConfig.regional : categoriaSimulacion === 'diferenciado' ? sobrepreciosConfig.diferenciado : sobrepreciosConfig.exotico) / 100)))}</span>
+                            </div>
+                        </div>
+
+                        <div className="p-3 bg-[#e3d5b8]/10 rounded-2xl border border-[#e3d5b8]/30 text-[9px] font-bold text-[#5f705f]/70 leading-relaxed">
+                            💡 **Nota**: Los porcentajes de sobreprecio son fijados dinámicamente por la junta de administración de Odisea.
+                        </div>
                     </Card>
 
                     {/* ESTADO DEL CLIMA PUNTUAL */}

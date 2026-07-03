@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react';
 import { Badge } from './ui/badge';
-import { Star, Shield, CheckCircle2, Share2, Download, MapPin, Wind, Layers } from 'lucide-react';
+import { Star, Shield, CheckCircle2, Share2, Download, MapPin, Wind, Layers, Scale } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface HeroLoteProps {
@@ -17,6 +17,7 @@ interface HeroLoteProps {
     reputacion: number;
     cumplimientoUE: 'Verificado' | 'En revisión' | 'Pendiente';
     cadena: 'Completa' | 'Parcial';
+    factorRendimiento?: number;
   };
 }
 
@@ -60,7 +61,7 @@ export function HeroLote({ lote }: HeroLoteProps) {
               "{lote.finca} — Una joya del Huila a {lote.altitud}."
             </p>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-10">
               <div className="space-y-1">
                 <span className="text-[10px] uppercase tracking-tighter text-gray-400 font-bold">Proceso</span>
                 <div className="flex items-center gap-2 text-[#5f705f]">
@@ -80,6 +81,13 @@ export function HeroLote({ lote }: HeroLoteProps) {
                 <div className="flex items-center gap-2 text-[#5f705f]">
                   <CheckCircle2 className="h-4 w-4" />
                   <span className="font-bold">{lote.cosecha}</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-tighter text-gray-400 font-bold">Factor</span>
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <Scale className="h-4 w-4" />
+                  <span className="font-bold">{lote.factorRendimiento || 91.5}</span>
                 </div>
               </div>
               <div className="space-y-1">

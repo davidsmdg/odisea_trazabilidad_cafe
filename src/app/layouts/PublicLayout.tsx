@@ -23,7 +23,7 @@ export function PublicLayout() {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-xl font-sans font-black tracking-tight text-[#1A1A1A] leading-none uppercase">
-                            CERES<span className="text-[#5f705f]"> CROP</span>
+                            ODISEA<span className="text-[#5f705f]"> TRACE</span>
                         </span>
                         <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#5f705f]/60 mt-0.5">Trazabilidad con Propósito</span>
                     </div>

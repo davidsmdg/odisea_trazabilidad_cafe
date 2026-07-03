@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
     Anchor,
     Plus,
@@ -7,12 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
-
-const LOTES_DISPONIBLES = [
-    { id: 'LOT-HUILA-084', variedad: 'Bourbon Rosado', origen: 'San Agustín', sacosDisponibles: 7, precioSacoUSD: 507.50 },
-    { id: 'LOT-ANT-112', variedad: 'Geisha', origen: 'Acevedo', sacosDisponibles: 3, precioSacoUSD: 770.00 },
-    { id: 'LOT-QUI-301', variedad: 'Tabi Especiado', origen: 'Pitalito', sacosDisponibles: 5, precioSacoUSD: 588.00 },
-];
+import { getLotesMaster } from '../../utils/loteStore';
 
 const PUERTOS_DESTINO: Record<string, { eta: string; fleteBasePalletUSD: number }> = {
     hamburgo: { eta: '18 Días', fleteBasePalletUSD: 450 },
@@ -21,24 +16,38 @@ const PUERTOS_DESTINO: Record<string, { eta: string; fleteBasePalletUSD: number 
 };
 
 export function SimuladorLogistico() {
-    // Cuántos sacos de cada lote se añaden al pallet (máximo 10 sacos por pallet estándar)
-    const [pallet, setPallet] = useState<Record<string, number>>({
-        'LOT-HUILA-084': 2,
-        'LOT-ANT-112': 1,
-        'LOT-QUI-301': 0,
-    });
+    const [pallet, setPallet] = useState<Record<string, number>>({});
     const [puerto, setPuerto] = useState('roterdam');
     const [incoterm, setIncoterm] = useState<'FOB' | 'DDP'>('DDP');
+    const [lotesDisponibles, setLotesDisponibles] = useState<any[]>([]);
+
+    useEffect(() => {
+        const master = getLotesMaster();
+        const mapped = master.map(l => ({
+            id: l.id,
+            variedad: l.variedad,
+            origen: l.municipio.split(',')[0],
+            sacosDisponibles: l.id === 'LOT-HUILA-084' ? 7 : (l.id === 'LOT-ANT-112' ? 3 : 5),
+            precioSacoUSD: l.id === 'LOT-HUILA-084' ? 507.50 : (l.id === 'LOT-ANT-112' ? 770.00 : 588.00)
+        }));
+        setLotesDisponibles(mapped);
+        
+        const initialPallet: Record<string, number> = {};
+        mapped.forEach(l => {
+            initialPallet[l.id] = l.id === 'LOT-HUILA-084' ? 2 : (l.id === 'LOT-ANT-112' ? 1 : 0);
+        });
+        setPallet(initialPallet);
+    }, []);
 
     const totalSacos = useMemo(() => {
         return Object.values(pallet).reduce((a, b) => a + b, 0);
     }, [pallet]);
 
     const costoCaféUSD = useMemo(() => {
-        return LOTES_DISPONIBLES.reduce((sum, lote) => {
+        return lotesDisponibles.reduce((sum, lote) => {
             return sum + (pallet[lote.id] || 0) * lote.precioSacoUSD;
         }, 0);
-    }, [pallet]);
+    }, [pallet, lotesDisponibles]);
 
     const fleteUSD = useMemo(() => {
         // Flete consolidado base por pallet completo o parcial
@@ -108,7 +117,7 @@ export function SimuladorLogistico() {
                         </div>
 
                         <div className="space-y-4">
-                            {LOTES_DISPONIBLES.map((lote) => {
+                            {lotesDisponibles.map((lote) => {
                                 const cantidad = pallet[lote.id] || 0;
                                 return (
                                     <div key={lote.id} className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 flex items-center justify-between gap-4">

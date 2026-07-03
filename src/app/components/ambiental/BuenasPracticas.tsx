@@ -164,9 +164,29 @@ export function BuenasPracticas() {
                                     {activeTab === 'sombra' && "Evidencia: Sistemas Agroforestales"}
                                     {activeTab === 'agua' && "Evidencia: Tratamiento de Agua"}
                                 </h2>
-                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">
                                     Sube imágenes que demuestren las prácticas agronómicas en finca.
                                 </p>
+
+                                {activeTab === 'fertilizantes' && (
+                                    <div className="bg-emerald-50/50 p-6 rounded-[24px] border border-emerald-100/50 mb-6 text-left space-y-3">
+                                        <p className="text-[10px] font-black uppercase text-emerald-800 tracking-widest">Chequeo Técnico de Insumos (Auditoría Odisea)</p>
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-3 text-xs font-semibold text-[#4A5B4A] cursor-pointer">
+                                                <input type="checkbox" defaultChecked className="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
+                                                <span>Bodega de Insumos con ventilación adecuada y rotulación de seguridad</span>
+                                            </label>
+                                            <label className="flex items-center gap-3 text-xs font-semibold text-[#4A5B4A] cursor-pointer">
+                                                <input type="checkbox" defaultChecked className="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
+                                                <span>Práctica obligatoria de triple lavado para recipientes vacíos</span>
+                                            </label>
+                                            <label className="flex items-center gap-3 text-xs font-semibold text-[#4A5B4A] cursor-pointer">
+                                                <input type="checkbox" defaultChecked className="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
+                                                <span>Ausencia absoluta de quemas de rastrojos o suelos</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Dropzone Area */}

@@ -14,6 +14,7 @@ import {
     AlertCircle,
     ExternalLink,
     Landmark,
+    UploadCloud,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
@@ -82,6 +83,7 @@ export function DetalleValidacion() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [isSaving, setIsSaving] = useState(false);
+    const [isDraftSaving, setIsDraftSaving] = useState(false);
 
     // Validation states
     const [valNombre, setValNombre] = useState(true);
@@ -90,16 +92,101 @@ export function DetalleValidacion() {
     const [valArchivos, setValArchivos] = useState(true);
     const [gpsCapturado, setGpsCapturado] = useState(false);
 
+    // Tenure and JAC settings
+    const [tipoTenencia, setTipoTenencia] = useState<'escritura' | 'posesion' | 'cartaventa'>('escritura');
+    const [hasJacLetter, setHasJacLetter] = useState(true);
+
     const handleSave = () => {
         setIsSaving(true);
         setTimeout(() => {
             setIsSaving(false);
+            
+            const idMap: Record<string, string> = {
+                '1': 'LOT-HUILA-084',
+                '2': 'LOT-ANT-112',
+                '3': 'LOT-NAR-225'
+            };
+            const targetLoteId = idMap[id || '1'] || id || '1';
+            
+            let alistamientoStatus: 'Apto' | 'Subsanable' | 'No Apto' = 'Apto';
+            if (!valNombre || !valUbicacion) {
+                alistamientoStatus = 'No Apto';
+            } else if (!valCoordenadas || !valArchivos) {
+                alistamientoStatus = 'Subsanable';
+            }
+            
+            const rawMaster = localStorage.getItem('odisea_lotes_master');
+            if (rawMaster) {
+                try {
+                    const masterLotes = JSON.parse(rawMaster);
+                    const updatedMaster = masterLotes.map((ml: any) => {
+                        if (ml.id === targetLoteId) {
+                            return { 
+                                ...ml, 
+                                estadoJAC: alistamientoStatus,
+                                coordenadas: gpsCapturado ? '1.88452° N, 76.29712° W' : ml.coordenadas
+                            };
+                        }
+                        return ml;
+                    });
+                    localStorage.setItem('odisea_lotes_master', JSON.stringify(updatedMaster));
+                } catch(e) {}
+            }
+            
             toast.success('Validación guardada con éxito', {
                 description: 'La información del agricultor ha sido actualizada.',
                 style: { borderRadius: '24px', background: '#FDFDF8', padding: '20px' }
             });
             navigate('/lider/validaciones');
         }, 1500);
+    };
+
+    const handleSaveDraft = () => {
+        setIsDraftSaving(true);
+        setTimeout(() => {
+            setIsDraftSaving(false);
+            
+            const savedDrafts = localStorage.getItem('borradores_offline_lider');
+            let list = [];
+            if (savedDrafts) {
+                try {
+                    list = JSON.parse(savedDrafts);
+                } catch (e) {}
+            }
+            
+            let alistamientoStatus: 'Apto' | 'Subsanable' | 'No Apto' = 'Apto';
+            if (!valNombre || !valUbicacion) {
+                alistamientoStatus = 'No Apto';
+            } else if (!valCoordenadas || !valArchivos) {
+                alistamientoStatus = 'Subsanable';
+            }
+            
+            const idMap: Record<string, string> = {
+                '1': 'LOT-HUILA-084',
+                '2': 'LOT-ANT-112',
+                '3': 'LOT-NAR-225'
+            };
+            const targetLoteId = idMap[id || '1'] || id || '1';
+            
+            const newDraft = {
+                id: id || '1',
+                loteId: targetLoteId,
+                alistamiento: alistamientoStatus,
+                gpsCapturado
+            };
+            
+            // Remove previous draft for this id if exists
+            list = list.filter((item: any) => (typeof item === 'string' ? item !== id : item.id !== id));
+            list.push(newDraft);
+            
+            localStorage.setItem('borradores_offline_lider', JSON.stringify(list));
+
+            toast.success('Borrador offline guardado localmente', {
+                description: 'Los cambios han sido guardados en el almacenamiento local del celular.',
+                style: { borderRadius: '24px', background: '#FEF3C7', border: '1px solid #FDE68A', color: '#78350F' }
+            });
+            navigate('/lider/validaciones');
+        }, 1000);
     };
 
     const handleCaptureGps = () => {
@@ -185,9 +272,41 @@ export function DetalleValidacion() {
                     </ValidationItem>
 
                     <ValidationItem label="Tipo de Tenencia" status={valUbicacion} onToggle={setValUbicacion}>
-                        <div className="flex flex-col">
-                            <span className="text-lg font-bold text-slate-600 leading-none">Propiedad Titulada (Escritura Pública)</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Folio de Matrícula: 210-48293</span>
+                        <div className="flex flex-col gap-3 w-full">
+                            <select 
+                                value={tipoTenencia} 
+                                onChange={(e) => setTipoTenencia(e.target.value as any)}
+                                className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            >
+                                <option value="escritura">Propiedad Titulada (Escritura Pública)</option>
+                                <option value="posesion">Posesión de Buena Fe (Endoso de JAC)</option>
+                                <option value="cartaventa">Carta-Venta Veredal / Compraventa Informal</option>
+                            </select>
+
+                            {tipoTenencia === 'escritura' && (
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Folio de Matrícula: 210-48293</span>
+                            )}
+
+                            {tipoTenencia !== 'escritura' && (
+                                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/50 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-amber-900 uppercase">¿Posee Carta de Aval JAC Firmada?</span>
+                                        <Switch 
+                                            checked={hasJacLetter} 
+                                            onCheckedChange={setHasJacLetter}
+                                            className="data-[state=checked]:bg-amber-600 scale-75"
+                                        />
+                                    </div>
+                                    <p className="text-[9px] text-amber-800/80 font-semibold leading-relaxed">
+                                        Para productores sin títulos formales, el aval de la Junta de Acción Comunal certifica posesión pacífica veredal de buena fe.
+                                    </p>
+                                    {hasJacLetter && (
+                                        <span className="text-[9px] font-black text-[#5D4037] uppercase flex items-center gap-1">
+                                            <FileText size={10} /> Adjunto: Carta_Aval_JAC.pdf
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </ValidationItem>
 
@@ -297,6 +416,19 @@ export function DetalleValidacion() {
                                         </div>
                                     ))}
                                 </div>
+                                <div className="pt-4">
+                                    <Button
+                                        variant="outline"
+                                        className="h-11 border-dashed border-[#1A365D]/30 bg-slate-50 hover:bg-[#1A365D]/5 text-[#1A365D] font-black text-[10px] uppercase tracking-widest rounded-xl w-full sm:w-auto gap-2"
+                                        onClick={() => {
+                                            toast.info("Iniciando escáner de cámara para digitalizar documento físico del productor...", {
+                                                description: "La metadata de georreferenciación y fecha de captura serán inyectadas en el PDF."
+                                            });
+                                        }}
+                                    >
+                                        <UploadCloud size={14} /> Cargar/Digitalizar Soporte en Campo
+                                    </Button>
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-4 bg-slate-50/80 p-1.5 rounded-full border border-slate-100 shadow-inner h-fit">
@@ -312,16 +444,25 @@ export function DetalleValidacion() {
                     </div>
 
                     {/* Final Action Button */}
-                    <div className="pt-8">
+                    <div className="pt-8 flex flex-col sm:flex-row gap-4">
                         <Button
-                            disabled={isSaving}
-                            onClick={handleSave}
-                            className="h-16 sm:h-20 w-full rounded-2xl sm:rounded-[32px] bg-[#1A365D] hover:bg-[#11243e] text-white font-black text-lg sm:text-xl shadow-2xl shadow-blue-900/40 transition-all active:scale-95 flex items-center justify-center gap-3 sm:gap-4"
+                            disabled={isSaving || isDraftSaving}
+                            onClick={handleSaveDraft}
+                            variant="secondary"
+                            className="h-16 sm:h-20 flex-1 rounded-2xl sm:rounded-[32px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-base shadow-sm border border-slate-200 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
-                            <Save size={20} className="shrink-0 sm:h-6 sm:w-6" /> Guardar Validación Final
+                            <Save size={18} className="shrink-0" /> Guardar Borrador (Offline)
                         </Button>
-                        <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6">Certifico que la información revisada es veraz y cumple la política de TraceCafé.</p>
+                        
+                        <Button
+                            disabled={isSaving || isDraftSaving}
+                            onClick={handleSave}
+                            className="h-16 sm:h-20 flex-[2] rounded-2xl sm:rounded-[32px] bg-[#1A365D] hover:bg-[#11243e] text-white font-black text-base sm:text-lg shadow-2xl shadow-blue-900/40 transition-all active:scale-95 flex items-center justify-center gap-3"
+                        >
+                            <CheckCircle2 size={18} className="shrink-0" /> Enviar Validación Final
+                        </Button>
                     </div>
+                    <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6">Certifico que la información revisada es veraz y cumple la política de TraceCafé.</p>
                 </div>
             </div>
         </div>

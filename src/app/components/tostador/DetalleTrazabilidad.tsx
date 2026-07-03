@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
     ChevronLeft,
@@ -92,9 +93,103 @@ const MOCK_TRAZABILIDAD = [
     }
 ];
 
+import { getLotesMaster } from '../../utils/loteStore';
+
 export function DetalleTrazabilidadRoaster() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const [lote, setLote] = useState<any>(null);
+
+    useEffect(() => {
+        const master = getLotesMaster();
+        const found = master.find(l => l.id === id);
+        if (found) {
+            setLote(found);
+        } else {
+            // fallback a buscar por el ID de prueba pre-cargado
+            const fallback = master.find(l => l.id === 'LOT-HUILA-084');
+            setLote(fallback);
+        }
+    }, [id]);
+
+    const variedad = lote?.variedad || 'Bourbon Rosado';
+    const proceso = lote?.proceso || 'Lavado Especial';
+    const codigoLote = lote?.id || id || 'LOT-HUILA-084';
+    const factor = lote?.factorRendimiento || '90.5';
+
+    const dynamicTrazabilidad = [
+        {
+            id: 'orig',
+            titulo: 'Capítulo 1: El Origen',
+            resumen: 'Cultivado en las altas montañas del Huila por una familia caficultora integrada a Odisea Trace.',
+            calificacion: 4.8,
+            confiabilidad: 'Alta' as const,
+            quepaso: [
+                'Geolocalización del predio verificada',
+                'Plan de manejo ambiental aprobado',
+                'Cero deforestación reportada (EUDR)',
+            ],
+            evidencias: [
+                { id: 'ev1', tipo: 'Geo' as const, nombre: 'Coordenadas del Lote', estado: 'Verificado' as const },
+                { id: 'ev2', tipo: 'Certificado' as const, nombre: 'Cumplimiento EUDR', estado: 'Verificado' as const },
+            ],
+            datosClaves: [
+                { label: 'Finca', valor: lote?.finca || 'La Esperanza' },
+                { label: 'Altura', valor: '1.750 msnm' },
+                { label: 'Región', valor: 'San Agustín, Huila' },
+                { label: 'Ecosistema', valor: 'Socio Odisea Trace' },
+            ],
+            tags: ['Orgánico', 'Direct Trade', 'Biodiversidad'],
+        },
+        {
+            id: 'proc',
+            titulo: 'Capítulo 2: El Proceso',
+            resumen: 'De la cereza al pergamino seco: Beneficio controlado para resaltar notas frutales.',
+            calificacion: 5.0,
+            confiabilidad: 'Alta' as const,
+            quepaso: [
+                'Cosecha manual selectiva',
+                'Fermentación anaeróbica 48h',
+                'Secado lento en marquesina',
+            ],
+            evidencias: [
+                { id: 'ev3', tipo: 'Foto' as const, nombre: 'Grado de madurez (Brix)', estado: 'Verificado' as const },
+                { id: 'ev4', tipo: 'Registro' as const, nombre: 'Bitácora de Secado', estado: 'Verificado' as const },
+            ],
+            datosClaves: [
+                { label: 'Variedad', valor: variedad },
+                { label: 'Proceso', valor: proceso },
+                { label: 'Factor Rendimiento', valor: factor.toString() },
+                { label: 'Lote ID', valor: codigoLote },
+            ],
+            tags: ['Especialidad', 'Micro-lote'],
+        },
+        {
+            id: 'logi',
+            titulo: 'Capítulo 3: Logística & Exportación',
+            resumen: 'Control de frescura desde la bodega hasta el puerto de embarque.',
+            calificacion: 4.5,
+            confiabilidad: 'Alta' as const,
+            quepaso: lote?.historialMovimientos && lote.historialMovimientos.length > 0
+                ? lote.historialMovimientos.map((m: any) => `${m.fecha} - ${m.estado}: ${m.descripcion} (${m.ubicacion})`)
+                : [
+                    'Humedad de recibo controlada (11.2%)',
+                    'Logística Odisea sincronizada',
+                    'Embarcado en Puerto marítimo',
+                ],
+            evidencias: [
+                { id: 'ev5', tipo: 'PDF' as const, nombre: 'Bill of Lading (B/L)', estado: 'Verificado' as const },
+                { id: 'ev6', tipo: 'Foto' as const, nombre: 'Certificado de Pesaje', estado: 'Verificado' as const },
+            ],
+            datosClaves: [
+                { label: 'Ingreso Bodega', valor: lote?.historialMovimientos?.[0]?.fecha || '20 Mayo 2026' },
+                { label: 'Destinos Habilitados', valor: lote?.regionesDisponibles?.join(', ') || 'USA, EU' },
+                { label: 'Trazabilidad', valor: 'Odisea Hub' },
+                { label: 'Estado Logístico', valor: lote?.estado || 'En Bodega' },
+            ],
+            tags: ['Logística Segura', 'Ready for Export'],
+        }
+    ];
 
     // Estructura transparente solicitada:
     // Precio Final de Ejemplo: $14.50 USD/Kg
@@ -277,7 +372,7 @@ export function DetalleTrazabilidadRoaster() {
                 {/* Visual Line */}
                 <div className="absolute left-1/2 -translate-x-1/2 top-10 bottom-10 w-px bg-gradient-to-b from-transparent via-[#bb8d3b]/40 to-transparent hidden lg:block" />
 
-                {MOCK_TRAZABILIDAD.map((cap, i) => (
+                {dynamicTrazabilidad.map((cap, i) => (
                     <div key={cap.id} className={cn("relative z-10", i % 2 !== 0 ? "lg:flex lg:justify-end" : "")}>
                         <div className="lg:w-[95%]">
                             <CapituloTrazabilidad

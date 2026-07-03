@@ -107,11 +107,10 @@ export function TopBar({ activeItem }: TopBarProps) {
                         onClick={() => {
                           if (user.role === 'AGRICULTOR') navigate('/producer/dashboard');
                           else if (user.role === 'COMMUNITY_LEADER') navigate('/lider/validaciones');
-                          else if (user.role === 'ENV_VERIFIER') navigate('/ambiental/revisiones');
+                          else if (user.role === 'ENV_VERIFIER') navigate('/odisea/ambiental/revisiones');
                           else if (user.role === 'TASTER') navigate('/catador/muestras');
-                          else if (user.role === 'CERES') navigate('/ceres/lotes');
+                          else if (user.role === 'CERES') navigate('/odisea/lotes');
                           else if (user.role === 'ROASTER') navigate('/tostador/explorar');
-                          else if (user.role === 'FINAL_CLIENT') navigate('/trazabilidad/publica/084');
                           else navigate('/');
                         }}
                         className="flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full border border-[#5f705f]/20 hover:border-[#5f705f]/50 hover:bg-[#5f705f]/5 transition-all cursor-pointer"

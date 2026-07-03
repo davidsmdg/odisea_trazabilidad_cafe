@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router';
 import { motion } from 'motion/react';
 import { TopBar } from '../components/TopBar';
 import { BreadcrumbNav } from '../components/BreadcrumbNav';
@@ -136,10 +137,50 @@ const capituloCata = {
 };
 
 export function TrazabilidadLote() {
+  const { loteId } = useParams();
+  const [dynamicLote, setDynamicLote] = useState<any>(null);
   const [activeStep, setActiveStep] = useState('finca');
   const [selectedEslabon, setSelectedEslabon] = useState<any>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showActionBar, setShowActionBar] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('lotes_produccion');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const found = parsed.find((l: any) => l.id === loteId || l.codigo === loteId);
+        if (found) {
+          setDynamicLote(found);
+        }
+      } catch (e) {}
+    }
+  }, [loteId]);
+
+  const currentLoteData = {
+    ...loteData,
+    titulo: dynamicLote ? `Lote ${dynamicLote.codigo}` : loteData.titulo,
+    finca: dynamicLote ? dynamicLote.finca : loteData.finca,
+    proceso: dynamicLote ? (dynamicLote.detallesObjetivo?.proceso || 'Lavado') : loteData.proceso,
+    variedad: dynamicLote ? (dynamicLote.detallesObjetivo?.variedad || 'Castillo') : loteData.variedad,
+    factorRendimiento: dynamicLote ? dynamicLote.factorRendimiento : 91.5
+  };
+
+  const dynamicCapitulos = capitulos.map(c => {
+    if (c.id === 'beneficio') {
+      // Check if Factor Rendimiento is already in datosClaves to avoid duplication
+      const hasFactor = c.datosClaves.some(d => d.label === 'Factor Rendimiento');
+      if (hasFactor) return c;
+      return {
+        ...c,
+        datosClaves: [
+          ...c.datosClaves,
+          { label: 'Factor Rendimiento', valor: currentLoteData.factorRendimiento ? currentLoteData.factorRendimiento.toString() : '91.5' }
+        ]
+      };
+    }
+    return c;
+  });
 
   // Scroll tracking para progress bar y action bar
   useEffect(() => {
@@ -217,7 +258,7 @@ export function TrazabilidadLote() {
           items={['Explorar', 'Colombia', 'Huila', 'Banco de cafés', 'Lote HUI-ESP-042']}
         />
 
-        <HeroLote lote={loteData} />
+        <HeroLote lote={currentLoteData} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-8 space-y-12">
@@ -228,7 +269,7 @@ export function TrazabilidadLote() {
             <StepNavigator steps={steps} activeStep={activeStep} onStepClick={handleStepClick} />
 
             <div className="space-y-12 mt-12">
-              {capitulos.map((capitulo) => (
+              {dynamicCapitulos.map((capitulo) => (
                 <CapituloTrazabilidad
                   key={capitulo.id}
                   capitulo={capitulo}

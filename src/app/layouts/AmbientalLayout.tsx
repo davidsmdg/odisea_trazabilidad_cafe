@@ -53,7 +53,7 @@ export function AmbientalLayout() {
                 <Shield className="h-8 w-8 text-emerald-400 shrink-0" />
                 {(!collapsed || mobileMenuOpen) && (
                     <span className="text-xl font-sans font-black tracking-tight text-white leading-none">
-                        CERES<span className="text-emerald-400"> CROP</span>
+                        ODISEA <span className="text-emerald-400">COFFEE TRACE</span>
                     </span>
                 )}
             </div>
@@ -130,7 +130,7 @@ export function AmbientalLayout() {
                 </Button>
                 <div className="flex items-center gap-2">
                     <Shield className="h-6 w-6 text-[#4A5B4A]" />
-                    <span className="text-lg font-sans font-black text-[#4A5B4A]">ODISEA COFFEE</span>
+                    <span className="text-lg font-sans font-black text-[#4A5B4A]">ODISEA COFFEE TRACE</span>
                 </div>
             </header>
 
@@ -183,7 +183,7 @@ export function AmbientalLayout() {
                     <div className="flex items-center gap-3">
                         <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50" />
                         <h2 className="text-sm font-black uppercase tracking-[0.2em] text-gray-400">
-                            Monitor Ambiental <span className="text-emerald-900 mx-2 ml-4">Odisea Trace Hub</span>
+                            Monitor Ambiental <span className="text-emerald-900 mx-2 ml-4">Odisea Coffee Trace Hub</span>
                         </h2>
                     </div>
 

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from '../ui/button';
@@ -51,8 +52,39 @@ const MUESTRAS_MOCK = [
     },
 ];
 
+import { getLotesMaster, LoteUnificado } from '../../utils/loteStore';
+
 export function MuestrasPendientes() {
     const navigate = useNavigate();
+    const [muestras, setMuestras] = useState<any[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        const loaded = getLotesMaster();
+        // Muestras pendientes: lotes que no tengan calificación (o con calificacion <= 0)
+        const pendientes = loaded.filter(l => !(l.calificacion && l.calificacion > 0));
+        const items = pendientes.map(l => ({
+            id: l.id,
+            bache: 'Bache #1',
+            productor: l.productor,
+            finca: l.finca,
+            municipio: l.municipio,
+            variedad: l.variedad,
+            proceso: l.proceso,
+            fechaIngreso: l.fecha || 'Reciente',
+        }));
+        setMuestras(items);
+    }, []);
+
+    const muestrasFiltradas = muestras.filter(item => {
+        const term = searchTerm.toLowerCase();
+        return item.id.toLowerCase().includes(term) ||
+               item.productor.toLowerCase().includes(term) ||
+               item.finca.toLowerCase().includes(term) ||
+               item.municipio.toLowerCase().includes(term) ||
+               item.variedad.toLowerCase().includes(term) ||
+               item.proceso.toLowerCase().includes(term);
+    });
 
     return (
         <div className="space-y-12 max-w-[1100px] mx-auto animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-20 px-4">
@@ -68,8 +100,8 @@ export function MuestrasPendientes() {
             {/* 2. RESUMEN DEL LABORATORIO */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                    { label: 'En Espera', value: '18', icon: Beaker, color: 'bg-amber-50 text-amber-900 border-amber-100' },
-                    { label: 'En Proceso', value: '12', icon: Microscope, color: 'bg-blue-50 text-blue-900 border-blue-100' },
+                    { label: 'En Espera', value: muestrasFiltradas.length.toString(), icon: Beaker, color: 'bg-amber-50 text-amber-900 border-amber-100' },
+                    { label: 'En Proceso', value: '0', icon: Microscope, color: 'bg-blue-50 text-blue-900 border-blue-100' },
                     { label: 'Hoy Cerradas', value: '08', icon: ClipboardCheck, color: 'bg-emerald-50 text-emerald-900 border-emerald-100' },
                 ].map((stat, i) => (
                     <div key={i} className={cn("p-8 rounded-[40px] border flex items-center justify-between shadow-sm", stat.color)}>
@@ -91,6 +123,8 @@ export function MuestrasPendientes() {
                     <Input
                         placeholder="Buscar por lote o productor..."
                         className="h-16 pl-16 rounded-2xl border-none bg-[#FDFBF9] font-bold text-[#5D4037] placeholder:text-[#D7CCC8]"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
                 <Button className="h-16 rounded-2xl px-10 bg-[#5D4037] hover:bg-[#3E2723] text-white font-black uppercase text-xs tracking-widest gap-3 shadow-xl shadow-[#5D4037]/20">
@@ -100,7 +134,7 @@ export function MuestrasPendientes() {
 
             {/* 4. LISTA DE MUESTRAS (GRANDES BLOQUES) */}
             <div className="space-y-6">
-                {MUESTRAS_MOCK.map((item) => (
+                {muestrasFiltradas.map((item) => (
                     <motion.div
                         key={item.id}
                         whileHover={{ y: -4 }}

@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { cn } from '../components/ui/utils';
 import { Button } from '../components/ui/button';
+import { OnboardingTour, OnboardingTourTrigger } from '../components/OnboardingTour';
 
 interface NavItem {
     label: string;
@@ -62,7 +63,7 @@ export function TostadorLayout() {
                 {(!collapsed || mobileMenuOpen) && (
                     <div className="flex flex-col">
                         <span className="text-xl font-sans font-black tracking-tight text-white leading-none uppercase">
-                            ODISEA <span className="text-[#bb8d3b]">TRACE</span>
+                            ODISEA COFFEE <span className="text-[#bb8d3b]">TRACE</span>
                         </span>
                         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#bb8d3b] mt-1">Portal Tostador B2B</span>
                     </div>
@@ -138,7 +139,7 @@ export function TostadorLayout() {
                 </Button>
                 <div className="flex items-center gap-2">
                     <Coffee className="h-5 w-5 text-[#bb8d3b]" />
-                    <span className="text-base font-black tracking-tight">ODISEA TRACE</span>
+                    <span className="text-base font-black tracking-tight">ODISEA COFFEE TRACE</span>
                 </div>
             </header>
 
@@ -195,6 +196,7 @@ export function TostadorLayout() {
                     </div>
 
                     <div className="flex items-center gap-6">
+                        <OnboardingTourTrigger role="ROASTER" />
                         <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
                             <Avatar className="h-7 w-7">
                                 <AvatarFallback className="bg-[#5f705f] text-white font-black text-[10px]">
@@ -216,6 +218,7 @@ export function TostadorLayout() {
                 <main className="flex-1 p-6 md:p-10 overflow-y-auto">
                     <Outlet />
                 </main>
+                <OnboardingTour role="ROASTER" />
             </div>
         </div>
     );

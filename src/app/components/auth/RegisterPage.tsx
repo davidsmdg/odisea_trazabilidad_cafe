@@ -37,15 +37,6 @@ const ROLES: RoleCard[] = [
         borderColor: 'border-[#5a8f5b]',
     },
     {
-        role: 'ENV_VERIFIER',
-        icon: Leaf,
-        title: 'Verificador Ambiental',
-        description: 'Reviso planes de manejo y mapas.',
-        color: 'text-[#8b7355]',
-        bgColor: 'bg-[#8b7355]',
-        borderColor: 'border-[#8b7355]',
-    },
-    {
         role: 'TASTER',
         icon: Coffee,
         title: 'Catador',
@@ -58,7 +49,7 @@ const ROLES: RoleCard[] = [
         role: 'CERES',
         icon: Building,
         title: 'Odisea Trace',
-        description: 'Gestiono almacenamiento y exportación.',
+        description: 'Gestiono almacenamiento, exportación y auditoría ambiental.',
         color: 'text-[#4A5568]',
         bgColor: 'bg-[#4A5568]',
         borderColor: 'border-[#4A5568]',
@@ -71,15 +62,6 @@ const ROLES: RoleCard[] = [
         color: 'text-[#D97706]',
         bgColor: 'bg-[#D97706]',
         borderColor: 'border-[#D97706]',
-    },
-    {
-        role: 'FINAL_CLIENT',
-        icon: Star,
-        title: 'Cliente final',
-        description: 'Valoro el café que consumo.',
-        color: 'text-[#DC2626]',
-        bgColor: 'bg-[#DC2626]',
-        borderColor: 'border-[#DC2626]',
     },
 ];
 
@@ -135,15 +117,13 @@ export function RegisterPage() {
             } else if (selectedRole === 'COMMUNITY_LEADER') {
                 navigate('/lider/validaciones', { replace: true });
             } else if (selectedRole === 'ENV_VERIFIER') {
-                navigate('/ambiental/revisiones', { replace: true });
+                navigate('/odisea/ambiental/revisiones', { replace: true });
             } else if (selectedRole === 'TASTER') {
                 navigate('/catador/muestras', { replace: true });
             } else if (selectedRole === 'CERES') {
-                navigate('/ceres/lotes', { replace: true });
+                navigate('/odisea/lotes', { replace: true });
             } else if (selectedRole === 'ROASTER') { // Changed from 'ROAST_CLIENT' to 'ROASTER' based on ROLES array
                 navigate('/tostador/explorar', { replace: true });
-            } else if (selectedRole === 'FINAL_CLIENT') {
-                navigate('/trazabilidad/publica/084', { replace: true });
             } else {
                 navigate('/', { replace: true });
             }
@@ -155,7 +135,7 @@ export function RegisterPage() {
     };
 
     return (
-        <div className="max-w-3xl mx-auto w-full px-4 sm:px-0">
+        <div className={cn("mx-auto w-full px-4 sm:px-0 transition-all duration-500", step === 'role-select' ? "max-w-6xl" : "max-w-md")}>
             <AnimatePresence mode="wait">
                 {step === 'role-select' && (
                     <motion.div
@@ -166,7 +146,7 @@ export function RegisterPage() {
                         transition={{ duration: 0.3 }}
                     >
                         {/* Header */}
-                        <div className="text-center mb-10 relative flex flex-col items-center">
+                        <div className="text-center sm:text-left mb-8 relative">
                             {/* Option to return to Home */}
                             <Link
                                 to="/"
@@ -176,19 +156,21 @@ export function RegisterPage() {
                                 Volver al Inicio
                             </Link>
 
-                            <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-4 mt-2 sm:mt-0">
-                                Paso 1 de 2
-                            </span>
-                            <h1 className="text-3xl sm:text-4xl font-sans text-[#5f705f] font-bold leading-tight">
-                                ¿Cuál es tu rol en la<br />cadena de valor?
-                            </h1>
-                            <p className="mt-3 text-gray-500 text-sm">
-                                Elige el que mejor describe tu actividad principal.
-                            </p>
+                            <div className="mt-12 sm:mt-8">
+                                <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-4">
+                                    Paso 1 de 2
+                                </span>
+                                <h1 className="text-3xl sm:text-4xl font-sans text-[#5f705f] font-bold leading-tight">
+                                    ¿Cuál es tu rol en la cadena de valor?
+                                </h1>
+                                <p className="mt-3 text-gray-500 text-sm">
+                                    Elige el que mejor describe tu actividad principal.
+                                </p>
+                            </div>
                         </div>
 
                         {/* Role Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                             {ROLES.map((roleCard) => {
                                 const Icon = roleCard.icon;
                                 const isSelected = selectedRole === roleCard.role;

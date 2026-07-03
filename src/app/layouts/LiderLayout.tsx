@@ -12,11 +12,13 @@ import {
     ChevronLeft,
     ChevronRight,
     Home,
+    User,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { cn } from '../components/ui/utils';
 import { Button } from '../components/ui/button';
+import { OnboardingTour, OnboardingTourTrigger } from '../components/OnboardingTour';
 
 interface NavItem {
     label: string;
@@ -25,6 +27,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+    { label: 'Mi Perfil', path: '/lider/perfil', icon: User },
     { label: 'Panel de Validaciones', path: '/lider/validaciones', icon: CheckSquare },
     { label: 'Reportar Riesgo', path: '/lider/reportar', icon: Bell },
 ];
@@ -49,7 +52,7 @@ export function LiderLayout() {
             <div className="flex items-center gap-3 px-6 py-8 border-b border-white/10">
                 <Coffee className="h-8 w-8 text-white shrink-0" />
                 {(!collapsed || mobileMenuOpen) && (
-                    <span className="text-2xl font-sans font-bold tracking-tight text-blue-100">Odisea Trace</span>
+                    <span className="text-2xl font-sans font-bold tracking-tight text-blue-100">Odisea Coffee Trace</span>
                 )}
             </div>
 
@@ -122,7 +125,7 @@ export function LiderLayout() {
                 </Button>
                 <div className="flex items-center gap-2">
                     <Coffee className="h-6 w-6 text-[#1A365D]" />
-                    <span className="text-xl font-sans font-bold text-[#1A365D]">Odisea Trace</span>
+                    <span className="text-xl font-sans font-bold text-[#1A365D]">Odisea Coffee Trace</span>
                 </div>
             </header>
 
@@ -182,6 +185,7 @@ export function LiderLayout() {
                     </div>
 
                     <div className="flex items-center gap-6">
+                        <OnboardingTourTrigger role="COMMUNITY_LEADER" />
                         <div className="relative">
                             <Button variant="ghost" size="icon" className="rounded-full text-slate-500 hover:bg-slate-100 relative">
                                 <Bell size={20} />
@@ -205,6 +209,7 @@ export function LiderLayout() {
                 <main className="flex-1 p-6 md:p-10">
                     <Outlet />
                 </main>
+                <OnboardingTour role="COMMUNITY_LEADER" />
             </div>
         </div>
     );

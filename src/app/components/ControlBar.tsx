@@ -48,8 +48,26 @@ export function ControlBar({ onAgruparChange, onOrdenarChange, onFiltroChange }:
   const [notasSeleccionadas, setNotasSeleccionadas] = useState<string[]>([]);
 
   const opcionesAgrupar: AgruparPor[] = ['Departamento', 'Municipio'];
-  const procesos = ['Lavado', 'Honey', 'Natural'];
-  const notas = ['Especiado', 'Floral', 'Frutal', 'Colombia'];
+  const procesos = [
+    'Lavado',
+    'Natural',
+    'Honey',
+    'Fermentación anaeróbica',
+    'Fermentación carbónica',
+    'Fermentación con levadura',
+    'Cofermentación'
+  ];
+  const notas = [
+    'Floral',
+    'Frutal bayas',
+    'Frutal cítrico',
+    'Vinoso',
+    'Nueces',
+    'Cacao',
+    'Especiado',
+    'Dulce Vainilla',
+    'Dulce Azúcar morena'
+  ];
 
   const handleAgruparClick = (opcion: AgruparPor) => {
     setAgruparSeleccionado(opcion);
@@ -147,14 +165,14 @@ export function ControlBar({ onAgruparChange, onOrdenarChange, onFiltroChange }:
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-4">
               <span className="text-[10px] font-black uppercase text-gray-400 w-16">Proceso</span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 max-w-md">
                 {procesos.map((proceso) => (
                   <Badge
                     key={proceso}
                     variant={procesosSeleccionados.includes(proceso) ? 'default' : 'outline'}
                     className={cn(
                       "cursor-pointer select-none text-[11px] px-3 py-1.5 rounded-lg transition-all",
-                      procesosSeleccionados.includes(proceso) ? "bg-[#bb8d3b]" : "hover:border-[#bb8d3b]/30"
+                      procesosSeleccionados.includes(proceso) ? "bg-[#bb8d3b] text-white" : "hover:border-[#bb8d3b]/30"
                     )}
                     onClick={() => toggleProceso(proceso)}
                   >
@@ -166,44 +184,19 @@ export function ControlBar({ onAgruparChange, onOrdenarChange, onFiltroChange }:
 
             <div className="flex flex-wrap items-center gap-4">
               <span className="text-[10px] font-black uppercase text-gray-400 w-16">Macroperfil</span>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 max-w-lg">
                 {notas.map((nota) => (
                   <motion.div key={nota} whileTap={{ scale: 0.98 }}>
-                    {nota === 'Colombia' ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge
-                              variant={notasSeleccionadas.includes(nota) ? 'default' : 'outline'}
-                              className={cn(
-                                "cursor-pointer select-none text-[11px] px-3 py-1.5 rounded-lg",
-                                notasSeleccionadas.includes(nota) ? "bg-[#e3d5b8] text-[#5f705f]" : "hover:border-[#e3d5b8]/30"
-                              )}
-                              onClick={() => toggleNota(nota)}
-                            >
-                              {nota}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs p-4 bg-white border-[#5f705f]/20 shadow-xl">
-                            <p className="font-bold text-[#5f705f] mb-1">Perfil Colombia</p>
-                            <p className="text-xs text-gray-500 leading-relaxed">
-                              Chocolate, cítrico, panela. Acidez baja, cuerpo medio bajo, posgusto ligero.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
-                      <Badge
-                        variant={notasSeleccionadas.includes(nota) ? 'default' : 'outline'}
-                        className={cn(
-                          "cursor-pointer select-none text-[11px] px-3 py-1.5 rounded-lg",
-                          notasSeleccionadas.includes(nota) ? "bg-[#8a9a8a]" : "hover:border-[#8a9a8a]/30"
-                        )}
-                        onClick={() => toggleNota(nota)}
-                      >
-                        {nota}
-                      </Badge>
-                    )}
+                    <Badge
+                      variant={notasSeleccionadas.includes(nota) ? 'default' : 'outline'}
+                      className={cn(
+                        "cursor-pointer select-none text-[11px] px-3 py-1.5 rounded-lg",
+                        notasSeleccionadas.includes(nota) ? "bg-[#8a9a8a] text-white" : "hover:border-[#8a9a8a]/30"
+                      )}
+                      onClick={() => toggleNota(nota)}
+                    >
+                      {nota}
+                    </Badge>
                   </motion.div>
                 ))}
               </div>

@@ -1,38 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { PackageCheck, Truck, FlaskConical, FileText } from 'lucide-react';
 import { Button } from '../ui/button';
+import { getLotesMaster, isLotePublicado } from '../../utils/loteStore';
 
 export function MisLotesTostador() {
     const navigate = useNavigate();
-    const [lotesComprados] = useState(() => [
-        {
-            id: 'LOT-HUILA-084',
-            codigo: 'LOT-HUILA-084',
-            finca: 'Finca La Esperanza',
-            origen: 'San Agustín, Huila',
-            variedad: 'Bourbon Rosado',
-            proceso: 'Lavado Especial',
-            volumen: '250 Kg Verde',
-            estado: 'En Tránsito a Bodega',
-            fechaReserva: '2026-05-10',
-            eta: '2026-05-25',
-            contrato: 'CTR-2026-8891'
-        },
-        {
-            id: 'LOT-ANT-112',
-            codigo: 'LOT-ANT-112',
-            finca: 'Manantial de Agua',
-            origen: 'Acevedo, Antioquia',
-            variedad: 'Geisha',
-            proceso: 'Honey Amarillo',
-            volumen: '120 Kg Verde',
-            estado: 'Muestra Recibida',
-            fechaReserva: '2026-04-28',
-            eta: 'Entregado',
-            contrato: 'CTR-2026-7432'
+    const [lotesComprados, setLotesComprados] = useState<any[]>([]);
+
+    useEffect(() => {
+        const master = getLotesMaster();
+        
+        // Cargar enlaces activos
+        const rawLinks = localStorage.getItem('links_tostador');
+        let links: any[] = [];
+        if (rawLinks) {
+            try { links = JSON.parse(rawLinks); } catch (e) {}
+        } else {
+            links = [
+                { id: '1', loteId: 'LOT-HUILA-084', tostador: 'Blue Bottle Coffee (USA)' },
+                { id: '2', loteId: 'LOT-ANT-112', tostador: 'Workshop Coffee (UK)' }
+            ];
         }
-    ]);
+
+        // Filtrar lotes master que están asociados en los vínculos de tostadores y publicados
+        const linkedLotes = master.filter(l => links.some(link => link.loteId === l.id) && isLotePublicado(l.id));
+        
+        // Mapear al esquema de visualización
+        const items = linkedLotes.map(l => {
+            const linkObj = links.find(link => link.loteId === l.id);
+            return {
+                id: l.id,
+                codigo: l.id,
+                finca: l.finca,
+                origen: l.municipio,
+                variedad: l.variedad,
+                proceso: l.proceso,
+                volumen: `${l.pesos?.verde || 250} Kg Verde`,
+                estado: l.estado === 'Listo Exportación' ? 'Listo Puerto / Exportación' : (l.estado === 'En Bodega' ? 'Recibido en Bodega' : 'En Finca (Origen)'),
+                fechaReserva: l.fecha || '2026-05-10',
+                eta: l.estado === 'Listo Exportación' ? 'Entregado en Puerto' : 'En Tránsito',
+                contrato: `CTR-2026-${l.id.split('-').pop() || '8841'}`
+            };
+        });
+        setLotesComprados(items);
+    }, []);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-20 max-w-[1200px] mx-auto">

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'motion/react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
     MapPin,
     Plus,
@@ -16,7 +16,9 @@ import {
     Leaf,
     Droplets,
     Sprout,
-    Navigation
+    Navigation,
+    FileText,
+    Settings
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -34,6 +36,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
+import { validateBounds, calculatePolygonArea, checkPolygonOverlap } from '../../utils/geoValidator';
 
 interface LoteCafe {
     id: string;
@@ -42,6 +45,13 @@ interface LoteCafe {
     variedades: string[];
     coordenadaCentral: string; // Un solo punto
     estadoEUDR: 'Verificado' | 'En revisión' | 'Pendiente';
+    poligonoCoordenadas?: [number, number][];
+    poligonoMetodo?: 'GPS' | 'Dibujo Manual' | 'Importado';
+    poligonoFechaCaptura?: string;
+    poligonoPrecision?: string;
+    poligonoAreaCalculada?: number;
+    overlapWarning?: string;
+    areaWarning?: string;
 }
 
 interface Finca {
@@ -124,10 +134,20 @@ const INITIAL_FINCAS: Finca[] = [
             {
                 id: 'p1',
                 nombre: 'Lote El Mirador',
-                area: '2.5',
+                area: '4.92',
                 variedades: ['Caturra'],
                 coordenadaCentral: 'Lat: 1.884, Long: -76.297',
-                estadoEUDR: 'Verificado'
+                estadoEUDR: 'Verificado',
+                poligonoCoordenadas: [
+                    [1.884, -76.297],
+                    [1.886, -76.297],
+                    [1.886, -76.295],
+                    [1.884, -76.295]
+                ],
+                poligonoMetodo: 'GPS',
+                poligonoFechaCaptura: '2026-05-12',
+                poligonoPrecision: '+/- 2.1 metros',
+                poligonoAreaCalculada: 4.92
             },
             {
                 id: 'p2',
@@ -149,6 +169,23 @@ export function MisFincas() {
     const [editingFincaId, setEditingFincaId] = useState<string | null>(null);
     const [editingLoteId, setEditingLoteId] = useState<string | null>(null);
 
+    // Persistencia y carga local
+    useEffect(() => {
+        const saved = localStorage.getItem('odisea_fincas');
+        if (saved) {
+            try {
+                setFincas(JSON.parse(saved));
+            } catch (e) {}
+        } else {
+            localStorage.setItem('odisea_fincas', JSON.stringify(INITIAL_FINCAS));
+        }
+    }, []);
+
+    const updateFincasState = (newFincas: Finca[]) => {
+        setFincas(newFincas);
+        localStorage.setItem('odisea_fincas', JSON.stringify(newFincas));
+    };
+
     // Finca Form State
     const [fincaNombre, setFincaNombre] = useState('');
     const [fincaDepartamento, setFincaDepartamento] = useState('');
@@ -164,6 +201,147 @@ export function MisFincas() {
     const [currentVariedad, setCurrentVariedad] = useState('');
     const [coordenadas, setCoordenadas] = useState('');
     const [autodeclaracionAmbiental, setAutodeclaracionAmbiental] = useState(false);
+
+    // Geo-validation states & configurations
+    const [isConfigOpen, setIsConfigOpen] = useState(false);
+    const [maxAreas, setMaxAreas] = useState<Record<string, number>>({
+        'Antioquia': 8.0,
+        'Huila': 12.0,
+        'Cauca': 5.0,
+        'Tolima': 10.0,
+        'Caldas': 7.0
+    });
+
+    const handleMaxAreaChange = (dep: string, val: number) => {
+        setMaxAreas(prev => ({ ...prev, [dep]: val || 1 }));
+    };
+
+    const [loteTab, setLoteTab] = useState<'punto' | 'poligono'>('punto');
+    const [polygonCoordinates, setPolygonCoordinates] = useState<[number, number][]>([]);
+    const [polygonMetodo, setPolygonMetodo] = useState<'GPS' | 'Dibujo Manual' | 'Importado'>('GPS');
+    const [polygonPrecision, setPolygonPrecision] = useState('+/- 2.5 metros');
+    const [polygonAreaCalculada, setPolygonAreaCalculada] = useState(0);
+    const [polygonFechaCaptura, setPolygonFechaCaptura] = useState('');
+
+    const [validationErrorMsg, setValidationErrorMsg] = useState<string | null>(null);
+    const [validationWarningMsg, setValidationWarningMsg] = useState<string | null>(null);
+    const [validationOverlapWarning, setValidationOverlapWarning] = useState<string | null>(null);
+
+    const PRESET_POLYGONS = {
+        'EsperanzaNormal': {
+            name: 'Polígono Finca La Esperanza (Huila, Válida)',
+            coordenadas: [
+                [1.884, -76.297] as [number, number],
+                [1.886, -76.297] as [number, number],
+                [1.886, -76.295] as [number, number],
+                [1.884, -76.295] as [number, number]
+            ],
+            areaCalculada: 4.92,
+            precision: '+/- 2.1 metros',
+            metodo: 'GPS' as const
+        },
+        'DiamanteGrande': {
+            name: 'Polígono Lote El Diamante (Huila, Excede 12 Ha)',
+            coordenadas: [
+                [1.890, -76.310] as [number, number],
+                [1.895, -76.310] as [number, number],
+                [1.895, -76.300] as [number, number],
+                [1.890, -76.300] as [number, number]
+            ],
+            areaCalculada: 12.28,
+            precision: '+/- 3.5 metros',
+            metodo: 'Importado' as const
+        },
+        'SolapadoMirador': {
+            name: 'Polígono Lote Solapado (Huila, Conflicto)',
+            coordenadas: [
+                [1.884, -76.297] as [number, number],
+                [1.886, -76.297] as [number, number],
+                [1.886, -76.295] as [number, number],
+                [1.884, -76.295] as [number, number]
+            ],
+            areaCalculada: 4.92,
+            precision: '+/- 1.5 metros',
+            metodo: 'Dibujo Manual' as const
+        },
+        'FueraHuila': {
+            name: 'Polígono Popayán (Fuera de límites - Cauca)',
+            coordenadas: [
+                [2.441, -76.606] as [number, number],
+                [2.443, -76.606] as [number, number],
+                [2.443, -76.604] as [number, number],
+                [2.441, -76.604] as [number, number]
+            ],
+            areaCalculada: 4.91,
+            precision: '+/- 4.0 metros',
+            metodo: 'Importado' as const
+        }
+    };
+
+    const runGeoValidation = (coords: [number, number][], metodo: typeof polygonMetodo, precision: string, area: number) => {
+        const currentFinca = fincas.find(f => f.id === selectedFincaId);
+        if (!currentFinca) return;
+        
+        // 1. Plausibilidad
+        const boundsValid = validateBounds(currentFinca.departamento, coords);
+        if (!boundsValid) {
+            setValidationErrorMsg(`Error de Plausibilidad Geográfica: Las coordenadas ingresadas no corresponden a los límites de ${currentFinca.departamento}.`);
+            setValidationWarningMsg(null);
+            setValidationOverlapWarning(null);
+            return;
+        } else {
+            setValidationErrorMsg(null);
+        }
+        
+        // 2. Área Máxima
+        const limit = maxAreas[currentFinca.departamento] || 10.0;
+        if (area > limit) {
+            setValidationWarningMsg(`Alerta de Área Excesiva: La superficie calculada (${area} Ha) excede el umbral límite configurado para ${currentFinca.departamento} (${limit} Ha).`);
+        } else {
+            setValidationWarningMsg(null);
+        }
+        
+        // 3. Solapamiento (Overlap)
+        let overlapFound = false;
+        let overlappedLoteName = '';
+        
+        for (const f of fincas) {
+            for (const l of f.lotesDeCafe) {
+                if (editingLoteId && l.id === editingLoteId) continue;
+                
+                if (l.poligonoCoordenadas && l.poligonoCoordenadas.length > 0) {
+                    const overlap = checkPolygonOverlap(coords, l.poligonoCoordenadas);
+                    if (overlap) {
+                        overlapFound = true;
+                        overlappedLoteName = `${f.nombre} - ${l.nombre}`;
+                        break;
+                    }
+                }
+            }
+            if (overlapFound) break;
+        }
+        
+        if (overlapFound) {
+            setValidationOverlapWarning(`Alerta de Conflicto Territorial: Se detectó solapamiento espacial con el lote "${overlappedLoteName}".`);
+        } else {
+            setValidationOverlapWarning(null);
+        }
+    };
+
+    const handleSelectPreset = (presetKey: string) => {
+        if (!presetKey) return;
+        const preset = PRESET_POLYGONS[presetKey as keyof typeof PRESET_POLYGONS];
+        if (!preset) return;
+        
+        setPolygonCoordinates(preset.coordenadas);
+        setPolygonMetodo(preset.metodo);
+        setPolygonPrecision(preset.precision);
+        setPolygonAreaCalculada(preset.areaCalculada);
+        setPolygonFechaCaptura(new Date().toLocaleDateString('es-CO'));
+        
+        runGeoValidation(preset.coordenadas, preset.metodo, preset.precision, preset.areaCalculada);
+        toast.info(`Polígono de prueba cargado: ${preset.name}`);
+    };
 
     const openAddFinca = () => {
         setEditingFincaId(null);
@@ -195,6 +373,17 @@ export function MisFincas() {
         setLoteVariedades([]);
         setCoordenadas('');
         setAutodeclaracionAmbiental(false);
+        
+        setLoteTab('punto');
+        setPolygonCoordinates([]);
+        setPolygonMetodo('GPS');
+        setPolygonPrecision('+/- 2.5 metros');
+        setPolygonAreaCalculada(0);
+        setPolygonFechaCaptura('');
+        setValidationErrorMsg(null);
+        setValidationWarningMsg(null);
+        setValidationOverlapWarning(null);
+
         setIsLoteDialogOpen(true);
     };
 
@@ -205,6 +394,35 @@ export function MisFincas() {
         setLoteArea(lote.area);
         setLoteVariedades(lote.variedades);
         setCoordenadas(lote.coordenadaCentral);
+
+        if (lote.poligonoCoordenadas) {
+            setLoteTab('poligono');
+            setPolygonCoordinates(lote.poligonoCoordenadas);
+            setPolygonMetodo(lote.poligonoMetodo || 'GPS');
+            setPolygonPrecision(lote.poligonoPrecision || '+/- 2.5 metros');
+            setPolygonAreaCalculada(lote.poligonoAreaCalculada || 0);
+            setPolygonFechaCaptura(lote.poligonoFechaCaptura || '');
+            
+            setTimeout(() => {
+                runGeoValidation(
+                    lote.poligonoCoordenadas || [], 
+                    lote.poligonoMetodo || 'GPS', 
+                    lote.poligonoPrecision || '+/- 2.5 metros', 
+                    lote.poligonoAreaCalculada || 0
+                );
+            }, 50);
+        } else {
+            setLoteTab('punto');
+            setPolygonCoordinates([]);
+            setPolygonMetodo('GPS');
+            setPolygonPrecision('+/- 2.5 metros');
+            setPolygonAreaCalculada(0);
+            setPolygonFechaCaptura('');
+            setValidationErrorMsg(null);
+            setValidationWarningMsg(null);
+            setValidationOverlapWarning(null);
+        }
+
         setIsLoteDialogOpen(true);
     };
 
@@ -224,7 +442,7 @@ export function MisFincas() {
         };
 
         if (editingFincaId) {
-            setFincas(fincas.map(f => f.id === editingFincaId ? { ...f, ...fincaData } as Finca : f));
+            updateFincasState(fincas.map(f => f.id === editingFincaId ? { ...f, ...fincaData } as Finca : f));
             toast.success('Finca actualizada');
         } else {
             const newFinca: Finca = {
@@ -232,28 +450,46 @@ export function MisFincas() {
                 lotesDeCafe: [],
                 ...fincaData,
             } as Finca;
-            setFincas([...fincas, newFinca]);
+            updateFincasState([...fincas, newFinca]);
             toast.success('Finca registrada con éxito');
         }
         setIsFincaDialogOpen(false);
     };
 
     const handleSaveLote = () => {
-        if (!loteNombre || !loteArea) {
+        if (!loteNombre || (!loteArea && loteTab === 'punto')) {
             toast.error('Completa el nombre y área del lote de café');
             return;
+        }
+
+        if (loteTab === 'poligono') {
+            if (polygonCoordinates.length === 0) {
+                toast.error('Por favor cargue un polígono georreferenciado');
+                return;
+            }
+            if (validationErrorMsg) {
+                toast.error('No se puede guardar el lote: Corrija los errores geoespaciales críticos.');
+                return;
+            }
         }
 
         const loteData: LoteCafe = {
             id: editingLoteId || Date.now().toString(),
             nombre: loteNombre,
-            area: loteArea,
+            area: loteTab === 'poligono' && polygonAreaCalculada ? polygonAreaCalculada.toString() : loteArea,
             variedades: loteVariedades,
-            coordenadaCentral: coordenadas,
-            estadoEUDR: coordenadas ? 'En revisión' : 'Pendiente',
+            coordenadaCentral: coordenadas || (polygonCoordinates.length > 0 ? `Lat: ${polygonCoordinates[0][0]}, Long: ${polygonCoordinates[0][1]}` : ''),
+            estadoEUDR: (coordenadas || polygonCoordinates.length > 0) ? 'En revisión' : 'Pendiente',
+            poligonoCoordenadas: loteTab === 'poligono' ? polygonCoordinates : undefined,
+            poligonoMetodo: loteTab === 'poligono' ? polygonMetodo : undefined,
+            poligonoFechaCaptura: loteTab === 'poligono' ? polygonFechaCaptura : undefined,
+            poligonoPrecision: loteTab === 'poligono' ? polygonPrecision : undefined,
+            poligonoAreaCalculada: loteTab === 'poligono' ? polygonAreaCalculada : undefined,
+            overlapWarning: loteTab === 'poligono' && validationOverlapWarning ? validationOverlapWarning : undefined,
+            areaWarning: loteTab === 'poligono' && validationWarningMsg ? validationWarningMsg : undefined
         };
 
-        setFincas(fincas.map(f => {
+        updateFincasState(fincas.map(f => {
             if (f.id === selectedFincaId) {
                 const newLotes = editingLoteId
                     ? f.lotesDeCafe.map(l => l.id === editingLoteId ? loteData : l)
@@ -305,12 +541,47 @@ export function MisFincas() {
     };
 
     return (
-        <div className="space-y-8 max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
+        <div className="space-y-8 max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24 text-left">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-4xl font-sans font-black text-gray-900 tracking-tight">Mis Fincas</h1>
                     <p className="text-gray-500 font-medium">Gestiona tus predios y lotes de café para exportación EUDR.</p>
                 </div>
+            </div>
+
+            {/* Panel de Configuración de Umbrales de Área */}
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
+                <button
+                    onClick={() => setIsConfigOpen(!isConfigOpen)}
+                    className="w-full flex items-center justify-between font-sans font-black text-xs text-gray-700 uppercase tracking-widest outline-none border-none bg-transparent cursor-pointer"
+                >
+                    <span className="flex items-center gap-2">
+                        <Settings className="text-[#5f705f]" size={18} />
+                        Configuración de Umbrales Territoriales (Área Máxima por Región)
+                    </span>
+                    <span className="text-[#5f705f] font-bold text-xs">{isConfigOpen ? 'Ocultar Configuración' : 'Ver Ajustes'}</span>
+                </button>
+                
+                {isConfigOpen && (
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-4 border-t border-gray-50 animate-in fade-in duration-300">
+                        {Object.keys(maxAreas).map((dep) => (
+                            <div key={dep} className="space-y-1.5 p-3.5 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">{dep}</label>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                    <input
+                                        type="number"
+                                        value={maxAreas[dep]}
+                                        onChange={(e) => handleMaxAreaChange(dep, Number(e.target.value))}
+                                        className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs font-black text-gray-800 outline-none text-center"
+                                        min={1}
+                                        max={100}
+                                    />
+                                    <span className="text-[10px] font-black text-gray-400 uppercase">Ha</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* List of Fincas */}
@@ -380,16 +651,38 @@ export function MisFincas() {
                                             <div className="space-y-3 mb-6">
                                                 <p className="text-sm font-bold text-gray-400 flex items-center gap-2">
                                                     <Mountain size={14} className="opacity-40" /> {lote.area} Hectáreas
+                                                    {lote.poligonoMetodo && (
+                                                        <span className="text-[8px] font-black uppercase tracking-widest bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                                                            {lote.poligonoMetodo}
+                                                        </span>
+                                                    )}
                                                 </p>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {lote.variedades.map(v => (
                                                         <span key={v} className="bg-gray-100 text-gray-400 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">{v}</span>
                                                     ))}
                                                 </div>
+
+                                                {/* Alertas geoespaciales en la tarjeta */}
+                                                {(lote.overlapWarning || lote.areaWarning) && (
+                                                    <div className="bg-amber-50 border border-amber-200/50 p-3 rounded-2xl space-y-1 mt-3 text-left">
+                                                        <p className="text-[9px] font-black text-amber-800 uppercase flex items-center gap-1">
+                                                            <AlertTriangle size={12} /> Alerta Territorial
+                                                        </p>
+                                                        {lote.overlapWarning && <p className="text-[9px] font-bold text-amber-700 leading-tight">• Solapamiento detectado</p>}
+                                                        {lote.areaWarning && <p className="text-[9px] font-bold text-amber-700 leading-tight">• Excede área regional</p>}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-[#5f705f] flex items-center gap-2">
-                                                    {lote.coordenadaCentral ? <><ShieldCheck size={14} /> GPS Registrado</> : <><Navigation size={14} /> GPS Pendiente</>}
+                                                    {lote.poligonoCoordenadas && lote.poligonoCoordenadas.length > 0 ? (
+                                                        <><ShieldCheck size={14} className="text-emerald-600" /> Polígono Validado</>
+                                                    ) : lote.coordenadaCentral ? (
+                                                        <><ShieldCheck size={14} /> GPS Registrado</>
+                                                    ) : (
+                                                        <><Navigation size={14} /> GPS Pendiente</>
+                                                    )}
                                                 </span>
                                                 <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
                                             </div>
@@ -548,6 +841,28 @@ export function MisFincas() {
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Documentos de Soporte de la Finca */}
+                            <div className="space-y-3 pt-4 border-t border-gray-100 text-left">
+                                <Label className="text-[10px] font-black uppercase tracking-wider block opacity-40">Documento de Soporte (Propiedad / Aval JAC / Contrato)</Label>
+                                <div 
+                                    onClick={() => {
+                                        toast.info("Simulando carga de documento de soporte...");
+                                    }}
+                                    className="border-2 border-dashed border-[#5f705f]/20 bg-emerald-50/10 hover:bg-emerald-50 hover:border-[#5f705f]/40 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all group"
+                                >
+                                    <UploadCloud size={24} className="text-[#5f705f] group-hover:scale-110 transition-transform" />
+                                    <div className="text-center">
+                                        <p className="text-xs font-black text-gray-700">Subir soporte PDF o Foto</p>
+                                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Escrituras, Cartas-Venta o Actas de la JAC</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                    <Badge className="bg-[#5f705f]/10 text-[#5f705f] border-none text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
+                                        <FileText size={10} /> Soporte_Tenencia_Finca.pdf
+                                    </Badge>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <DialogFooter className="p-8 border-t bg-gray-50">
@@ -569,20 +884,86 @@ export function MisFincas() {
                         </DialogHeader>
                     </div>
 
-                    <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto text-left">
+                        {/* Selector de modo de georreferenciación */}
+                        <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl">
+                            <button
+                                type="button"
+                                onClick={() => setLoteTab('punto')}
+                                className={cn(
+                                    "flex-1 py-3 text-center font-sans font-black text-[10px] uppercase tracking-wider rounded-xl border-none cursor-pointer transition-all",
+                                    loteTab === 'punto' ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 bg-transparent hover:text-gray-600"
+                                )}
+                            >
+                                Coordenada Única (Punto GPS)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLoteTab('poligono')}
+                                className={cn(
+                                    "flex-1 py-3 text-center font-sans font-black text-[10px] uppercase tracking-wider rounded-xl border-none cursor-pointer transition-all",
+                                    loteTab === 'poligono' ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 bg-transparent hover:text-gray-600"
+                                )}
+                            >
+                                Polígono Completo (Linderos EUDR)
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
                                 <div>
                                     <Label className="text-[10px] font-black uppercase mb-1 block opacity-40">Nombre del Lote</Label>
                                     <Input value={loteNombre} onChange={e => setLoteNombre(e.target.value)} className="h-12 rounded-xl" placeholder="Ej: Lote Oriental" />
                                 </div>
-                                <div>
-                                    <Label className="text-[10px] font-black uppercase mb-1 block opacity-40">Área Geográfica (Hectáreas)</Label>
-                                    <div className="relative">
-                                        <Input type="number" value={loteArea} onChange={e => setLoteArea(e.target.value)} className="h-12 rounded-xl pr-12" />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-30">Ha</span>
+                                
+                                {loteTab === 'punto' ? (
+                                    <div>
+                                        <Label className="text-[10px] font-black uppercase mb-1 block opacity-40">Área Declarada (Hectáreas)</Label>
+                                        <div className="relative">
+                                            <Input type="number" value={loteArea} onChange={e => setLoteArea(e.target.value)} className="h-12 rounded-xl pr-12" />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-30">Ha</span>
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {/* Presets Geoespaciales */}
+                                        <div>
+                                            <Label className="text-[10px] font-black uppercase mb-1 block opacity-40">Herramienta de Simulación: Polígono</Label>
+                                            <select
+                                                onChange={(e) => handleSelectPreset(e.target.value)}
+                                                className="w-full h-12 rounded-xl border border-gray-250 bg-gray-50 font-bold text-gray-700 outline-none px-4"
+                                            >
+                                                <option value="">Seleccione un escenario geoespacial...</option>
+                                                <option value="EsperanzaNormal">Escenario 1: Polígono Huila (4.92 Ha - Válido)</option>
+                                                <option value="DiamanteGrande">Escenario 2: Lote El Diamante (12.28 Ha - Excede Umbral)</option>
+                                                <option value="SolapadoMirador">Escenario 3: Lote Solapado (Conflicto territorial)</option>
+                                                <option value="FueraHuila">Escenario 4: Polígono Popayán (Fuera de límites)</option>
+                                            </select>
+                                        </div>
+
+                                        {polygonAreaCalculada > 0 && (
+                                            <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl space-y-2 text-xs">
+                                                <div className="flex justify-between">
+                                                    <span className="font-bold text-gray-400">Área Calculada:</span>
+                                                    <span className="font-black text-gray-900">{polygonAreaCalculada} Ha (Shoelace)</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="font-bold text-gray-400">Método de Captura:</span>
+                                                    <span className="font-black text-gray-900">{polygonMetodo}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="font-bold text-gray-400">Fecha Captura:</span>
+                                                    <span className="font-black text-gray-900">{polygonFechaCaptura}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="font-bold text-gray-400">Precisión Estimada:</span>
+                                                    <span className="font-black text-gray-900">{polygonPrecision}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-black uppercase opacity-40">Variedades Sembradas</Label>
                                     <div className="flex gap-2">
@@ -598,18 +979,95 @@ export function MisFincas() {
                             </div>
 
                             <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase opacity-40 block">Ubicación GPS (Punto Único)</Label>
-                                <div className="aspect-square bg-gray-100 rounded-3xl border-4 border-white shadow-xl overflow-hidden relative flex flex-col items-center justify-center p-6 text-center">
-                                    <Navigation size={48} className={coordenadas ? "text-[#5f705f] mb-4" : "text-gray-300 mb-4"} />
-                                    <Button
-                                        onClick={handleGetLocation}
-                                        className={cn("bg-emerald-600 text-white font-black rounded-xl gap-2 shadow-xl hover:bg-emerald-700 transition-all cursor-pointer h-12 w-full", coordenadas && "bg-[#5f705f]")}
-                                    >
-                                        <MapPin size={20} /> {coordenadas ? 'Actualizar Coordenada' : 'Capturar Mi Ubicación Actual'}
-                                    </Button>
-                                    {coordenadas && <p className="text-xs font-black text-[#5f705f] bg-white px-4 py-2 border border-[#5f705f]/20 rounded-xl mt-4 shadow-sm w-full">{coordenadas}</p>}
-                                    {!coordenadas && <p className="text-[10px] text-gray-400 mt-4 leading-tight">Opcionalmente párate en medio del lote y presiona capturar.</p>}
-                                </div>
+                                {loteTab === 'punto' ? (
+                                    <div className="space-y-4">
+                                        <Label className="text-[10px] font-black uppercase opacity-40 block">Ubicación GPS (Punto Único)</Label>
+                                        <div className="aspect-square bg-gray-100 rounded-3xl border-4 border-white shadow-xl overflow-hidden relative flex flex-col items-center justify-center p-6 text-center">
+                                            <Navigation size={48} className={coordenadas ? "text-[#5f705f] mb-4" : "text-gray-300 mb-4"} />
+                                            <Button
+                                                onClick={handleGetLocation}
+                                                className={cn("bg-emerald-600 text-white font-black rounded-xl gap-2 shadow-xl hover:bg-emerald-700 transition-all cursor-pointer h-12 w-full", coordenadas && "bg-[#5f705f]")}
+                                            >
+                                                <MapPin size={20} /> {coordenadas ? 'Actualizar Coordenada' : 'Capturar Mi Ubicación Actual'}
+                                            </Button>
+                                            {coordenadas && <p className="text-xs font-black text-[#5f705f] bg-white px-4 py-2 border border-[#5f705f]/20 rounded-xl mt-4 shadow-sm w-full">{coordenadas}</p>}
+                                            {!coordenadas && <p className="text-[10px] text-gray-400 mt-4 leading-tight">Opcionalmente párate en medio del lote y presiona capturar.</p>}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <Label className="text-[10px] font-black uppercase opacity-40 block">Simulador de Mapa Vectorial de Linderos</Label>
+                                        <div className="aspect-square bg-slate-900 rounded-[32px] border-4 border-white shadow-xl overflow-hidden relative flex flex-col items-center justify-center p-6 text-center">
+                                            {polygonCoordinates.length > 0 ? (
+                                                <div className="w-full h-full flex flex-col items-center justify-center relative">
+                                                    {/* SVG Representing the vector map */}
+                                                    <svg viewBox="0 0 100 100" className="w-48 h-48 drop-shadow-2xl">
+                                                        <polygon 
+                                                            points="20,20 80,20 80,80 20,80" 
+                                                            fill={validationErrorMsg ? "rgba(239, 68, 68, 0.2)" : (validationWarningMsg || validationOverlapWarning ? "rgba(245, 158, 11, 0.25)" : "rgba(16, 185, 129, 0.2)")}
+                                                            stroke={validationErrorMsg ? "#ef4444" : (validationWarningMsg || validationOverlapWarning ? "#f59e0b" : "#10b981")}
+                                                            strokeWidth="3"
+                                                            className={cn("transition-all", (validationWarningMsg || validationOverlapWarning) && "animate-pulse")}
+                                                        />
+                                                        {/* If overlap warning, draw a second overlapping block */}
+                                                        {validationOverlapWarning && (
+                                                            <polygon 
+                                                                points="10,35 60,35 60,85 10,85" 
+                                                                fill="rgba(239, 68, 68, 0.15)"
+                                                                stroke="#ef4444"
+                                                                strokeWidth="1.5"
+                                                                strokeDasharray="2"
+                                                            />
+                                                        )}
+                                                    </svg>
+                                                    
+                                                    {/* Render overlay details */}
+                                                    <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-md rounded-xl p-2.5 text-[9px] font-mono text-emerald-400">
+                                                        <span className="block text-white">Vértices: {polygonCoordinates.length} (WGS84)</span>
+                                                        <span className="block text-emerald-400">Status: {validationErrorMsg ? "RECHAZADO" : (validationWarningMsg || validationOverlapWarning ? "AVISO" : "APROBADO")}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <MapIcon size={48} className="text-slate-700 mb-4" />
+                                                    <p className="text-xs font-black text-slate-400">Mapa Satelital Vacío</p>
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Seleccione un escenario geoespacial para importar los límites geográficos</p>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* BANNER DE ALERTAS EN CALIENTE */}
+                                        {validationErrorMsg && (
+                                            <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl flex items-start gap-3 text-left">
+                                                <AlertTriangle size={18} className="text-rose-600 shrink-0 mt-0.5" />
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-black text-rose-800 uppercase tracking-wider leading-none">Error Crítico</p>
+                                                    <p className="text-xs font-semibold text-rose-700 leading-normal">{validationErrorMsg}</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {validationWarningMsg && (
+                                            <div className="bg-amber-50 border border-amber-250 p-4 rounded-2xl flex items-start gap-3 text-left">
+                                                <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-wider leading-none">Alerta de Umbral</p>
+                                                    <p className="text-xs font-semibold text-amber-700 leading-normal">{validationWarningMsg}</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {validationOverlapWarning && (
+                                            <div className="bg-amber-50 border border-amber-250 p-4 rounded-2xl flex items-start gap-3 text-left">
+                                                <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-wider leading-none">Conflicto Territorial</p>
+                                                    <p className="text-xs font-semibold text-amber-700 leading-normal">{validationOverlapWarning}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

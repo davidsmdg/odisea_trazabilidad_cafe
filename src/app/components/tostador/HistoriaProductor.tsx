@@ -16,6 +16,7 @@ import {
     Image as ImageIcon,
     Compass,
     Heart,
+    Scale,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
@@ -174,6 +175,7 @@ export function HistoriaProductor() {
                                 precioBaseKgUSD: loteEncontrado.pesos?.verde ? 12.50 : 10.00,
                                 macroperfil: 'Regional Colombia',
                                 impacto: 'Mujeres Caficultoras',
+                                factorRendimiento: loteEncontrado.factorRendimiento || null
                             }
                         ]
                     };
@@ -196,7 +198,7 @@ export function HistoriaProductor() {
                 hectareas: '', // Espacio vacío para completar
                 variedadesDisponibles: loteMarket.variedad,
                 fechasCosecha: '', // Espacio vacío para completar
-                biografia: `Productor aliado de la plataforma Ceres. Perfil en proceso de validación y enriquecimiento de datos por el equipo de Odisea Trace.`,
+                biografia: `Productor aliado de la plataforma Odisea. Perfil en proceso de validación y enriquecimiento de datos por el equipo de Odisea Trace.`,
                 fotos: [
                     loteMarket.avatar,
                     'https://images.unsplash.com/photo-1524350876685-274059332603?auto=format&fit=crop&w=800&q=80',
@@ -417,10 +419,18 @@ export function HistoriaProductor() {
                                         </p>
                                     </div>
 
-                                    {/* Disponibilidad en verde estandarizada */}
-                                    <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
-                                        <Package size={14} className="text-[#bb8d3b]" />
-                                        <span>Empaque: <span className="text-[#5f705f]">{lote.empaque}</span></span>
+                                    {/* Disponibilidad en verde estandarizada y Factor */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-xs font-bold text-gray-800">
+                                        <div className="flex items-center gap-2">
+                                            <Package size={14} className="text-[#bb8d3b]" />
+                                            <span>Empaque: <span className="text-[#5f705f]">{lote.empaque}</span></span>
+                                        </div>
+                                        {lote.factorRendimiento && (
+                                            <div className="flex items-center gap-2">
+                                                <Scale size={14} className="text-emerald-600" />
+                                                <span>Factor Rendimiento: <span className="text-emerald-700">{lote.factorRendimiento}</span></span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

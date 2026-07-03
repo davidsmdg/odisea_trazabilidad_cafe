@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
+import { updateLote } from '../../utils/loteStore';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     ChevronLeft,
@@ -40,6 +41,7 @@ interface FormCata {
     balance: number;
     limpieza: number;
     notas: string;
+    macroperfil: string[];
 }
 
 const MOCK_LOTE = {
@@ -70,6 +72,7 @@ export function EvaluacionSensorial() {
             balance: 7.5,
             limpieza: 8.0,
             notas: '',
+            macroperfil: ['Floral'],
         }
     });
 
@@ -98,8 +101,48 @@ export function EvaluacionSensorial() {
         setIsSaving(true);
         setTimeout(() => {
             setIsSaving(false);
+            
+            const selectedProfiles = data.macroperfil || [];
+            const macroperfilString = selectedProfiles.join(', ');
+
+            // Persistir los resultados en localStorage para propagar al resto de la app
+            const savedLotes = localStorage.getItem('lotes_produccion');
+            if (savedLotes) {
+                try {
+                    const lotes = JSON.parse(savedLotes);
+                    const updated = lotes.map((l: any) => {
+                        if (l.id === loteId || l.codigo === loteId) {
+                            return {
+                                ...l,
+                                calificacion: parseFloat(totalScore),
+                                macroperfil: macroperfilString,
+                                perfilTaza: data.notes || data.notas,
+                                fase: 3, // Asegurar que pasa a verde/trillado tras cata si aplica
+                                cataDetalle: {
+                                    acidez: data.acidez,
+                                    cuerpo: data.cuerpo,
+                                    dulzor: data.dulzor,
+                                    balance: data.balance,
+                                    limpieza: data.limpieza
+                                }
+                            };
+                        }
+                        return l;
+                    });
+                    localStorage.setItem('lotes_produccion', JSON.stringify(updated));
+                } catch (e) {}
+            }
+
+            // Sincronizar en el almacén master de Odisea
+            if (loteId) {
+                updateLote(loteId, {
+                    calificacion: parseFloat(totalScore),
+                    macroperfil: macroperfilString
+                });
+            }
+
             toast.success('Cata registrada exitosamente', {
-                description: `Puntaje Final: ${totalScore} Puntos SCA`,
+                description: `Puntaje Final: ${totalScore} Puntos SCA | Perfiles: ${macroperfilString}`,
                 style: { borderRadius: '24px', background: '#FDFBF9', border: '1px solid #D7CCC8' }
             });
             navigate('/catador/muestras');
@@ -282,6 +325,44 @@ export function EvaluacionSensorial() {
 
                         {/* NOTAS Y GUARDADO */}
                         <div className="space-y-8 pt-10 border-t border-[#EADDCA]">
+                            <div className="space-y-4">
+                                <Label className="text-xs font-black uppercase tracking-widest text-[#5D4037] block">Clasificación de Macroperfiles (Selecciona uno o más)</Label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[#FDFBF9] p-6 rounded-[24px] border border-[#D7CCC8]">
+                                    {[
+                                        'Floral', 'Frutal bayas', 'Frutal cítrico', 'Vinoso', 'Nueces', 'Cacao', 'Especiado', 'Dulce Vainilla', 'Dulce Azúcar morena'
+                                    ].map(option => {
+                                        const isChecked = (values.macroperfil || []).includes(option);
+                                        return (
+                                            <label
+                                                key={option}
+                                                className={cn(
+                                                    "flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all select-none text-[11px] font-black uppercase tracking-wider justify-center text-center",
+                                                    isChecked 
+                                                        ? "bg-[#5D4037] border-[#5D4037] text-white shadow-lg" 
+                                                        : "bg-white border-gray-100 text-[#5D4037] hover:border-[#5D4037]/20"
+                                                )}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    value={option}
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        const current = values.macroperfil || [];
+                                                        const updated = e.target.checked 
+                                                            ? [...current, option] 
+                                                            : current.filter(o => o !== option);
+                                                        setValue('macroperfil', updated);
+                                                    }}
+                                                    className="hidden"
+                                                />
+                                                <span>{isChecked ? '✓' : '+'}</span>
+                                                <span>{option}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             <div className="space-y-4">
                                 <Label className="text-xs font-black uppercase tracking-widest text-[#5D4037] mb-4 block">Descripción de Perfil (Notas de Cata)</Label>
                                 <textarea

@@ -21,8 +21,11 @@ import {
     Coffee,
     TrendingUp,
     X,
-    Scale
+    Scale,
+    AlertTriangle
 } from 'lucide-react';
+import { getValidationStageForLote, updateValidationStage, updateLote } from '../../utils/loteStore';
+import { detectAnomaly } from '../../utils/anomalyStore';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -60,7 +63,8 @@ const INITIAL_COSECHAS = [
         detallesObjetivo: { variedad: 'Bourbon Rosado', proceso: 'Lavado' },
         calificacion: 86.5,
         macroperfil: 'Frutal',
-        clientes: []
+        clientes: [],
+        factorRendimiento: 91.5
     },
     {
         id: 'lc2',
@@ -75,7 +79,8 @@ const INITIAL_COSECHAS = [
         modalidad: 'diario',
         calificacion: 0,
         macroperfil: '',
-        clientes: []
+        clientes: [],
+        factorRendimiento: null
     },
     {
         id: 'lc3',
@@ -91,12 +96,13 @@ const INITIAL_COSECHAS = [
         detallesObjetivo: { variedad: 'Geisha', proceso: 'Natural' },
         calificacion: 0,
         macroperfil: '',
-        clientes: []
+        clientes: [],
+        factorRendimiento: null
     }
 ];
 
 interface ModalAccionState {
-    tipo: 'sumar_cereza' | 'avanzar_seco' | 'avanzar_verde' | 'anotar_proceso' | 'anotar_cata' | 'ver_rendimiento';
+    tipo: 'sumar_cereza' | 'avanzar_seco' | 'avanzar_verde' | 'anotar_proceso' | 'anotar_cata' | 'ver_rendimiento' | 'anotar_factor';
     lote: any;
 }
 
@@ -110,6 +116,65 @@ export function MisCosechas() {
     const [modalAccion, setModalAccion] = useState<ModalAccionState | null>(null);
     const [inputValue, setInputValue] = useState('');
     const [selectValue, setSelectValue] = useState('');
+    const [factorValue, setFactorValue] = useState('');
+
+    // Correction Flow States
+    const [isCorrectionOpen, setIsCorrectionOpen] = useState(false);
+    const [correctionLote, setCorrectionLote] = useState<any | null>(null);
+    const [correctionPeso, setCorrectionPeso] = useState('');
+    const [correctionProceso, setCorrectionProceso] = useState('');
+    const [correctionVariedad, setCorrectionVariedad] = useState('');
+    const [correctionMotivoReject, setCorrectionMotivoReject] = useState('');
+
+    const handleOpenCorrectionModal = (lote: any, motivo: string) => {
+        setCorrectionLote(lote);
+        setCorrectionPeso(lote.pesos.cereza || lote.pesos.objetivo || '0');
+        setCorrectionProceso(lote.detallesObjetivo?.proceso || 'Lavado');
+        setCorrectionVariedad(lote.detallesObjetivo?.variedad || 'Bourbon Rosado');
+        setCorrectionMotivoReject(motivo);
+        setIsCorrectionOpen(true);
+    };
+
+    const handleSaveCorrection = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!correctionLote) return;
+        
+        // Actualizar en lotes_produccion
+        const updated = cosechas.map(l => {
+            if (l.id === correctionLote.id) {
+                return {
+                    ...l,
+                    pesos: { ...l.pesos, cereza: Number(correctionPeso) },
+                    detallesObjetivo: {
+                        ...l.detallesObjetivo,
+                        proceso: correctionProceso,
+                        variedad: correctionVariedad
+                    }
+                };
+            }
+            return l;
+        });
+        updateLotes(updated);
+        
+        // Actualizar en odisea_lotes_master
+        updateLote(correctionLote.codigo, {
+            variedad: correctionVariedad,
+            proceso: correctionProceso,
+            pesos: {
+                cereza: Number(correctionPeso),
+                pergamino: 0,
+                verde: 0
+            }
+        });
+        
+        // Cambiar Stage Gate a 'En validación'
+        updateValidationStage(correctionLote.codigo, 'En validación', 'Productor María González', 'Registro corregido y enviado para re-evaluación.');
+        
+        setIsCorrectionOpen(false);
+        toast.success(`Lote ${correctionLote.codigo} re-sometido con éxito`, {
+            description: 'El lote ha vuelto a la cola de validación de la Mesa de Control.'
+        });
+    };
 
     useEffect(() => {
         const saved = localStorage.getItem('lotes_produccion');
@@ -130,7 +195,19 @@ export function MisCosechas() {
     const handleOpenModal = (accion: ModalAccionState) => {
         setInputValue('');
         setSelectValue('');
+        setFactorValue('');
         setModalAccion(accion);
+    };
+
+    const handleIniciarSecado = (lote: any) => {
+        const updated = cosechas.map(l => {
+            if (l.id === lote.id) {
+                return { ...l, fase: 2, estado: 'En Secado', pesos: { ...l.pesos, pergamino: 0 } };
+            }
+            return l;
+        });
+        updateLotes(updated);
+        toast.success(`Lote ${lote.codigo} trasladado a marquesinas de secado.`);
     };
 
     const handleConfirmarAccion = () => {
@@ -146,6 +223,15 @@ export function MisCosechas() {
             const updated = cosechas.map(l => {
                 if (l.id === lote.id) {
                     const newCereza = (l.pesos.cereza || 0) + kilos;
+                    
+                    // Verificar anomalía histórica de cereza
+                    const check = detectAnomaly(lote.codigo, 'peso_cereza', newCereza, lote.finca || 'Finca La Esperanza', 'María González');
+                    if (check) {
+                        toast.warning('Discrepancia Histórica de Peso', {
+                            description: `Los ${newCereza} Kg acumulados difieren significativamente de la media de esta finca. Registrado para revisión.`
+                        });
+                    }
+
                     return { ...l, pesos: { ...l.pesos, cereza: newCereza }, fase: Math.max(1, l.fase), estado: 'Cereza (Fresco)' };
                 }
                 return l;
@@ -159,14 +245,33 @@ export function MisCosechas() {
                 toast.error('Ingresa los kilos de pergamino seco obtenidos');
                 return;
             }
+            const factor = parseFloat(factorValue);
             const updated = cosechas.map(l => {
                 if (l.id === lote.id) {
-                    return { ...l, pesos: { ...l.pesos, pergamino: kilos }, fase: 2, estado: 'Pergamino (Seco)' };
+                    // Verificar anomalía de pergamino y factor
+                    const checkPeso = detectAnomaly(lote.codigo, 'peso_pergamino', kilos, lote.finca || 'Finca La Esperanza', 'María González');
+                    let checkFactor = null;
+                    if (!isNaN(factor) && factor > 0) {
+                        checkFactor = detectAnomaly(lote.codigo, 'factor_rendimiento', factor, lote.finca || 'Finca La Esperanza', 'María González');
+                    }
+                    if (checkPeso || checkFactor) {
+                        toast.warning('Discrepancia Histórica Detectada', {
+                            description: 'Los valores de pergamino o factor de rendimiento se desvían de los históricos de la finca. Registrado para revisión.'
+                        });
+                    }
+
+                    return { 
+                        ...l, 
+                        pesos: { ...l.pesos, pergamino: kilos }, 
+                        fase: 2, 
+                        estado: 'Pergamino Seco (Listo)',
+                        factorRendimiento: (!isNaN(factor) && factor > 0) ? factor : l.factorRendimiento || null
+                    };
                 }
                 return l;
             });
             updateLotes(updated);
-            toast.success(`Lote ${lote.codigo} avanzado a Secado con ${kilos} Kg`);
+            toast.success(`Lote ${lote.codigo} actualizado con ${kilos} Kg de pergamino seco.`);
         }
         else if (tipo === 'avanzar_verde') {
             const kilos = parseFloat(inputValue);
@@ -174,9 +279,16 @@ export function MisCosechas() {
                 toast.error('Ingresa los kilos de café verde obtenidos');
                 return;
             }
+            const factor = parseFloat(factorValue);
             const updated = cosechas.map(l => {
                 if (l.id === lote.id) {
-                    return { ...l, pesos: { ...l.pesos, verde: kilos }, fase: 3, estado: 'Verde (Trillado)' };
+                    return { 
+                        ...l, 
+                        pesos: { ...l.pesos, verde: kilos }, 
+                        fase: 3, 
+                        estado: 'Verde (Trillado)',
+                        factorRendimiento: (!isNaN(factor) && factor > 0) ? factor : l.factorRendimiento || null
+                    };
                 }
                 return l;
             });
@@ -212,8 +324,59 @@ export function MisCosechas() {
             updateLotes(updated);
             toast.success(`Puntaje de ${ptos} registrado exitosamente`);
         }
+        else if (tipo === 'anotar_factor') {
+            const factor = parseFloat(inputValue);
+            if (!factor || isNaN(factor) || factor <= 0) {
+                toast.error('Ingresa un factor de rendimiento válido (ej. 90.5)');
+                return;
+            }
+            const updated = cosechas.map(l => {
+                if (l.id === lote.id) {
+                    // Verificar anomalía de factor de rendimiento
+                    const check = detectAnomaly(lote.codigo, 'factor_rendimiento', factor, lote.finca || 'Finca La Esperanza', 'María González');
+                    if (check) {
+                        toast.warning('Factor de Rendimiento Atípico', {
+                            description: `El factor de rendimiento (${factor}) se desvía del historial de la finca. Registrado para revisión.`
+                        });
+                    }
+
+                    return { ...l, factorRendimiento: factor };
+                }
+                return l;
+            });
+            updateLotes(updated);
+            toast.success(`Factor de Rendimiento de ${factor} registrado para el lote ${lote.codigo}`);
+        }
 
         setModalAccion(null);
+    };
+
+    const handleOfrecerLote = (loteId: string) => {
+        const updated = cosechas.map(l => {
+            if (l.id === loteId) {
+                const offered = !l.ofrecidoPorProductor;
+                try {
+                    const rawMaster = localStorage.getItem('odisea_lotes_master');
+                    if (rawMaster) {
+                        const masterLotes = JSON.parse(rawMaster);
+                        const updatedMaster = masterLotes.map((ml: any) => {
+                            if (ml.id === l.codigo || ml.id === l.id) {
+                                return { ...ml, ofrecidoPorProductor: offered };
+                            }
+                            return ml;
+                        });
+                        localStorage.setItem('odisea_lotes_master', JSON.stringify(updatedMaster));
+                    }
+                } catch (e) {}
+
+                return { ...l, ofrecidoPorProductor: offered };
+            }
+            return l;
+        });
+        updateLotes(updated);
+        toast.success('Estado de oferta actualizado', {
+            description: 'El lote ha sido propuesto para comercialización y espera aprobación de Odisea.'
+        });
     };
 
     const filteredCosechas = cosechas.filter(c => {
@@ -288,10 +451,59 @@ export function MisCosechas() {
                                     )}>
                                         {lote.modalidad === 'objetivo' ? 'Meta Planeada' : 'Recolección Libre'}
                                     </span>
+                                    {lote.factorRendimiento && (
+                                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase px-2.5 py-1 rounded-lg tracking-wider">
+                                            Factor: {lote.factorRendimiento}
+                                        </span>
+                                    )}
                                     <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{lote.finca}</span>
                                     {lote.parcelas?.[0] && <span className="text-xs font-bold text-gray-400">• {lote.parcelas[0]}</span>}
+                                    
+                                    {/* Stage Gate Validation Status Badge */}
+                                    {(() => {
+                                        const vRecord = getValidationStageForLote(lote.codigo);
+                                        const badgeColors = {
+                                            'Capturado': 'bg-slate-100 text-slate-700 border border-slate-200',
+                                            'En validación': 'bg-amber-100 text-amber-700 border border-amber-200',
+                                            'Validado': 'bg-blue-100 text-blue-700 border border-blue-200',
+                                            'Rechazado': 'bg-rose-100 text-rose-700 border border-rose-250 animate-pulse',
+                                            'Publicado': 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                        };
+                                        return (
+                                            <Badge className={cn("border-none text-[9px] font-sans font-black px-2.5 py-1 uppercase tracking-wider rounded-lg", badgeColors[vRecord.stage])}>
+                                                Validación: {vRecord.stage}
+                                            </Badge>
+                                        );
+                                    })()}
                                 </div>
                                 <h3 className="text-4xl font-black text-gray-900 tracking-tight">{lote.codigo}</h3>
+                                
+                                {/* Alerta de rechazo con botón de corrección */}
+                                {(() => {
+                                    const vRecord = getValidationStageForLote(lote.codigo);
+                                    if (vRecord.stage === 'Rechazado') {
+                                        const lastLog = [...vRecord.historial].reverse().find(h => h.estadoNuevo === 'Rechazado');
+                                        return (
+                                            <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl space-y-2 mt-3 text-left">
+                                                <div className="flex items-center gap-2 text-rose-800 font-sans font-black text-xs uppercase tracking-wider">
+                                                    <AlertTriangle size={16} /> Registro Rechazado por Mesa de Control
+                                                </div>
+                                                <p className="text-xs font-semibold text-rose-750">
+                                                    Observación: <span className="font-bold text-rose-900">"{lastLog?.motivo || 'Revisar linderos y pesos.'}"</span>
+                                                </p>
+                                                <div className="pt-2">
+                                                    <Button
+                                                        onClick={() => handleOpenCorrectionModal(lote, lastLog?.motivo || '')}
+                                                        className="h-10 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-sans font-black text-[10px] uppercase tracking-widest border-none cursor-pointer"
+                                                    >
+                                                        Corregir y Re-someter
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                                 {lote.detallesObjetivo?.proceso && (
                                     <p className="text-sm font-bold text-gray-600 mt-1 flex items-center gap-1.5">
                                         <span className="w-2 h-2 rounded-full bg-[#5f705f]"></span>
@@ -328,7 +540,7 @@ export function MisCosechas() {
                                             lote.fase === 1 ? "text-red-600" :
                                             lote.fase === 2 ? "text-amber-600" : "text-[#5f705f]"
                                         )}>
-                                            {lote.fase === 0 ? 'Meta Planeada' : lote.fase === 1 ? 'Cereza Fresca' : lote.fase === 2 ? 'Pergamino Seco' : 'Café Verde'}
+                                            {lote.fase === 0 ? 'Meta Planeada' : lote.fase === 1 ? 'Cereza Fresca' : lote.fase === 2 ? (lote.pesos.pergamino > 0 ? 'Pergamino Seco' : 'En Secado') : 'Café Verde'}
                                         </span>
                                     </div>
                                </div>
@@ -336,7 +548,7 @@ export function MisCosechas() {
                                     <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest hidden sm:block">Volumen</p>
                                     <p className="text-2xl font-black text-gray-900">
                                         {lote.fase <= 1 ? `${lote.pesos.cereza || 0} Kg` :
-                                         lote.fase === 2 ? `${lote.pesos.pergamino || 0} Kg` :
+                                         lote.fase === 2 ? (lote.pesos.pergamino > 0 ? `${lote.pesos.pergamino} Kg` : 'En proceso...') :
                                          `${lote.pesos.verde || 0} Kg`}
                                     </p>
                                 </div>
@@ -393,39 +605,80 @@ export function MisCosechas() {
                                         )}
                                         {lote.pesos.cereza > 0 && (
                                             <Button
-                                                onClick={() => handleOpenModal({ tipo: 'avanzar_seco', lote })}
+                                                onClick={() => handleIniciarSecado(lote)}
                                                 className="h-12 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider grow sm:grow-0"
                                             >
-                                                ☀️ Pasar a Secado
+                                                ☀️ Iniciar Secado
                                             </Button>
                                         )}
                                     </>
                                 )}
 
                                 {lote.fase === 2 && (
-                                    <Button
-                                        onClick={() => handleOpenModal({ tipo: 'avanzar_verde', lote })}
-                                        className="h-12 rounded-xl bg-[#5f705f] hover:bg-[#4a584a] text-white font-black text-xs uppercase tracking-wider w-full sm:w-auto"
-                                    >
-                                        🌾 Pasar a Trillado (Verde)
-                                    </Button>
+                                    <>
+                                        {!(lote.pesos.pergamino > 0) ? (
+                                            <Button
+                                                onClick={() => handleOpenModal({ tipo: 'avanzar_seco', lote })}
+                                                className="h-12 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider w-full sm:w-auto"
+                                            >
+                                                ⚖️ Registrar Peso Seco
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                <Button
+                                                    onClick={() => handleOpenModal({ tipo: 'avanzar_verde', lote })}
+                                                    className="h-12 rounded-xl bg-[#5f705f] hover:bg-[#4a584a] text-white font-black text-xs uppercase tracking-wider w-full sm:w-auto"
+                                                >
+                                                    🌾 Pasar a Trillado (Verde)
+                                                </Button>
+                                                <Button
+                                                    onClick={() => handleOpenModal({ tipo: 'anotar_factor', lote })}
+                                                    className="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider w-full sm:w-auto"
+                                                >
+                                                    📊 Anotar Factor
+                                                </Button>
+                                            </>
+                                        )}
+                                    </>
                                 )}
 
                                 {lote.fase === 3 && (
-                                    <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 w-full sm:w-auto justify-between">
-                                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Calidad en Taza:</span>
-                                        {lote.calificacion > 0 ? (
-                                            <span className="text-lg font-black text-[#bb8d3b]">⭐ {lote.calificacion} Ptos</span>
-                                        ) : (
-                                            <Button
-                                                onClick={() => handleOpenModal({ tipo: 'anotar_cata', lote })}
-                                                size="sm"
-                                                className="h-8 bg-white text-gray-900 border font-black text-[10px] uppercase rounded-lg shadow-sm hover:bg-gray-50"
-                                            >
-                                                Anotar Puntaje
-                                            </Button>
-                                        )}
-                                    </div>
+                                    <>
+                                        <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 w-full sm:w-auto justify-between">
+                                            <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Calidad en Taza:</span>
+                                            {lote.calificacion > 0 ? (
+                                                <span className="text-lg font-black text-[#bb8d3b]">⭐ {lote.calificacion} Ptos</span>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => handleOpenModal({ tipo: 'anotar_cata', lote })}
+                                                    size="sm"
+                                                    className="h-8 bg-white text-gray-900 border font-black text-[10px] uppercase rounded-lg shadow-sm hover:bg-gray-50"
+                                                >
+                                                    Anotar Puntaje
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <Button
+                                            onClick={() => handleOpenModal({ tipo: 'anotar_factor', lote })}
+                                            className="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider w-full sm:w-auto"
+                                        >
+                                            📊 Anotar/Editar Factor
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleOfrecerLote(lote.id)}
+                                            className={cn(
+                                                "h-12 rounded-xl font-black text-xs uppercase tracking-wider w-full sm:w-auto border-none text-white",
+                                                lote.ofrecidoPorProductor
+                                                    ? (lote.aprobadoComercializacion ? "bg-emerald-600 hover:bg-emerald-700" : "bg-sky-600 hover:bg-sky-700")
+                                                    : "bg-[#bb8d3b] hover:bg-[#a07830]"
+                                            )}
+                                        >
+                                            {lote.ofrecidoPorProductor
+                                                ? (lote.aprobadoComercializacion ? "✓ En Marketplace" : "⏱️ Pendiente Aprobación")
+                                                : "📢 Ofrecer a Tostadores"
+                                            }
+                                        </Button>
+                                    </>
                                 )}
                             </div>
 
@@ -460,8 +713,11 @@ export function MisCosechas() {
                             </div>
                             <div>
                                 <DialogTitle className="text-2xl font-black text-gray-900">Sumar Recolección</DialogTitle>
-                                <DialogDescription className="text-sm text-gray-500 mt-1">
-                                    ¿Cuántos kilos de cereza fresca ingresaron hoy para el lote <strong className="text-gray-800">{modalAccion.lote.codigo}</strong>?
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200 mx-auto">
+                                    Código Lote: <span className="font-black text-gray-900">{modalAccion.lote.codigo}</span>
+                                </div>
+                                <DialogDescription className="text-sm text-gray-500 mt-3">
+                                    ¿Cuántos kilos de cereza fresca ingresaron hoy?
                                 </DialogDescription>
                             </div>
                             <div className="relative">
@@ -490,27 +746,41 @@ export function MisCosechas() {
                                 <Sun size={32} />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black text-gray-900">Finalizar Secado</DialogTitle>
-                                <DialogDescription className="text-sm text-gray-500 mt-1">
-                                    Al secar el café se pierde agua. Pesa tu café seco y anota cuántos kilos de <strong className="text-gray-800">Pergamino Seco</strong> te quedaron en total:
+                                <DialogTitle className="text-2xl font-black text-gray-900">Registrar Peso Seco</DialogTitle>
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200 mx-auto">
+                                    Código Lote: <span className="font-black text-gray-900">{modalAccion.lote.codigo}</span>
+                                </div>
+                                <DialogDescription className="text-sm text-gray-500 mt-3">
+                                    Pesa tu café seco y anota cuántos kilos de **Pergamino Seco** te quedaron en total:
                                 </DialogDescription>
                             </div>
-                            <div className="relative">
-                                <Input
-                                    type="number"
-                                    placeholder="0"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    className="h-20 rounded-2xl bg-gray-50 border-none text-center text-4xl font-black text-amber-600 focus:ring-4 focus:ring-amber-100"
-                                    autoFocus
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">Kg</span>
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <Input
+                                        type="number"
+                                        placeholder="Kilos Pergamino"
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                        className="h-16 rounded-2xl bg-gray-50 border-none text-center text-2xl font-black text-amber-600 focus:ring-4 focus:ring-amber-100"
+                                        autoFocus
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">Kg</span>
+                                </div>
+                                <div className="relative">
+                                    <Input
+                                        type="number"
+                                        placeholder="Factor de Rendimiento (Opcional - ej: 91.5)"
+                                        value={factorValue}
+                                        onChange={(e) => setFactorValue(e.target.value)}
+                                        className="h-16 rounded-2xl bg-gray-50 border-none text-center text-lg font-bold text-gray-700 focus:ring-4 focus:ring-emerald-100"
+                                    />
+                                </div>
                             </div>
                             <Button
                                 onClick={handleConfirmarAccion}
                                 className="w-full h-14 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-sm uppercase tracking-wider"
                             >
-                                Guardar Peso Seco
+                                Guardar Datos de Secado
                             </Button>
                         </div>
                     )}
@@ -522,20 +792,34 @@ export function MisCosechas() {
                             </div>
                             <div>
                                 <DialogTitle className="text-2xl font-black text-gray-900">Trillar Café (Verde)</DialogTitle>
-                                <DialogDescription className="text-sm text-gray-500 mt-1">
-                                    Al remover la cascarilla (trilla) queda el café verde de exportación. Anota el peso final resultante:
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200 mx-auto">
+                                    Código Lote: <span className="font-black text-gray-900">{modalAccion.lote.codigo}</span>
+                                </div>
+                                <DialogDescription className="text-sm text-gray-500 mt-3">
+                                    Anota el peso final resultante y el factor de rendimiento obtenido:
                                 </DialogDescription>
                             </div>
-                            <div className="relative">
-                                <Input
-                                    type="number"
-                                    placeholder="0"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    className="h-20 rounded-2xl bg-gray-50 border-none text-center text-4xl font-black text-[#5f705f] focus:ring-4 focus:ring-[#5f705f]/10"
-                                    autoFocus
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">Kg</span>
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <Input
+                                        type="number"
+                                        placeholder="Kilos Verde"
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                        className="h-16 rounded-2xl bg-gray-50 border-none text-center text-2xl font-black text-[#5f705f] focus:ring-4 focus:ring-[#5f705f]/10"
+                                        autoFocus
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">Kg</span>
+                                </div>
+                                <div className="relative">
+                                    <Input
+                                        type="number"
+                                        placeholder="Factor de Rendimiento (Opcional - ej: 91.5)"
+                                        value={factorValue}
+                                        onChange={(e) => setFactorValue(e.target.value)}
+                                        className="h-16 rounded-2xl bg-gray-50 border-none text-center text-lg font-bold text-gray-700 focus:ring-4 focus:ring-emerald-100"
+                                    />
+                                </div>
                             </div>
                             <Button
                                 onClick={handleConfirmarAccion}
@@ -553,7 +837,10 @@ export function MisCosechas() {
                             </div>
                             <div>
                                 <DialogTitle className="text-2xl font-black text-gray-900">Elegir Proceso</DialogTitle>
-                                <DialogDescription className="text-sm text-gray-500 mt-1">
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200 mx-auto">
+                                    Código Lote: <span className="font-black text-gray-900">{modalAccion.lote.codigo}</span>
+                                </div>
+                                <DialogDescription className="text-sm text-gray-500 mt-3">
                                     Define cómo procesarás la cereza acumulada en este lote:
                                 </DialogDescription>
                             </div>
@@ -562,9 +849,13 @@ export function MisCosechas() {
                                     <SelectValue placeholder="Selecciona el proceso..." />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl border-gray-100">
-                                    <SelectItem value="Lavado">Lavado (Tradicional)</SelectItem>
+                                    <SelectItem value="Lavado">Lavado</SelectItem>
                                     <SelectItem value="Natural">Natural</SelectItem>
                                     <SelectItem value="Honey">Honey</SelectItem>
+                                    <SelectItem value="Fermentación anaeróbica">Fermentación anaeróbica</SelectItem>
+                                    <SelectItem value="Fermentación carbónica">Fermentación carbónica</SelectItem>
+                                    <SelectItem value="Fermentación con levadura">Fermentación con levadura</SelectItem>
+                                    <SelectItem value="Cofermentación">Cofermentación</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Button
@@ -583,7 +874,10 @@ export function MisCosechas() {
                             </div>
                             <div>
                                 <DialogTitle className="text-2xl font-black text-gray-900">Puntaje de Cata</DialogTitle>
-                                <DialogDescription className="text-sm text-gray-500 mt-1">
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200 mx-auto">
+                                    Código Lote: <span className="font-black text-gray-900">{modalAccion.lote.codigo}</span>
+                                </div>
+                                <DialogDescription className="text-sm text-gray-500 mt-3">
                                     Anota la calificación final que le dio el catador a este lote (escala SCA):
                                 </DialogDescription>
                             </div>
@@ -604,12 +898,48 @@ export function MisCosechas() {
                         </div>
                     )}
 
+                    {modalAccion?.tipo === 'anotar_factor' && (
+                        <div className="space-y-6 text-center">
+                            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                                <Scale size={32} />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black text-gray-900">Factor de Rendimiento</DialogTitle>
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200 mx-auto">
+                                    Código Lote: <span className="font-black text-gray-900">{modalAccion.lote.codigo}</span>
+                                </div>
+                                <DialogDescription className="text-sm text-gray-500 mt-3">
+                                    Anota el Factor de Rendimiento calculado para este lote:
+                                </DialogDescription>
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    type="number"
+                                    placeholder="Ej. 92.5"
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    className="h-20 rounded-2xl bg-gray-50 border-none text-center text-4xl font-black text-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                                    autoFocus
+                                />
+                            </div>
+                            <Button
+                                onClick={handleConfirmarAccion}
+                                className="w-full h-14 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider"
+                            >
+                                Guardar Factor
+                            </Button>
+                        </div>
+                    )}
+
                     {modalAccion?.tipo === 'ver_rendimiento' && (
                         <div className="space-y-6">
                             <div className="text-center">
                                 <DialogTitle className="text-2xl font-black text-gray-900">Historia y Mermas</DialogTitle>
-                                <DialogDescription className="text-xs text-gray-500 mt-1">
-                                    Evolución del peso de tu café para el lote <strong className="text-gray-800">{modalAccion.lote.codigo}</strong>
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200 mx-auto">
+                                    Código Lote: <span className="font-black text-gray-900">{modalAccion.lote.codigo}</span>
+                                </div>
+                                <DialogDescription className="text-xs text-gray-500 mt-3">
+                                    Evolución del peso de tu café.
                                 </DialogDescription>
                             </div>
 
@@ -641,6 +971,23 @@ export function MisCosechas() {
                                 </div>
                             )}
 
+                            {/* Mostrar Factor de Rendimiento */}
+                            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center space-y-2">
+                                <p className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">Factor de Rendimiento</p>
+                                {modalAccion.lote.factorRendimiento ? (
+                                    <p className="text-2xl font-black text-emerald-700">{modalAccion.lote.factorRendimiento}</p>
+                                ) : (
+                                    <p className="text-xs font-bold text-gray-500 italic">No registrado aún</p>
+                                )}
+                                <Button
+                                    onClick={() => handleOpenModal({ tipo: 'anotar_factor', lote: modalAccion.lote })}
+                                    size="sm"
+                                    className="bg-white text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-[10px] font-black uppercase rounded-lg w-full h-8 shadow-xs"
+                                >
+                                    {modalAccion.lote.factorRendimiento ? 'Modificar Factor' : 'Anotar Factor'}
+                                </Button>
+                            </div>
+
                             <Button
                                 onClick={() => setModalAccion(null)}
                                 className="w-full h-12 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-black text-xs uppercase tracking-wider"
@@ -651,6 +998,99 @@ export function MisCosechas() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* MODAL: Corrección de Lote Rechazado por Productor */}
+            <AnimatePresence>
+                {isCorrectionOpen && correctionLote && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.4 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsCorrectionOpen(false)}
+                            className="fixed inset-0 bg-black"
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-[40px] border border-gray-100 shadow-2xl p-8 max-w-lg w-full relative z-10 space-y-6 text-left"
+                        >
+                            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+                                <div>
+                                    <h3 className="text-xl font-sans font-black text-gray-900 flex items-center gap-3">
+                                        <AlertTriangle size={24} className="text-rose-500" />
+                                        Corregir Lote Rechazado
+                                    </h3>
+                                    <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Lote: {correctionLote.codigo}</p>
+                                </div>
+                                <button onClick={() => setIsCorrectionOpen(false)} className="h-8 w-8 rounded-full bg-gray-50 border-none text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center cursor-pointer">
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl space-y-1">
+                                <p className="text-[10px] font-black text-rose-950 uppercase leading-none">Motivo de Rechazo reportado:</p>
+                                <p className="text-xs text-rose-700 italic font-semibold">"{correctionMotivoReject}"</p>
+                            </div>
+
+                            <form onSubmit={handleSaveCorrection} className="space-y-5">
+                                {/* Kilos */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-450">Kilos de Cereza (Recolección)</label>
+                                    <div className="relative group">
+                                        <Input
+                                            type="number"
+                                            required
+                                            value={correctionPeso}
+                                            onChange={e => setCorrectionPeso(e.target.value)}
+                                            className="h-12 rounded-xl border-gray-200"
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-gray-400">Kg</div>
+                                    </div>
+                                </div>
+
+                                {/* Proceso */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-455">Proceso Beneficio</label>
+                                    <select
+                                        value={correctionProceso}
+                                        onChange={e => setCorrectionProceso(e.target.value)}
+                                        className="h-12 w-full px-4 rounded-xl border border-gray-250 bg-gray-50 font-bold text-gray-700 outline-none"
+                                    >
+                                        <option value="Lavado">Lavado</option>
+                                        <option value="Natural">Natural</option>
+                                        <option value="Honey">Honey</option>
+                                        <option value="Fermentación anaeróbica">Fermentación anaeróbica</option>
+                                    </select>
+                                </div>
+
+                                {/* Variedad */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-455">Variedad de Café</label>
+                                    <select
+                                        value={correctionVariedad}
+                                        onChange={e => setCorrectionVariedad(e.target.value)}
+                                        className="h-12 w-full px-4 rounded-xl border border-gray-255 bg-gray-50 font-bold text-gray-700 outline-none"
+                                    >
+                                        <option value="Bourbon Rosado">Bourbon Rosado</option>
+                                        <option value="Geisha">Geisha</option>
+                                        <option value="Castillo">Castillo</option>
+                                        <option value="Caturra">Caturra</option>
+                                    </select>
+                                </div>
+
+                                <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+                                    <Button type="button" onClick={() => setIsCorrectionOpen(false)} variant="outline" className="h-12 px-6 rounded-xl text-slate-500 font-bold border-slate-200">Cancelar</Button>
+                                    <Button type="submit" className="h-12 px-8 rounded-xl bg-gray-900 hover:bg-black text-white font-black text-xs uppercase tracking-widest border-none cursor-pointer">
+                                        Guardar y Re-someter
+                                    </Button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

@@ -6,8 +6,7 @@ export type UserRole =
   | 'ENV_VERIFIER'
   | 'TASTER'
   | 'CERES'
-  | 'ROASTER'
-  | 'FINAL_CLIENT';
+  | 'ROASTER';
 
 export interface AuthUser {
   id: string;

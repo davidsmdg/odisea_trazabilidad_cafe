@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
     Award,
@@ -8,7 +9,8 @@ import {
     Calendar,
     TrendingUp,
     CheckCircle2,
-    Medal
+    Medal,
+    Search
 } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { Badge } from '../ui/badge';
@@ -78,7 +80,47 @@ const HISTORIAL_MOCK = [
     }
 ];
 
+import { getLotesMaster, LoteUnificado } from '../../utils/loteStore';
+
 export function HistorialCatas() {
+    const [historial, setHistorial] = useState<any[]>([]);
+    const [filtroProductor, setFiltroProductor] = useState('');
+
+    useEffect(() => {
+        const loaded = getLotesMaster();
+        // lotes catados
+        const realizadas = loaded.filter(l => l.calificacion && l.calificacion > 0);
+        const items = realizadas.map(l => {
+            const det = {
+                acidez: 8.0,
+                cuerpo: 7.5,
+                dulzor: 8.0,
+                balance: 8.0,
+                limpieza: 8.5
+            };
+            return {
+                id: l.id,
+                productor: l.productor,
+                bache: 'Bache #1',
+                fecha: l.fecha || 'Reciente',
+                puntaje: l.calificacion,
+                nivel: l.calificacion && l.calificacion >= 85 ? 'Especialidad' : 'Premium',
+                perfil: [
+                    { attribute: 'Acidez', value: det.acidez },
+                    { attribute: 'Cuerpo', value: det.cuerpo },
+                    { attribute: 'Dulzor', value: det.dulzor },
+                    { attribute: 'Balance', value: det.balance },
+                    { attribute: 'Limpieza', value: det.limpieza }
+                ]
+            };
+        });
+        setHistorial(items);
+    }, []);
+
+    const historialFiltrado = historial.filter(cata => 
+        cata.productor.toLowerCase().includes(filtroProductor.toLowerCase())
+    );
+
     return (
         <div className="space-y-12 max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-20 px-4">
 
@@ -110,10 +152,6 @@ export function HistorialCatas() {
                             </p>
 
                             <div className="flex gap-4 mt-6 justify-center md:justify-start">
-                                <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
-                                    <p className="text-[10px] text-white/60 font-black uppercase tracking-widest mb-1">Precisión de Calibración</p>
-                                    <p className="text-xl font-mono font-black text-emerald-400">98.4%</p>
-                                </div>
                                 <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
                                     <p className="text-[10px] text-white/60 font-black uppercase tracking-widest mb-1">Muestras Totales</p>
                                     <p className="text-xl font-mono font-black text-white">1,245</p>
@@ -147,21 +185,35 @@ export function HistorialCatas() {
                 </div>
             </div>
 
-            {/* MAIN CONTENT TITLE */}
-            <div className="flex items-center gap-4 px-4">
-                <div className="h-10 w-2 bg-[#5D4037] rounded-full" />
-                <h2 className="text-3xl font-sans font-black text-[#5D4037] tracking-tight">Registro Histórico de Auditorías Sensoriales</h2>
+            {/* MAIN CONTENT TITLE & FILTER */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4">
+                <div className="flex items-center gap-4">
+                    <div className="h-10 w-2 bg-[#5D4037] rounded-full" />
+                    <h2 className="text-3xl font-sans font-black text-[#5D4037] tracking-tight">Registro Histórico de Auditorías Sensoriales</h2>
+                </div>
+                
+                {/* Buscador de Productor */}
+                <div className="relative w-full md:w-80 group">
+                    <input
+                        type="text"
+                        placeholder="Buscar por productor..."
+                        value={filtroProductor}
+                        onChange={(e) => setFiltroProductor(e.target.value)}
+                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-[#EADDCA] bg-[#FDFBF9] font-bold text-xs text-[#5D4037] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5D4037]/20 outline-none"
+                    />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8D6E63]" size={16} />
+                </div>
             </div>
 
             {/* HISTORY LIST */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {HISTORIAL_MOCK.map((cata) => (
+                {historialFiltrado.map((cata) => (
                     <motion.div
-                        key={cata.id}
+                        key={cata.id + '-' + cata.bache}
                         whileHover={{ y: -5 }}
                         className="bg-white rounded-[40px] border border-[#EADDCA] p-8 shadow-sm hover:shadow-xl transition-all group flex flex-col"
                     >
-                        <div className="flex justify-between items-start mb-6">
+                        <div className="flex justify-between items-start gap-4 mb-6">
                             <div className="space-y-2">
                                 <div className="flex gap-2 items-center">
                                     <Badge className="bg-[#5D4037]/5 text-[#5D4037] font-black text-[10px] uppercase tracking-widest border-none px-3">
@@ -174,7 +226,7 @@ export function HistorialCatas() {
                                 <p className="text-sm font-bold text-gray-400 flex items-center gap-1"><Calendar size={12} /> {cata.fecha}</p>
                             </div>
 
-                            <div className="text-center bg-[#FDFBF9] border border-[#EADDCA] p-3 rounded-2xl w-24 shadow-inner">
+                            <div className="text-center bg-[#FDFBF9] border border-[#EADDCA] p-3 rounded-2xl min-w-[100px] shadow-inner shrink-0">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-[#8D6E63] mb-1">SCA Score</p>
                                 <p className={cn(
                                     "text-3xl font-sans font-black leading-none",
@@ -206,7 +258,7 @@ export function HistorialCatas() {
                 <div>
                     <h4 className="text-sm font-black text-amber-900 uppercase tracking-widest">Validación de Experticia B2B</h4>
                     <p className="text-xs text-amber-800/70 font-medium leading-relaxed mt-1">
-                        Tu nivel de <strong className="font-bold">Q-Grader</strong> y tu <strong className="font-bold">Porcentaje de Precisión de Calibración</strong> es visible públicamente para los Tostadores en el certificado de trazabilidad. Mantener un alto nivel de calibración aumenta la confianza del comprador sobre la muestra garantizada.
+                        Tu nivel de <strong className="font-bold">Q-Grader</strong> es visible públicamente para los Tostadores en el certificado de trazabilidad. Esto aumenta la confianza del comprador sobre la muestra garantizada en origen.
                     </p>
                 </div>
             </div>

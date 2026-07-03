@@ -13,11 +13,13 @@ import {
     ChevronRight,
     Home,
     Microscope,
+    User,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { cn } from '../components/ui/utils';
 import { Button } from '../components/ui/button';
+import { OnboardingTour, OnboardingTourTrigger } from '../components/OnboardingTour';
 
 interface NavItem {
     label: string;
@@ -26,6 +28,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+    { label: 'Mi Perfil', path: '/catador/perfil', icon: User },
     { label: 'Muestras Pendientes', path: '/catador/muestras', icon: Beaker },
     { label: 'Historial de Catas', path: '/catador/historial', icon: ClipboardList },
 ];
@@ -51,7 +54,7 @@ export function CatadorLayout() {
                 <Microscope className="h-8 w-8 text-[#5D4037] shrink-0" />
                 {(!collapsed || mobileMenuOpen) && (
                     <span className="text-xl font-sans font-black tracking-tighter text-[#5D4037] leading-none uppercase">
-                        LAB<span className="text-[#8D6E63] font-normal">SENSORY</span>
+                        ODISEA <span className="text-[#8D6E63] font-normal">COFFEE TRACE</span>
                     </span>
                 )}
             </div>
@@ -125,7 +128,7 @@ export function CatadorLayout() {
                 </Button>
                 <div className="flex items-center gap-2">
                     <Microscope className="h-6 w-6 text-[#5D4037]" />
-                    <span className="text-lg font-sans font-black text-[#5D4037]">LABSENSORY</span>
+                    <span className="text-lg font-sans font-black text-[#5D4037]">ODISEA COFFEE TRACE</span>
                 </div>
             </header>
 
@@ -183,6 +186,7 @@ export function CatadorLayout() {
                     </div>
 
                     <div className="flex items-center gap-8">
+                        <OnboardingTourTrigger role="TASTER" />
                         <div className="flex items-center gap-4 bg-[#FDFBF9] px-4 py-2 rounded-2xl border border-[#EADDCA]">
                             <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm border border-[#D7CCC8]">
                                 <AvatarFallback className="bg-[#EADDCA] text-[#5D4037] font-black text-[10px]">
@@ -204,6 +208,7 @@ export function CatadorLayout() {
                 <main className="flex-1 p-8 md:p-12 overflow-y-auto">
                     <Outlet />
                 </main>
+                <OnboardingTour role="TASTER" />
             </div>
         </div>
     );

@@ -30,7 +30,9 @@ const buildGruposDepartamentos = (filtros?: any) => {
 
     // Macroperfil / Notas
     if (filtros.notasSeleccionadas?.length > 0) {
-      if (!filtros.notasSeleccionadas.includes(lote.macroperfil)) return false;
+      const profiles = Array.isArray(lote.macroperfil) ? lote.macroperfil : (typeof lote.macroperfil === 'string' ? lote.macroperfil.split(',').map((s: string) => s.trim()) : []);
+      const hasMatch = profiles.some(p => filtros.notasSeleccionadas.includes(p));
+      if (!hasMatch) return false;
     }
 
     // Impactos (simplificado: si exige jóvenes, que tenga impacto Jóven, si exige mujeres, impacto Mujeres)

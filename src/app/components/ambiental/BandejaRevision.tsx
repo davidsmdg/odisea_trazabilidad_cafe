@@ -56,7 +56,7 @@ export function BandejaRevision() {
 
             {/* 1. SECCIÓN DE BIENVENIDA */}
             <div className="flex flex-col gap-6 text-center md:text-left pt-6">
-                <h1 className="text-4xl md:text-5xl font-sans font-black text-emerald-900 tracking-tight">Revisiones Ambientales</h1>
+                <h1 className="text-4xl md:text-5xl font-sans font-black text-emerald-900 tracking-tight">Auditoría Odisea (EUDR)</h1>
                 <p className="text-lg text-emerald-800/60 font-medium max-w-2xl">
                     Verifica que las fincas no estén en zonas protegidas. Presta especial atención a las <strong className="text-rose-600">Alertas EUDR</strong>.
                 </p>
@@ -146,7 +146,7 @@ export function BandejaRevision() {
                             </div>
 
                             <Button
-                                onClick={() => navigate(`/ambiental/analizar/${item.id}`)}
+                                onClick={() => navigate(`/odisea/ambiental/analizar/${item.id}`)}
                                 className={cn(
                                     "h-24 px-10 rounded-[32px] font-black text-lg shadow-2xl transition-all active:scale-95 group/btn flex items-center gap-4 cursor-pointer",
                                     item.estado === 'Alerta EUDR' ? "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-900/20" : "bg-emerald-900 hover:bg-emerald-950 text-white shadow-emerald-900/20"

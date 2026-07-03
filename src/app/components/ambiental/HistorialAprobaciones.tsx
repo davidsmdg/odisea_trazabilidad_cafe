@@ -95,7 +95,7 @@ export function HistorialAprobaciones() {
                 <div className="space-y-4 max-w-2xl">
                     <div className="inline-flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
                         <ShieldCheck size={16} className="text-blue-600" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-800">Ceres Compliance Suite</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-800">Odisea Compliance Suite</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-sans font-black text-slate-900 tracking-tight leading-tight">
                         Registro Maestro de<br />Auditoría y Certificación

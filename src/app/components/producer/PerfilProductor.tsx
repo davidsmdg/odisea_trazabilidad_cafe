@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     User,
@@ -49,7 +49,7 @@ export function PerfilProductor() {
     const [nombre, setNombre] = useState('María González');
     const [genero, setGenero] = useState('Femenino');
     const [fechaNacimiento, setFechaNacimiento] = useState('1980-05-15');
-    const [celular, setCelular] = useState('310 123 4567');
+    const [celular, setCelular] = useState('312 455 9876');
     const [aniosCafe, setAniosCafe] = useState('25');
 
     // Family & Identity State
@@ -74,6 +74,27 @@ export function PerfilProductor() {
     const [isRecording, setIsRecording] = useState(false);
     const [transcribing, setTranscribing] = useState(false);
 
+    // Cargar perfil guardado en localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('perfil_productor');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.nombre) setNombre(data.nombre);
+                if (data.genero) setGenero(data.genero);
+                if (data.fechaNacimiento) setFechaNacimiento(data.fechaNacimiento);
+                if (data.celular) setCelular(data.celular);
+                if (data.aniosCafe) setAniosCafe(data.aniosCafe);
+                if (data.tieneHijos) setTieneHijos(data.tieneHijos);
+                if (data.cuantosHijos) setCuantosHijos(data.cuantosHijos);
+                if (data.cuantosMenores) setCuantosMenores(data.cuantosMenores);
+                if (data.perteneceEtno) setPerteneceEtno(data.perteneceEtno);
+                if (data.historia) setHistoria(data.historia);
+                if (data.profilePhoto) setProfilePhoto(data.profilePhoto);
+            } catch (e) {}
+        }
+    }, []);
+
     const handleSimulateAudio = () => {
         setIsRecording(true);
         setTimeout(() => {
@@ -90,6 +111,12 @@ export function PerfilProductor() {
     const handleSave = () => {
         setIsSaving(true);
         setTimeout(() => {
+            const profileData = {
+                nombre, genero, fechaNacimiento, celular, aniosCafe,
+                tieneHijos, cuantosHijos, cuantosMenores, perteneceEtno,
+                historia, profilePhoto
+            };
+            localStorage.setItem('perfil_productor', JSON.stringify(profileData));
             setIsSaving(false);
             toast.success('Perfil actualizado correctamente', {
                 description: 'La información social ha sido guardada para cumplimiento de trazabilidad.',

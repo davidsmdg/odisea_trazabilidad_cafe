@@ -31,6 +31,7 @@ import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
+import { updateLote } from '../../utils/loteStore';
 
 type Tab = 'mapa' | 'visita' | 'auditoria';
 
@@ -91,11 +92,24 @@ export function AnalisisEspacial() {
         setIsSaving(true);
         setTimeout(() => {
             setIsSaving(false);
+            
+            const idMap: Record<string, string> = {
+                '1': 'LOT-HUILA-084',
+                '2': 'LOT-ANT-112',
+                '3': 'LOT-NAR-225'
+            };
+            const targetLoteId = idMap[id || '1'] || id || '1';
+
+            updateLote(targetLoteId, {
+                verificadoEUDR: valDeforestacion,
+                riesgoDeforestacion: valDeforestacion ? '0.0% (Riesgo Nulo)' : '100.0% (Alerta de Deforestación)',
+            });
+
             toast.success('Auditoría Ambiental Guardada', {
                 description: `Expediente ${id} validado y emitido correctamente.`,
                 style: { borderRadius: '24px', background: '#ecfdf5', border: '1px solid #4A5B4A20', color: '#4A5B4A' }
             });
-            navigate('/ambiental/historial');
+            navigate('/odisea/ambiental/historial');
         }, 1500);
     };
 
@@ -108,7 +122,7 @@ export function AnalisisEspacial() {
                         variant="ghost"
                         size="icon"
                         className="h-14 w-14 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-xl transition-all active:scale-95 group shrink-0 cursor-pointer"
-                        onClick={() => navigate('/ambiental/revisiones')}
+                        onClick={() => navigate('/odisea/ambiental/revisiones')}
                     >
                         <ChevronLeft size={24} className="text-gray-400 group-hover:text-[#4A5B4A] transition-colors" />
                     </Button>

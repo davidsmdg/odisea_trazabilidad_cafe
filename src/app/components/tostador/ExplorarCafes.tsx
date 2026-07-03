@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { getLotesMaster, isLotePublicado } from '../../utils/loteStore';
 import {
     Compass,
     Search,
@@ -405,20 +406,80 @@ export const LOTES_MARKET_DEFAULT = [
         precioBaseKgUSD: 24.87,
         avatar: 'https://images.unsplash.com/photo-1611162458324-aae1eb4129a4?auto=format&fit=crop&w=800&q=80',
     }
-];
+].map(l => {
+    let mp = l.macroperfil;
+    if (mp === 'Balanceado') mp = 'Dulce Vainilla';
+    else if (mp === 'Colombia') mp = 'Nueces';
+    else if (mp === 'Frutal') {
+        mp = l.id.includes('6') || l.id.includes('8') ? 'Frutal cítrico' : 'Frutal bayas';
+    }
+    
+    let proc = l.proceso;
+    if (proc.toLowerCase().includes('anaeróbic') || proc.toLowerCase().includes('extendid')) {
+        proc = 'Fermentación anaeróbica';
+    } else if (proc.toLowerCase().includes('honey')) {
+        proc = 'Honey';
+    } else if (proc.toLowerCase().includes('natural')) {
+        proc = 'Natural';
+    } else {
+        proc = 'Lavado';
+    }
+    return { ...l, macroperfil: mp, proceso: proc };
+});
 
 export function ExplorarCafes() {
     const navigate = useNavigate();
-    const [lotes, setLotes] = useState<any[]>(LOTES_MARKET_DEFAULT);
+    const [lotes, setLotes] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [mercadoDestino, setMercadoDestino] = useState<'EU' | 'USA'>('EU');
+
+    useEffect(() => {
+        const master = getLotesMaster();
+        // Filtrar solo los lotes ofrecidos por el productor, aprobados por Odisea y que estén PUBLICADOS en el Stage Gate
+        const commercialLotes = master.filter(l => l.ofrecidoPorProductor && l.aprobadoComercializacion && isLotePublicado(l.id));
+        const mappedMaster = commercialLotes.map(l => ({
+            id: l.id,
+            codigo: l.id,
+            productor: l.productor,
+            finca: l.finca,
+            municipio: l.municipio ? l.municipio.split(',')[0] : 'San Agustín',
+            departamento: l.municipio ? (l.municipio.split(',')[1]?.trim() || 'Huila') : 'Huila',
+            variedad: l.variedad,
+            proceso: l.proceso,
+            macroperfil: l.macroperfil || 'Balanceado',
+            impacto: 'Comunidad',
+            puntaje: l.calificacion ? l.calificacion.toFixed(2) : 'Sin Evaluar',
+            empaque: '10 Sacos (35 kg verde)',
+            perfilTaza: l.macroperfil ? `Perfil sensorial destacado con notas a ${l.macroperfil.toLowerCase()}.` : 'Perfil de taza con notas frutales y acidez equilibrada.',
+            precioBaseKgUSD: 14.50,
+            avatar: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=800&q=80',
+            regionesDisponibles: l.regionesDisponibles || ['USA', 'EU'],
+        }));
+        
+        const combined = [...mappedMaster];
+        LOTES_MARKET_DEFAULT.forEach(def => {
+            if (!combined.some(c => c.id === def.id)) {
+                combined.push({
+                    ...def,
+                    regionesDisponibles: (def as any).regionesDisponibles || ['USA', 'EU']
+                });
+            }
+        });
+        setLotes(combined);
+    }, []);
 
     // Filtros de Sourcing Avanzados
     const [filtroVariedad, setFiltroVariedad] = useState('todas');
     const [filtroProceso, setFiltroProceso] = useState('todos');
-    const [filtroMacroperfil, setFiltroMacroperfil] = useState('todos');
+    const [filtroMacroperfiles, setFiltroMacroperfiles] = useState<string[]>([]);
     const [filtroImpacto, setFiltroImpacto] = useState('todos');
     const [filtroOrigen, setFiltroOrigen] = useState('todos');
+
+    const toggleFiltroMacroperfil = (perfil: string) => {
+        setFiltroMacroperfiles(prev => 
+            prev.includes(perfil) ? prev.filter(p => p !== perfil) : [...prev, perfil]
+        );
+    };
 
     const [accionesRealizadas, setAccionesRealizadas] = useState<Record<string, { muestra?: boolean; reserva?: boolean; cantidad?: number; tipoEmpaque?: 'Sacos' | 'Cajas' }>>({});
     const [reservaActiva, setReservaActiva] = useState<string | null>(null);
@@ -440,9 +501,16 @@ export function ExplorarCafes() {
 
         if (filtroVariedad !== 'todas' && !l.variedad.toLowerCase().includes(filtroVariedad.toLowerCase())) return false;
         if (filtroProceso !== 'todos' && !l.proceso.toLowerCase().includes(filtroProceso.toLowerCase())) return false;
-        if (filtroMacroperfil !== 'todos' && l.macroperfil !== filtroMacroperfil) return false;
+        if (filtroMacroperfiles.length > 0) {
+            const profiles = Array.isArray(l.macroperfil) ? l.macroperfil : (typeof l.macroperfil === 'string' ? l.macroperfil.split(',').map((s: string) => s.trim()) : []);
+            const matches = profiles.some((p: string) => filtroMacroperfiles.includes(p));
+            if (!matches) return false;
+        }
         if (filtroImpacto !== 'todos' && l.impacto !== filtroImpacto) return false;
         if (filtroOrigen !== 'todos' && l.departamento.toLowerCase() !== filtroOrigen.toLowerCase()) return false;
+
+        // Filtrar por mercado de destino (USA / EU)
+        if (l.regionesDisponibles && !l.regionesDisponibles.includes(mercadoDestino)) return false;
 
         return true;
     });
@@ -480,7 +548,8 @@ export function ExplorarCafes() {
             cadena: 'Completa',
             imagen: lote.avatar,
             // Agregamos precio por si luego queremos renderizarlo en la tarjeta
-            precioBaseKgUSD: lote.precioBaseKgUSD
+            precioBaseKgUSD: lote.precioBaseKgUSD,
+            factorRendimiento: lote.factorRendimiento || 92.5
         });
 
         return acc;
@@ -542,7 +611,7 @@ export function ExplorarCafes() {
     const limpiarFiltrosAvanzados = () => {
         setFiltroVariedad('todas');
         setFiltroProceso('todos');
-        setFiltroMacroperfil('todos');
+        setFiltroMacroperfiles([]);
         setFiltroImpacto('todos');
         setFiltroOrigen('todos');
         setSearchTerm('');
@@ -613,7 +682,7 @@ export function ExplorarCafes() {
                     <span className="text-xs font-black uppercase tracking-wider text-[#5f705f] flex items-center gap-1.5">
                         <SlidersHorizontal size={15} /> Filtros de Sourcing Específicos
                     </span>
-                    {(filtroVariedad !== 'todas' || filtroProceso !== 'todos' || filtroMacroperfil !== 'todos' || filtroImpacto !== 'todos' || filtroOrigen !== 'todos' || searchTerm !== '') && (
+                    {(filtroVariedad !== 'todas' || filtroProceso !== 'todos' || filtroMacroperfiles.length > 0 || filtroImpacto !== 'todos' || filtroOrigen !== 'todos' || searchTerm !== '') && (
                         <button
                             onClick={limpiarFiltrosAvanzados}
                             className="text-[11px] font-bold text-[#bb8d3b] hover:underline"
@@ -623,8 +692,25 @@ export function ExplorarCafes() {
                     )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                    {/* Filtro Variedad */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    {/* 1. Filtro Origen (Departamento) - FIRST */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-gray-400 block">Origen (Depto)</label>
+                        <select
+                            value={filtroOrigen}
+                            onChange={(e) => setFiltroOrigen(e.target.value)}
+                            className="w-full h-10 bg-gray-50 border border-gray-200 rounded-xl px-3 text-xs font-bold text-gray-800 outline-none focus:border-[#bb8d3b]"
+                        >
+                            <option value="todos">Todos los orígenes</option>
+                            <option value="Huila">Huila</option>
+                            <option value="Antioquia">Antioquia</option>
+                            <option value="Quindío">Quindío</option>
+                            <option value="Cauca">Cauca</option>
+                            <option value="Nariño">Nariño</option>
+                        </select>
+                    </div>
+
+                    {/* 2. Filtro Variedad */}
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-gray-400 block">Variedad</label>
                         <select
@@ -641,7 +727,7 @@ export function ExplorarCafes() {
                         </select>
                     </div>
 
-                    {/* Filtro Proceso */}
+                    {/* 3. Filtro Proceso */}
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-gray-400 block">Proceso</label>
                         <select
@@ -650,30 +736,44 @@ export function ExplorarCafes() {
                             className="w-full h-10 bg-gray-50 border border-gray-200 rounded-xl px-3 text-xs font-bold text-gray-800 outline-none focus:border-[#bb8d3b]"
                         >
                             <option value="todos">Todos los procesos</option>
-                            <option value="Lavado Especial">Lavado Especial</option>
-                            <option value="Honey Amarillo">Honey Amarillo</option>
-                            <option value="Natural Prolongado">Natural Prolongado</option>
-                            <option value="Lavado Estándar">Lavado Estándar</option>
+                            <option value="Lavado">Lavado</option>
+                            <option value="Natural">Natural</option>
+                            <option value="Honey">Honey</option>
+                            <option value="Fermentación anaeróbica">Fermentación anaeróbica</option>
+                            <option value="Fermentación carbónica">Fermentación carbónica</option>
+                            <option value="Fermentación con levadura">Fermentación con levadura</option>
+                            <option value="Cofermentación">Cofermentación</option>
                         </select>
                     </div>
 
-                    {/* Filtro Macroperfil */}
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-gray-400 block">Macroperfil</label>
-                        <select
-                            value={filtroMacroperfil}
-                            onChange={(e) => setFiltroMacroperfil(e.target.value)}
-                            className="w-full h-10 bg-gray-50 border border-gray-200 rounded-xl px-3 text-xs font-bold text-gray-800 outline-none focus:border-[#bb8d3b]"
-                        >
-                            <option value="todos">Todos los perfiles</option>
-                            <option value="Regional Colombia">Regional Colombia</option>
-                            <option value="Frutal">Frutal</option>
-                            <option value="Floral">Floral</option>
-                            <option value="Especiado">Especiado</option>
-                        </select>
+                    {/* 4. Filtro Macroperfiles (Multi-select) */}
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase text-gray-400 block">Macroperfiles</label>
+                        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1 border border-gray-100 rounded-xl bg-gray-50/30">
+                            {[
+                                'Floral', 'Frutal bayas', 'Frutal cítrico', 'Vinoso', 'Nueces', 'Cacao', 'Especiado', 'Dulce Vainilla', 'Dulce Azúcar morena'
+                            ].map((perf) => {
+                                const isSelected = filtroMacroperfiles.includes(perf);
+                                return (
+                                    <button
+                                        key={perf}
+                                        type="button"
+                                        onClick={() => toggleFiltroMacroperfil(perf)}
+                                        className={cn(
+                                            "text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border transition-all cursor-pointer",
+                                            isSelected
+                                                ? "bg-[#bb8d3b] border-[#bb8d3b] text-white shadow-xs"
+                                                : "bg-white border-gray-100 text-gray-500 hover:border-gray-200"
+                                        )}
+                                    >
+                                        {perf}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    {/* Filtro Impacto */}
+                    {/* 5. Filtro Impacto */}
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-gray-400 block">Impacto Social</label>
                         <select
@@ -685,23 +785,6 @@ export function ExplorarCafes() {
                             <option value="Mujeres Caficultoras">Mujeres Caficultoras</option>
                             <option value="Jóvenes Productores">Jóvenes Productores</option>
                             <option value="Comunidades Indígenas">Comunidades Indígenas</option>
-                        </select>
-                    </div>
-
-                    {/* Filtro Origen (Departamento) */}
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-gray-400 block">Origen (Depto)</label>
-                        <select
-                            value={filtroOrigen}
-                            onChange={(e) => setFiltroOrigen(e.target.value)}
-                            className="w-full h-10 bg-gray-50 border border-gray-200 rounded-xl px-3 text-xs font-bold text-gray-800 outline-none focus:border-[#bb8d3b]"
-                        >
-                            <option value="todos">Todos los orígenes</option>
-                            <option value="Huila">Huila</option>
-                            <option value="Antioquia">Antioquia</option>
-                            <option value="Quindío">Quindío</option>
-                            <option value="Cauca">Cauca</option>
-                            <option value="Nariño">Nariño</option>
                         </select>
                     </div>
                 </div>

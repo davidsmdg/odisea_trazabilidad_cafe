@@ -14,31 +14,43 @@ interface LoteBancoCardProps {
     variedad: string;
     proceso: 'Lavado' | 'Honey' | 'Natural';
     puntaje: number;
-    macroperfil: 'Especiado' | 'Floral' | 'Frutal' | 'Colombia' | 'Chocolate' | 'Caramelo';
+    macroperfil: string;
     descripcionPerfil: string;
     ueEstado: 'Verificado' | 'En revisión' | 'Pendiente';
     disponibilidad: number;
     cadena: 'Completa' | 'Parcial';
     imagen?: string;
+    factorRendimiento?: number;
   };
   onClick: () => void;
 }
 
-const macroperfilConfig = {
-  Especiado: { color: 'bg-amber-100 text-amber-900 border-amber-200', label: 'Especiado' },
-  Floral: { color: 'bg-rose-100 text-rose-900 border-rose-200', label: 'Floral' },
-  Frutal: { color: 'bg-emerald-100 text-emerald-900 border-emerald-200', label: 'Frutal' },
-  Colombia: { color: 'bg-[#e3d5b8]/30 text-[#5f705f] border-[#e3d5b8]/50', label: 'Perfil Colombia' },
-  Chocolate: { color: 'bg-amber-100 text-[#5D4037] border-amber-200', label: 'Chocolate' },
-  Caramelo: { color: 'bg-orange-50 text-orange-900 border-orange-200', label: 'Caramelo' },
-  Balanceado: { color: 'bg-blue-50 text-blue-900 border-blue-200', label: 'Balanceado' },
-  Default: { color: 'bg-gray-100 text-gray-800 border-gray-200', label: 'Perfil' },
+const macroperfilConfig: Record<string, { color: string; label: string }> = {
+  'Floral': { color: 'bg-rose-100 text-rose-900 border-rose-200', label: 'Floral' },
+  'Frutal bayas': { color: 'bg-red-50 text-red-900 border-red-200', label: 'Frutal bayas' },
+  'Frutal cítrico': { color: 'bg-yellow-50 text-yellow-900 border-yellow-200', label: 'Frutal cítrico' },
+  'Vinoso': { color: 'bg-purple-100 text-purple-900 border-purple-200', label: 'Vinoso' },
+  'Nueces': { color: 'bg-amber-100 text-[#5D4037] border-amber-200', label: 'Nueces' },
+  'Cacao': { color: 'bg-amber-50 text-amber-900 border-amber-200', label: 'Cacao' },
+  'Especiado': { color: 'bg-orange-50 text-orange-900 border-orange-200', label: 'Especiado' },
+  'Dulce Vainilla': { color: 'bg-emerald-50 text-emerald-900 border-emerald-200', label: 'Dulce Vainilla' },
+  'Dulce Azúcar morena': { color: 'bg-amber-100 text-amber-900 border-amber-200', label: 'Dulce Azúcar morena' },
+  'Default': { color: 'bg-gray-100 text-gray-800 border-gray-200', label: 'Perfil' },
 };
 
 const ueColors = {
   Verificado: 'bg-primary text-primary-foreground',
   'En revisión': 'bg-orange-500 text-white',
   Pendiente: 'bg-gray-400 text-white',
+};
+
+const getMacroperfiles = (mp: any): string[] => {
+  if (!mp) return [];
+  if (Array.isArray(mp)) return mp;
+  if (typeof mp === 'string') {
+    return mp.split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+  return [];
 };
 
 export function LoteBancoCard({ lote, onClick }: LoteBancoCardProps) {
@@ -88,7 +100,7 @@ export function LoteBancoCard({ lote, onClick }: LoteBancoCardProps) {
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-0.5 text-left">
               <h4 className="text-xl font-sans font-bold text-gray-800 leading-tight group-hover:text-[#5f705f] transition-colors">
-                {lote.variedad} • {lote.macroperfil}
+                {lote.variedad} • {getMacroperfiles(lote.macroperfil).join(', ')}
               </h4>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[11px] font-medium text-[#5f705f]">{lote.productor}</span>
@@ -99,19 +111,29 @@ export function LoteBancoCard({ lote, onClick }: LoteBancoCardProps) {
           </div>
 
           {/* Variedad Destacada */}
-          <div className="pt-0.5">
+          <div className="pt-0.5 flex flex-wrap gap-2">
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-50 text-gray-600 text-[11px] font-medium border border-gray-100 shadow-sm">
               Variedad: {lote.variedad}
             </span>
+            {lote.factorRendimiento && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-100 shadow-sm">
+                Factor: {lote.factorRendimiento}
+              </span>
+            )}
           </div>
         </div>
 
         {/* Perfil de Sabor */}
         <div className="space-y-2 py-3 border-y border-gray-50">
-          <div className="flex items-center gap-2">
-            <Badge className={cn("text-[10px] font-medium px-2.5 py-0.5 rounded-md border shadow-none", (macroperfilConfig[lote.macroperfil] || macroperfilConfig.Default).color)}>
-              {(macroperfilConfig[lote.macroperfil] || macroperfilConfig.Default).label}
-            </Badge>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {getMacroperfiles(lote.macroperfil).map((perf) => {
+              const conf = macroperfilConfig[perf] || macroperfilConfig.Default;
+              return (
+                <Badge key={perf} className={cn("text-[10px] font-medium px-2.5 py-0.5 rounded-md border shadow-none", conf.color)}>
+                  {conf.label}
+                </Badge>
+              );
+            })}
           </div>
           <p className="text-xs text-gray-500 font-medium leading-relaxed line-clamp-2 italic">
             "{lote.descripcionPerfil}"

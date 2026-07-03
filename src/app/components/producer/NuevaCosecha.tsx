@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { addLote } from '../../utils/loteStore';
+import { detectAnomaly, detectHarvestDateAnomaly } from '../../utils/anomalyStore';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Calendar,
@@ -79,14 +81,13 @@ export function NuevaCosecha() {
             setIsLoading(false);
             
             // Create the new Lot Object
-            // Merma del 20% en cada etapa: Seco = Cereza * 0.80, Verde = Seco * 0.80 = Cereza * 0.64
-            // Por lo tanto, Cereza = Verde / 0.64 = Verde * 1.5625
+            const randomCode = `LOT-HUI-${Math.floor(100 + Math.random()*900)}`;
             const factor = 1.5625;
             const kilosObjetivoCereza = modalidad === 'objetivo' ? Math.round(Number(kilosObjetivo) * factor) : null;
 
             const newLot = {
                 id: `lc-new-${Date.now()}`,
-                codigo: `LOTE-${Math.floor(Math.random()*1000)}`,
+                codigo: randomCode,
                 productor: 'Tú',
                 cosecha: fecha,
                 finca,
@@ -107,13 +108,30 @@ export function NuevaCosecha() {
                 clientes: []
             };
 
+            // Ejecutar validaciones estadísticas históricas en caliente
+            let hasHistoricalAnomaly = false;
+            if (modalidad === 'diario') {
+                const checkPeso = detectAnomaly(randomCode, 'peso_cereza', Number(peso), finca, 'María González');
+                const checkFecha = detectHarvestDateAnomaly(randomCode, fecha, finca, 'María González');
+                if (checkPeso || checkFecha) hasHistoricalAnomaly = true;
+            } else if (modalidad === 'objetivo' && kilosObjetivoCereza) {
+                const checkPeso = detectAnomaly(randomCode, 'peso_cereza', kilosObjetivoCereza, finca, 'María González');
+                if (checkPeso) hasHistoricalAnomaly = true;
+            }
+
+            if (hasHistoricalAnomaly) {
+                toast.warning('¡Alerta de Desviación Histórica!', {
+                    description: 'Los valores de peso o fecha ingresados se desvían de su media histórica. El registro se guardó pero se envió a auditoría.',
+                    duration: 6000
+                });
+            }
+
             // Save to localStorage
             const saved = localStorage.getItem('lotes_produccion');
             let currentLotes = [];
             if (saved) {
                 try { currentLotes = JSON.parse(saved); } catch (e) {}
             } else {
-                // To avoid missing the mock list
                 currentLotes = [
                     {
                         id: 'lc1', codigo: 'MG-ESP-042', productor: 'María', cosecha: 'Oct-Nov 2024',
@@ -125,8 +143,26 @@ export function NuevaCosecha() {
                 ];
             }
             
-            currentLotes.unshift(newLot); // add to top
+            currentLotes.unshift(newLot);
             localStorage.setItem('lotes_produccion', JSON.stringify(currentLotes));
+
+            // Save to Master Odisea list
+            addLote({
+                id: randomCode,
+                productor: 'María González',
+                finca: finca,
+                municipio: 'San Agustín, Huila',
+                variedad: variedad || 'Bourbon Rosado',
+                proceso: proceso || 'Lavado',
+                estado: 'En Finca',
+                almacenamiento: 'Pendiente Recibo',
+                fecha: new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+                pesos: {
+                    cereza: modalidad === 'diario' ? Number(peso) : 0,
+                    pergamino: 0,
+                    verde: 0
+                }
+            });
 
             if (modalidad === 'objetivo') {
                 toast.success('¡Objetivo de Lote Creado!', {
@@ -299,10 +335,13 @@ export function NuevaCosecha() {
                                             <SelectValue placeholder="Lavado, Natural..." />
                                         </SelectTrigger>
                                         <SelectContent className="rounded-3xl border-gray-100">
-                                            <SelectItem value="Lavado">Lavado (Tradicional)</SelectItem>
+                                            <SelectItem value="Lavado">Lavado</SelectItem>
                                             <SelectItem value="Natural">Natural</SelectItem>
                                             <SelectItem value="Honey">Honey</SelectItem>
-                                            <SelectItem value="Experimento">Otro Experimento</SelectItem>
+                                            <SelectItem value="Fermentación anaeróbica">Fermentación anaeróbica</SelectItem>
+                                            <SelectItem value="Fermentación carbónica">Fermentación carbónica</SelectItem>
+                                            <SelectItem value="Fermentación con levadura">Fermentación con levadura</SelectItem>
+                                            <SelectItem value="Cofermentación">Cofermentación</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

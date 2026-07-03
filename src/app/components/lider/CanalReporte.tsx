@@ -28,7 +28,7 @@ export function CanalReporte() {
             setIsSending(false);
             setMessage('');
             toast.success("Reporte enviado de forma encriptada", {
-                description: "Ceres Corp ha recibido tu alerta. Un oficial de cumplimiento revisará el caso en menos de 24h.",
+                description: "Odisea Trace ha recibido tu alerta. Un oficial de cumplimiento revisará el caso en menos de 24h.",
                 style: { borderRadius: '24px', padding: '20px' }
             });
         }, 1500);
@@ -56,7 +56,7 @@ export function CanalReporte() {
                                 </div>
                                 <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10">
                                     <ShieldAlert size={16} className="text-amber-400" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-blue-200">Alerta Directa a Ceres</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-blue-200">Alerta Directa a Odisea</span>
                                 </div>
                             </div>
                         </div>

@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { cn } from '../components/ui/utils';
 import { Button } from '../components/ui/button';
+import { OnboardingTour, OnboardingTourTrigger } from '../components/OnboardingTour';
 
 interface NavItem {
     label: string;
@@ -58,7 +59,7 @@ export function ProducerLayout() {
             <div className="flex items-center gap-3 px-6 py-8 border-b border-white/10">
                 <Coffee className="h-8 w-8 text-white shrink-0" />
                 {(!collapsed || mobileMenuOpen) && (
-                    <span className="text-2xl font-sans font-bold tracking-tight">Odisea Trace</span>
+                    <span className="text-2xl font-sans font-bold tracking-tight">Odisea Coffee Trace</span>
                 )}
             </div>
 
@@ -122,7 +123,7 @@ export function ProducerLayout() {
                 </Button>
                 <div className="flex items-center gap-2">
                     <Coffee className="h-6 w-6 text-[#5f705f]" />
-                    <span className="text-xl font-sans font-bold text-[#5f705f]">Odisea Trace</span>
+                    <span className="text-xl font-sans font-bold text-[#5f705f]">Odisea Coffee Trace</span>
                 </div>
             </header>
 
@@ -182,6 +183,7 @@ export function ProducerLayout() {
                     </div>
 
                     <div className="flex items-center gap-6">
+                        <OnboardingTourTrigger role="AGRICULTOR" />
                         <div className="relative">
                             <Button variant="ghost" size="icon" className="rounded-full text-gray-500 hover:bg-gray-100 relative">
                                 <Bell size={20} />
@@ -205,6 +207,7 @@ export function ProducerLayout() {
                 <main className="flex-1 p-6 md:p-10">
                     <Outlet />
                 </main>
+                <OnboardingTour role="AGRICULTOR" />
             </div>
         </div>
     );

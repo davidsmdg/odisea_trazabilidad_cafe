@@ -21,9 +21,11 @@ import {
     CheckCircle2,
     Heart,
     ChevronRight,
+    AlertTriangle
 } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
+import { isLotePublicado } from '../../utils/loteStore';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -76,7 +78,7 @@ const CADENA_EXPORTACION: PasoChain[] = [
         id: 'bodega',
         label: 'Bodega',
         Icon: Package,
-        detalle: 'Bodega Ceres · Bucaramanga · Ingreso 20 mayo 2025 · Humedad controlada · Peso recibido: 800 kg pergamino.',
+        detalle: 'Bodega Odisea · Bucaramanga · Ingreso 20 mayo 2025 · Humedad controlada · Peso recibido: 800 kg pergamino.',
     },
     {
         id: 'cata',
@@ -144,6 +146,9 @@ const FLAVOR_NOTES = [
 export function TrazabilidadPublica() {
     const { loteId } = useParams();
 
+    const idToQuery = loteId || MOCK.loteId;
+    const isPublic = isLotePublicado(idToQuery);
+
     // Destino
     const [destino, setDestino] = useState<Destino>('exportacion');
     const cadena = destino === 'exportacion' ? CADENA_EXPORTACION : CADENA_LOCAL;
@@ -168,6 +173,26 @@ export function TrazabilidadPublica() {
         }
         setIsSubmitting(true);
         setTimeout(() => {
+            const newFeedback = {
+                id: Date.now().toString(),
+                loteId: loteId || MOCK.loteId,
+                rating,
+                selectedNotes,
+                message,
+                fecha: new Date().toLocaleDateString('es-CO'),
+                estado: 'Pendiente'
+            };
+
+            const current = localStorage.getItem('comentarios_publicos_pendientes');
+            let list = [];
+            if (current) {
+                try {
+                    list = JSON.parse(current);
+                } catch (e) {}
+            }
+            list.push(newFeedback);
+            localStorage.setItem('comentarios_publicos_pendientes', JSON.stringify(list));
+
             setIsSubmitting(false);
             setIsSubmitted(true);
             toast.success('¡Gracias por tu valoración!');
@@ -178,6 +203,24 @@ export function TrazabilidadPublica() {
         setDestino(d);
         setPasoActivo(0);
     };
+
+    if (!isPublic) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[85vh] p-8 bg-[#FDFCFB] text-center font-sans max-w-md mx-auto">
+                <div className="w-20 h-20 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-6 shadow-xs">
+                    <AlertTriangle size={36} />
+                </div>
+                <h1 className="text-3xl font-sans font-black text-slate-800 tracking-tight leading-tight mb-4">Registro en Validación</h1>
+                <p className="text-sm font-semibold text-slate-500 leading-normal mb-6">
+                    Los datos de trazabilidad del lote <span className="font-bold text-[#5f705f]">{idToQuery}</span> están en etapa de auditoría en origen y no han sido publicados de forma oficial todavía.
+                </p>
+                <div className="w-12 h-0.5 bg-slate-200 rounded-full mb-6" />
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[#5f705f]">
+                    Odisea Trace ®
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col animate-in fade-in duration-700 bg-[#FDFCFB]">

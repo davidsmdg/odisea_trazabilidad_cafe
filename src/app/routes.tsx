@@ -20,6 +20,7 @@ import { LiderLayout } from './layouts/LiderLayout';
 import { ValidacionesPanel } from './components/lider/ValidacionesPanel';
 import { DetalleValidacion } from './components/lider/DetalleValidacion';
 import { CanalReporte } from './components/lider/CanalReporte';
+import { PerfilLider } from './components/lider/PerfilLider';
 import { AmbientalLayout } from './layouts/AmbientalLayout';
 import { BandejaRevision } from './components/ambiental/BandejaRevision';
 import { AnalisisEspacial } from './components/ambiental/AnalisisEspacial';
@@ -29,11 +30,16 @@ import { CatadorLayout } from './layouts/CatadorLayout';
 import { MuestrasPendientes } from './components/catador/MuestrasPendientes';
 import { EvaluacionSensorial } from './components/catador/EvaluacionSensorial';
 import { HistorialCatas } from './components/catador/HistorialCatas';
-import { CeresLayout } from './layouts/CeresLayout';
-import { GestionLotesCeres } from './components/ceres/GestionLotesCeres';
-import { DetalleLoteCeres } from './components/ceres/DetalleLoteCeres';
-import { CalidadControlCeres } from './components/ceres/CalidadControlCeres';
-import { DirectorioProductoresCeres } from './components/ceres/DirectorioProductoresCeres';
+import { PerfilCatador } from './components/catador/PerfilCatador';
+import { OdiseaLayout } from './layouts/OdiseaLayout';
+import { DashboardOdisea } from './components/odisea/DashboardOdisea';
+import { GestionLotesOdisea } from './components/odisea/GestionLotesOdisea';
+import { DetalleLoteOdisea } from './components/odisea/DetalleLoteOdisea';
+import { CalidadControlOdisea } from './components/odisea/CalidadControlOdisea';
+import { DirectorioGeneralOdisea } from './components/odisea/DirectorioGeneralOdisea';
+import { ControlConexionesOdisea } from './components/odisea/ControlConexionesOdisea';
+import { ExportacionesOdisea } from './components/odisea/ExportacionesOdisea';
+import { GestionUsuariosOdisea } from './components/odisea/GestionUsuariosOdisea';
 import { TostadorLayout } from './layouts/TostadorLayout';
 import { PerfilTostador } from './components/tostador/PerfilTostador';
 import { ExplorarCafes } from './components/tostador/ExplorarCafes';
@@ -155,18 +161,22 @@ export const router = createBrowserRouter([
             path: 'reportar',
             Component: CanalReporte,
           },
+          {
+            path: 'perfil',
+            Component: PerfilLider,
+          },
         ],
       },
     ],
   },
 
-  // ── Rutas protegidas del verificador ambiental ──────────────────────────
+  // ── Rutas protegidas del verificador ambiental (FUSIONADO A ODISEA) ─────
   {
     path: '/ambiental',
     Component: ProtectedRoute,
     children: [
       {
-        Component: AmbientalLayout,
+        Component: OdiseaLayout,
         children: [
           {
             path: 'revisiones',
@@ -209,42 +219,70 @@ export const router = createBrowserRouter([
             path: 'historial',
             Component: HistorialCatas,
           },
+          {
+            path: 'perfil',
+            Component: PerfilCatador,
+          },
         ],
       },
     ],
   },
 
-  // ── Rutas protegidas de Ceres (Administrador Central) ────────────────────
+  // ── Rutas protegidas de Odisea (Administrador Central) ────────────────────
   {
-    path: '/ceres',
+    path: '/odisea',
     Component: ProtectedRoute,
     children: [
       {
-        Component: CeresLayout,
+        Component: OdiseaLayout,
         children: [
           {
             path: 'dashboard',
-            Component: () => <ComingSoon page="Dashboard Logístico" />,
+            Component: DashboardOdisea,
           },
           {
             path: 'productores',
-            Component: DirectorioProductoresCeres,
+            Component: DirectorioGeneralOdisea,
           },
           {
             path: 'lotes',
-            Component: GestionLotesCeres,
+            Component: GestionLotesOdisea,
           },
           {
             path: 'lote/:id',
-            Component: DetalleLoteCeres,
+            Component: DetalleLoteOdisea,
           },
           {
             path: 'exportaciones',
-            Component: () => <ComingSoon page="Panel de Exportaciones" />,
+            Component: ExportacionesOdisea,
           },
           {
             path: 'calidad',
-            Component: CalidadControlCeres,
+            Component: CalidadControlOdisea,
+          },
+          {
+            path: 'conexiones',
+            Component: ControlConexionesOdisea,
+          },
+          {
+            path: 'usuarios',
+            Component: GestionUsuariosOdisea,
+          },
+          {
+            path: 'ambiental/revisiones',
+            Component: BandejaRevision,
+          },
+          {
+            path: 'ambiental/analizar/:id',
+            Component: AnalisisEspacial,
+          },
+          {
+            path: 'ambiental/buenas-practicas',
+            Component: BuenasPracticas,
+          },
+          {
+            path: 'ambiental/historial',
+            Component: HistorialAprobaciones,
           },
         ],
       },

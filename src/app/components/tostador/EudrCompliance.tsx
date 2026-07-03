@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     ShieldCheck,
     FileCheck,
@@ -9,35 +9,50 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
-
-const LOTES_EUDR = [
-    {
-        id: 'LOT-HUILA-084',
-        finca: 'Finca La Esperanza',
-        productor: 'Carlos Alberto Montero',
-        coordenadas: '1.8843° N, 76.2931° W',
-        areaPoligono: '12.04 Hectáreas (Polígono Cerrado)',
-        riesgoDeforestacion: '0.0% (Riesgo Nulo)',
-        fechaVerificacion: '12 Mayo 2026',
-        ultimaImagenSat: 'Sentinel-2 (Resolución 10m)',
-        certificados: ['Libre de Deforestación (Post 31-Dic-2020)', 'Legalidad: Legislación País Productor', 'Polígono Georreferenciado Validado'],
-    },
-    {
-        id: 'LOT-ANT-112',
-        finca: 'Manantial de Agua',
-        productor: 'María Elena Restrepo',
-        coordenadas: '5.6421° N, 75.6120° W',
-        areaPoligono: '6.50 Hectáreas (Polígono Cerrado)',
-        riesgoDeforestacion: '0.0% (Riesgo Nulo)',
-        fechaVerificacion: '08 Mayo 2026',
-        ultimaImagenSat: 'Landsat-8 / Copernicus',
-        certificados: ['Libre de Deforestación (Post 31-Dic-2020)', 'Legalidad: Legislación País Productor', 'Polígono Georreferenciado Validado'],
-    },
-];
+import { getLotesMaster, isLotePublicado } from '../../utils/loteStore';
 
 export function EudrCompliance() {
-    const [selectedLote, setSelectedLote] = useState(LOTES_EUDR[0]);
+    const [lotesEudr, setLotesEudr] = useState<any[]>([]);
+    const [selectedLote, setSelectedLote] = useState<any>(null);
     const [isDownloading, setIsDownloading] = useState(false);
+
+    useEffect(() => {
+        const master = getLotesMaster();
+        
+        const rawLinks = localStorage.getItem('links_tostador');
+        let links: any[] = [];
+        if (rawLinks) {
+            try { links = JSON.parse(rawLinks); } catch (e) {}
+        } else {
+            links = [
+                { id: '1', loteId: 'LOT-HUILA-084', tostador: 'Blue Bottle Coffee (USA)' },
+                { id: '2', loteId: 'LOT-ANT-112', tostador: 'Workshop Coffee (UK)' }
+            ];
+        }
+
+        const linkedLotes = master.filter(l => links.some(link => link.loteId === l.id) && isLotePublicado(l.id));
+        
+        const items = linkedLotes.map(l => ({
+            id: l.id,
+            finca: l.finca,
+            productor: l.productor,
+            coordenadas: l.coordenadas || (l.id === 'LOT-HUILA-084' ? '1.8843° N, 76.2931° W' : '5.6421° N, 75.6120° W'),
+            areaPoligono: l.areaPoligono || (l.id === 'LOT-HUILA-084' ? '12.04 Hectáreas (Polígono Cerrado)' : '6.50 Hectáreas (Polígono Cerrado)'),
+            riesgoDeforestacion: l.riesgoDeforestacion || (l.verificadoEUDR === false ? '100.0% (Alerta de Deforestación)' : '0.0% (Riesgo Nulo)'),
+            fechaVerificacion: l.fecha || '12 Mayo 2026',
+            ultimaImagenSat: 'Sentinel-2 (Resolución 10m)',
+            certificados: [
+                'Libre de Deforestación (Post 31-Dic-2020)',
+                'Legalidad: Legislación País Productor',
+                'Polígono Georreferenciado Validado'
+            ],
+        }));
+        
+        setLotesEudr(items);
+        if (items.length > 0) {
+            setSelectedLote(items[0]);
+        }
+    }, []);
 
     const handleDownload = () => {
         setIsDownloading(true);
@@ -49,6 +64,15 @@ export function EudrCompliance() {
             });
         }, 1500);
     };
+
+    if (lotesEudr.length === 0 || !selectedLote) {
+        return (
+            <div className="text-center py-20 bg-white border border-gray-100 rounded-[40px] max-w-[1200px] mx-auto text-left font-sans p-10 space-y-4">
+                <h2 className="text-2xl font-black text-gray-800">Cumplimiento Cero Deforestación (EUDR)</h2>
+                <p className="text-gray-400 font-bold">No tienes lotes asociados con cumplimiento EUDR en este momento. Solicita al administrador de Odisea que asocie tus compras internacionales.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-[1200px] mx-auto pb-24 animate-in fade-in duration-500 font-sans space-y-10">
@@ -68,12 +92,20 @@ export function EudrCompliance() {
                     </p>
                 </div>
 
-                <div className="bg-emerald-500 text-white p-6 rounded-3xl shrink-0 space-y-1 shadow-md z-10">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-100 block">Estado de Auditoría</span>
+                <div className={`text-white p-6 rounded-3xl shrink-0 space-y-1 shadow-md z-10 transition-all duration-300 ${selectedLote.riesgoDeforestacion?.includes('Alerta') ? 'bg-rose-600 shadow-rose-600/10' : 'bg-emerald-500 shadow-emerald-500/10'}`}>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/80 block">Estado de Auditoría</span>
                     <p className="text-2xl font-black flex items-center gap-2">
-                        <CheckCircle2 size={24} className="fill-white text-emerald-500" /> APROBADO UE
+                        {selectedLote.riesgoDeforestacion?.includes('Alerta') ? (
+                            <>⚠️ RIESGO ALTO</>
+                        ) : (
+                            <><CheckCircle2 size={24} className="fill-white text-emerald-500" /> APROBADO UE</>
+                        )}
                     </p>
-                    <p className="text-[10px] text-emerald-50 font-bold pt-1">Firmado por Odisea Trace</p>
+                    <p className="text-[10px] text-white/90 font-bold pt-1">
+                        {selectedLote.riesgoDeforestacion?.includes('Alerta') 
+                            ? 'Incumple Regulación Cero Deforestación' 
+                            : 'Firmado por Odisea Trace'}
+                    </p>
                 </div>
             </div>
 
@@ -86,7 +118,7 @@ export function EudrCompliance() {
                     </span>
 
                     <div className="space-y-3">
-                        {LOTES_EUDR.map((lote) => {
+                        {lotesEudr.map((lote) => {
                             const isSelected = lote.id === selectedLote.id;
                             return (
                                 <div

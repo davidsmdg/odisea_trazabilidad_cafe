@@ -12,7 +12,8 @@ import {
     TrendingUp,
     Save,
     CheckCircle2,
-    Briefcase
+    Briefcase,
+    Phone
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ interface PerfilTostadorForm {
     nombreTostador: string;
     nombreEmpresa: string;
     email: string;
+    celular: string;
     ciudad: string;
     pais: string;
     edad: number;
@@ -39,6 +41,7 @@ export function PerfilTostador() {
             nombreTostador: '',
             nombreEmpresa: '',
             email: '',
+            celular: '',
             ciudad: '',
             pais: '',
             edad: 30,
@@ -142,18 +145,30 @@ export function PerfilTostador() {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="text-xs font-black uppercase tracking-wider text-gray-600 mb-2 flex items-center gap-1.5">
-                                    <Mail size={14} className="text-[#bb8d3b]" /> Correo Electrónico
-                                </label>
-                                <input
-                                    type="email"
-                                    {...register('email', { required: true })}
-                                    className="w-full h-12 rounded-xl border border-gray-200 bg-gray-50/50 px-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#bb8d3b]/20 focus:border-[#bb8d3b] transition-all"
-                                    placeholder="correo@tostaduria.com"
-                                />
-                                <p className="text-[10px] text-gray-400 mt-1 font-medium">Usado para notificaciones logísticas y acceso a Odisea Trace.</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-black uppercase tracking-wider text-gray-600 mb-2 flex items-center gap-1.5">
+                                        <Mail size={14} className="text-[#bb8d3b]" /> Correo Electrónico
+                                    </label>
+                                    <input
+                                        type="email"
+                                        {...register('email', { required: true })}
+                                        className="w-full h-12 rounded-xl border border-gray-200 bg-gray-50/50 px-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#bb8d3b]/20 focus:border-[#bb8d3b] transition-all"
+                                        placeholder="correo@tostaduria.com"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-black uppercase tracking-wider text-gray-600 mb-2 flex items-center gap-1.5">
+                                        <Phone size={14} className="text-[#bb8d3b]" /> Teléfono Celular
+                                    </label>
+                                    <input
+                                        {...register('celular', { required: true })}
+                                        className="w-full h-12 rounded-xl border border-gray-200 bg-gray-50/50 px-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#bb8d3b]/20 focus:border-[#bb8d3b] transition-all"
+                                        placeholder="Ej. +1 (510) 555-0199"
+                                    />
+                                </div>
                             </div>
+                            <p className="text-[10px] text-gray-400 mt-1 font-medium">Usados para notificaciones logísticas y contacto directo en la red.</p>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
