@@ -37,8 +37,10 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { toast } from 'sonner';
 
-import { getLotesMaster, LoteUnificado, updateLote, getValidationStageForLote, updateValidationStage, ValidationStage } from '../../utils/loteStore';
-import { getAnomalies, resolveAnomaly, getAnomalyConfig, updateAnomalyConfig, AnomalyRecord, AnomalyConfig } from '../../utils/anomalyStore';
+import type { LoteUnificado, ValidationStage } from '../../types/lote';
+import type { AnomalyRecord, AnomalyConfig } from '../../types/anomaly';
+import { getLotes, updateLote, getValidationStageForLote, updateValidationStage } from '../../../services/lotesService';
+import { getAnomalies, resolveAnomaly, getAnomalyConfig, updateAnomalyConfig } from '../../../services/anomaliesService';
 
 const getStatusStyles = (status: string) => {
     switch (status) {
@@ -55,6 +57,8 @@ export function GestionLotesOdisea() {
     const [lotes, setLotes] = useState<LoteUnificado[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTab, setSelectedTab] = useState('Todos');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Anomaly States
     const [anomalies, setAnomalies] = useState<AnomalyRecord[]>([]);
@@ -63,6 +67,7 @@ export function GestionLotesOdisea() {
     const [selectedAnomaly, setSelectedAnomaly] = useState<AnomalyRecord | null>(null);
     const [resolveEstado, setResolveEstado] = useState<'Confirmado Válido' | 'Confirmado Error'>('Confirmado Válido');
     const [resolveComentario, setResolveComentario] = useState('');
+    const [validationStages, setValidationStages] = useState<Record<string, any>>({});
 
     const handleOpenAnomalyResolve = (anomaly: AnomalyRecord, estado: 'Confirmado Válido' | 'Confirmado Error') => {
         setSelectedAnomaly(anomaly);
@@ -71,31 +76,54 @@ export function GestionLotesOdisea() {
         setIsAnomalyResolveOpen(true);
     };
 
-    const handleSaveAnomalyResolve = (e: React.FormEvent) => {
+    const reloadData = async () => {
+        setIsLoading(true);
+        try {
+            const [fetchedLotes, fetchedAnomalies, fetchedConfig] = await Promise.all([
+                getLotes(),
+                getAnomalies(),
+                getAnomalyConfig()
+            ]);
+            setLotes(fetchedLotes);
+            setAnomalies(fetchedAnomalies);
+            setAnomalyConfig(fetchedConfig);
+
+            const stages: Record<string, any> = {};
+            for (const l of fetchedLotes) {
+                stages[l.id] = await getValidationStageForLote(l.id);
+            }
+            setValidationStages(stages);
+        } catch (err) {
+            setError('Error al cargar datos de control');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSaveAnomalyResolve = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedAnomaly) return;
 
-        resolveAnomaly(selectedAnomaly.id, resolveEstado, resolveComentario);
+        await resolveAnomaly(selectedAnomaly.id, resolveEstado, resolveComentario);
 
         // Si se confirma como error (Rechazado), transicionar el Stage Gate
         if (resolveEstado === 'Confirmado Error') {
-            updateValidationStage(selectedAnomaly.loteId, 'Rechazado', 'Mesa de Control (Anomalías)', `Dato anómalo confirmado como error: ${selectedAnomaly.tipoDato} (${selectedAnomaly.valorIngresado}). Observación: ${resolveComentario}`);
-            updateLote(selectedAnomaly.loteId, { aprobadoComercializacion: false });
+            await updateValidationStage(selectedAnomaly.loteId, 'Rechazado', 'Mesa de Control (Anomalías)', `Dato anómalo confirmado como error: ${selectedAnomaly.tipoDato} (${selectedAnomaly.valorIngresado}). Observación: ${resolveComentario}`);
+            await updateLote(selectedAnomaly.loteId, { aprobadoComercializacion: false });
         }
 
         // Recargar listas
-        setAnomalies(getAnomalies());
-        setLotes(getLotesMaster());
+        await reloadData();
         setIsAnomalyResolveOpen(false);
         toast.success(`Anomalía resuelta como ${resolveEstado}`, {
             description: `Se registró la resolución de la discrepancia para el lote ${selectedAnomaly.loteId}.`
         });
     };
 
-    const handleConfigSliderChange = (key: keyof AnomalyConfig, val: number) => {
+    const handleConfigSliderChange = async (key: keyof AnomalyConfig, val: number) => {
         const nextConf = { ...anomalyConfig, [key]: val };
         setAnomalyConfig(nextConf);
-        updateAnomalyConfig(nextConf);
+        await updateAnomalyConfig(nextConf);
     };
     
     // Stage Gate Validation States
@@ -104,28 +132,28 @@ export function GestionLotesOdisea() {
     const [nextValidationStage, setNextValidationStage] = useState<ValidationStage>('En validación');
     const [validationMotivo, setValidationMotivo] = useState('');
 
-    const handleOpenValidationModal = (lote: LoteUnificado) => {
+    const handleOpenValidationModal = async (lote: LoteUnificado) => {
         setSelectedLoteForValidation(lote);
-        const currentStage = getValidationStageForLote(lote.id).stage;
+        const currentStage = (validationStages[lote.id] || await getValidationStageForLote(lote.id)).stage;
         setNextValidationStage(currentStage);
         setValidationMotivo('');
         setIsValidationOpen(true);
     };
 
-    const handleSaveValidation = (e: React.FormEvent) => {
+    const handleSaveValidation = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedLoteForValidation) return;
         
-        updateValidationStage(selectedLoteForValidation.id, nextValidationStage, 'Administrador Odisea', validationMotivo);
+        await updateValidationStage(selectedLoteForValidation.id, nextValidationStage, 'Administrador Odisea', validationMotivo);
         
         // Sincronizar campo aprobadoComercializacion si es publicado o rechazado
         if (nextValidationStage === 'Publicado') {
-            updateLote(selectedLoteForValidation.id, { aprobadoComercializacion: true });
+            await updateLote(selectedLoteForValidation.id, { aprobadoComercializacion: true });
         } else if (nextValidationStage === 'Rechazado') {
-            updateLote(selectedLoteForValidation.id, { aprobadoComercializacion: false });
+            await updateLote(selectedLoteForValidation.id, { aprobadoComercializacion: false });
         }
         
-        setLotes(getLotesMaster());
+        await reloadData();
         setIsValidationOpen(false);
         toast.success(`Estado Stage-Gate actualizado a ${nextValidationStage}`, {
             description: `Transición registrada para el lote ${selectedLoteForValidation.id}.`
@@ -133,9 +161,7 @@ export function GestionLotesOdisea() {
     };
 
     useEffect(() => {
-        setLotes(getLotesMaster());
-        setAnomalies(getAnomalies());
-        setAnomalyConfig(getAnomalyConfig());
+        reloadData();
         
         // Cargar filtro inicial desde la URL si existe
         const queryParams = new URLSearchParams(window.location.search);
@@ -253,7 +279,7 @@ export function GestionLotesOdisea() {
                     if (tab.key === 'Anomalies') {
                         badgeCount = anomalies.filter(a => a.estadoResolucion === 'Pendiente').length;
                     } else if (tab.key === 'StageGate') {
-                        badgeCount = lotes.filter(l => getValidationStageForLote(l.id).stage !== 'Publicado').length;
+                        badgeCount = lotes.filter(l => (validationStages[l.id] || { stage: 'Capturado' }).stage !== 'Publicado').length;
                     }
 
                     return (
@@ -304,20 +330,34 @@ export function GestionLotesOdisea() {
 
                     {/* Listado de Lotes */}
                     <div className="space-y-6">
-                        {(() => {
-                            const filteredLotes = lotes.filter(l => {
-                                if (selectedTab === 'Reservados') {
-                                    return !!l.tostadorAsignado;
-                                }
-                                if (selectedTab === 'Disponibles') {
-                                    return l.ofrecidoPorProductor && l.aprobadoComercializacion && !l.tostadorAsignado;
-                                }
-                                if (selectedTab === 'StageGate') {
-                                    const vRecord = getValidationStageForLote(l.id);
-                                    return vRecord.stage !== 'Publicado';
-                                }
-                                return true;
-                            }).filter(l => {
+                        {isLoading ? (
+                            <div className="space-y-4 animate-pulse">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="bg-white rounded-[40px] border border-slate-100 p-8 h-32 flex flex-col justify-between">
+                                        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                        <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : error ? (
+                            <div className="p-12 text-center bg-red-50 rounded-[40px] border border-red-100 space-y-4">
+                                <p className="text-red-700/80 font-medium">{error}</p>
+                            </div>
+                        ) : (
+                            (() => {
+                                const filteredLotes = lotes.filter(l => {
+                                    if (selectedTab === 'Reservados') {
+                                        return !!l.tostadorAsignado;
+                                    }
+                                    if (selectedTab === 'Disponibles') {
+                                        return l.ofrecidoPorProductor && l.aprobadoComercializacion && !l.tostadorAsignado;
+                                    }
+                                    if (selectedTab === 'StageGate') {
+                                        const vRecord = validationStages[l.id] || { stage: 'Capturado' };
+                                        return vRecord.stage !== 'Publicado';
+                                    }
+                                    return true;
+                                }).filter(l => {
                                 const term = searchTerm.toLowerCase();
                                 return (
                                     l.id.toLowerCase().includes(term) || 
@@ -350,7 +390,7 @@ export function GestionLotesOdisea() {
                                                     <Badge className="bg-blue-50 text-blue-600 border-none text-[8px] font-black px-2 uppercase tracking-widest">{item.id}</Badge>
                                                     <span className="text-[10px] font-black text-slate-350 uppercase tracking-widest">TRACE-ID ODISEA SYNC</span>
                                                     {(() => {
-                                                        const vRecord = getValidationStageForLote(item.id);
+                                                        const vRecord = validationStages[item.id] || { stage: 'Capturado' };
                                                         const badgeColors = {
                                                             'Capturado': 'bg-slate-100 text-slate-700',
                                                             'En validación': 'bg-amber-100 text-amber-700',
@@ -377,7 +417,7 @@ export function GestionLotesOdisea() {
                                             </div>
                                         </div>
                                                                       <div className="flex flex-col lg:flex-row items-center gap-6 w-full lg:w-auto pt-8 lg:pt-0 border-t lg:border-none">
-                                            {getValidationStageForLote(item.id).stage !== 'Publicado' && (
+                                            {(validationStages[item.id] || { stage: 'Capturado' }).stage !== 'Publicado' && (
                                                 <Button
                                                     onClick={() => handleOpenValidationModal(item)}
                                                     className="h-16 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-widest gap-2 cursor-pointer border-none shrink-0"
@@ -407,7 +447,8 @@ export function GestionLotesOdisea() {
                                     </motion.div>
                                 );
                             });
-                        })()}
+                        })()
+                    )}
                     </div>
                 </>
             ) : (
@@ -680,7 +721,7 @@ export function GestionLotesOdisea() {
                             <div className="space-y-3">
                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-440">Historial de Transiciones</h4>
                                 <div className="max-h-48 overflow-y-auto space-y-3 pr-2 border border-slate-50 p-4 rounded-2xl bg-slate-50/50">
-                                    {getValidationStageForLote(selectedLoteForValidation.id).historial.map((log, idx) => (
+                                    {(validationStages[selectedLoteForValidation.id] || { historial: [] }).historial.map((log, idx) => (
                                         <div key={idx} className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-2xs space-y-1.5 text-xs">
                                             <div className="flex items-center justify-between">
                                                 <Badge className="bg-slate-100 text-slate-700 border-none font-sans font-black text-[8px] uppercase tracking-wider px-2 py-0.5">
