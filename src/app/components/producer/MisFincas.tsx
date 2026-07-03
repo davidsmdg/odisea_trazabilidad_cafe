@@ -38,32 +38,8 @@ import { cn } from '../ui/utils';
 import { toast } from 'sonner';
 import { validateBounds, calculatePolygonArea, checkPolygonOverlap } from '../../utils/geoValidator';
 
-interface LoteCafe {
-    id: string;
-    nombre: string;
-    area: string;
-    variedades: string[];
-    coordenadaCentral: string; // Un solo punto
-    estadoEUDR: 'Verificado' | 'En revisión' | 'Pendiente';
-    poligonoCoordenadas?: [number, number][];
-    poligonoMetodo?: 'GPS' | 'Dibujo Manual' | 'Importado';
-    poligonoFechaCaptura?: string;
-    poligonoPrecision?: string;
-    poligonoAreaCalculada?: number;
-    overlapWarning?: string;
-    areaWarning?: string;
-}
-
-interface Finca {
-    id: string;
-    nombre: string;
-    departamento: string;
-    municipio: string;
-    cedulaCafetera: string;
-    tipoTenencia: string;
-    esComunidadEtnica: boolean;
-    lotesDeCafe: LoteCafe[];
-}
+import type { LoteCafe, Finca } from '../../types/finca';
+import { getFincas, saveFincas } from '../../../services/fincasService';
 
 const REGIONES_COLOMBIA = {
     'Antioquia': ['Dabeiba', 'Andes', 'Concordia', 'Jericó', 'Salgar'],
@@ -162,7 +138,9 @@ const INITIAL_FINCAS: Finca[] = [
 ];
 
 export function MisFincas() {
-    const [fincas, setFincas] = useState<Finca[]>(INITIAL_FINCAS);
+    const [fincas, setFincas] = useState<Finca[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [isFincaDialogOpen, setIsFincaDialogOpen] = useState(false);
     const [isLoteDialogOpen, setIsLoteDialogOpen] = useState(false);
     const [selectedFincaId, setSelectedFincaId] = useState<string | null>(null);
@@ -171,19 +149,25 @@ export function MisFincas() {
 
     // Persistencia y carga local
     useEffect(() => {
-        const saved = localStorage.getItem('odisea_fincas');
-        if (saved) {
-            try {
-                setFincas(JSON.parse(saved));
-            } catch (e) {}
-        } else {
-            localStorage.setItem('odisea_fincas', JSON.stringify(INITIAL_FINCAS));
-        }
+        setIsLoading(true);
+        getFincas()
+            .then((data) => {
+                setFincas(data);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar las fincas');
+                setIsLoading(false);
+            });
     }, []);
 
-    const updateFincasState = (newFincas: Finca[]) => {
+    const updateFincasState = async (newFincas: Finca[]) => {
         setFincas(newFincas);
-        localStorage.setItem('odisea_fincas', JSON.stringify(newFincas));
+        try {
+            await saveFincas(newFincas);
+        } catch (err) {
+            toast.error('Error al guardar las fincas');
+        }
     };
 
     // Finca Form State
@@ -586,11 +570,43 @@ export function MisFincas() {
 
             {/* List of Fincas */}
             <div className="space-y-12">
-                {fincas.map((finca) => {
-                    const dData = DEPARTAMENTOS_DATA[finca.departamento] || DEPARTAMENTOS_DATA['Antioquia'];
-                    const fao = dData.escenarioFao;
+                {isLoading ? (
+                    <div className="space-y-8 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-white rounded-[40px] border border-gray-100 overflow-hidden shadow-sm">
+                                <div className="bg-gray-100 p-10 h-40 flex flex-col justify-between">
+                                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                                </div>
+                                <div className="p-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {[1, 2, 3].map((j) => (
+                                        <div key={j} className="h-40 bg-gray-50/50 rounded-[32px] border border-gray-100"></div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="p-12 text-center bg-red-50 rounded-[40px] border border-red-100 space-y-4">
+                        <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                        <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+                        <p className="text-red-700/80 font-medium">{error}</p>
+                        <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
+                    </div>
+                ) : (
+                    <>
+                        {fincas.length === 0 && (
+                            <div className="p-10 text-center bg-gray-50/50 rounded-[40px] border border-dashed border-gray-200 py-16 space-y-4">
+                                <Tractor className="text-[#5f705f]/40 mx-auto" size={48} />
+                                <h3 className="text-lg font-sans font-black text-gray-700">No hay fincas registradas</h3>
+                                <p className="text-xs text-gray-500 font-medium max-w-sm mx-auto">Comienza registrando tu primera finca productora para administrar tus lotes de café.</p>
+                            </div>
+                        )}
+                        {fincas.map((finca) => {
+                            const dData = DEPARTAMENTOS_DATA[finca.departamento] || DEPARTAMENTOS_DATA['Antioquia'];
+                            const fao = dData.escenarioFao;
 
-                    return (
+                            return (
                         <div key={finca.id} className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700">
                             {/* Finca Header */}
                             <div className="bg-[#5f705f] p-10 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
@@ -775,6 +791,8 @@ export function MisFincas() {
                         <p className="text-xs font-black uppercase tracking-widest text-gray-400">Gestiona múltiples predios y lotes de café</p>
                     </div>
                 </motion.div>
+                    </>
+                )}
             </div>
 
             {/* Finca Form Dialog */}

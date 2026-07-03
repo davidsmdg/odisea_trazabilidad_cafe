@@ -47,59 +47,8 @@ import { cn } from '../ui/utils';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
-// Data Mock inicial
-const INITIAL_COSECHAS = [
-    {
-        id: 'lc1',
-        codigo: 'LOTE-042',
-        productor: 'María González',
-        cosecha: 'Oct-Nov 2024',
-        finca: 'Finca La Esperanza',
-        parcelas: ['Lote El Mirador'],
-        estado: 'Verde (Trillado)',
-        pesos: { cereza: 1200, pergamino: 250, verde: 180, objetivo: 1500 },
-        fase: 3,
-        modalidad: 'objetivo',
-        detallesObjetivo: { variedad: 'Bourbon Rosado', proceso: 'Lavado' },
-        calificacion: 86.5,
-        macroperfil: 'Frutal',
-        clientes: [],
-        factorRendimiento: 91.5
-    },
-    {
-        id: 'lc2',
-        codigo: 'LOTE-043',
-        productor: 'María González',
-        cosecha: 'Nov 2024',
-        finca: 'Finca La Esperanza',
-        parcelas: ['Lote Central'],
-        estado: 'Pergamino (Seco)',
-        pesos: { cereza: 800, pergamino: 165, verde: 0 },
-        fase: 2,
-        modalidad: 'diario',
-        calificacion: 0,
-        macroperfil: '',
-        clientes: [],
-        factorRendimiento: null
-    },
-    {
-        id: 'lc3',
-        codigo: 'LOTE-101',
-        productor: 'María González',
-        cosecha: 'Dic 2024',
-        finca: 'Finca Santa Helena',
-        parcelas: ['Lote Las Piedras'],
-        estado: 'Cereza (Fresco)',
-        pesos: { cereza: 450, pergamino: 0, verde: 0, objetivo: 500 },
-        fase: 1,
-        modalidad: 'objetivo',
-        detallesObjetivo: { variedad: 'Geisha', proceso: 'Natural' },
-        calificacion: 0,
-        macroperfil: '',
-        clientes: [],
-        factorRendimiento: null
-    }
-];
+import type { Cosecha } from '../../types/cosecha';
+import { getCosechas, saveCosechas } from '../../../services/cosechasService';
 
 interface ModalAccionState {
     tipo: 'sumar_cereza' | 'avanzar_seco' | 'avanzar_verde' | 'anotar_proceso' | 'anotar_cata' | 'ver_rendimiento' | 'anotar_factor';
@@ -176,19 +125,29 @@ export function MisCosechas() {
         });
     };
 
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
-        const saved = localStorage.getItem('lotes_produccion');
-        if (saved) {
-            setCosechas(JSON.parse(saved));
-        } else {
-            setCosechas(INITIAL_COSECHAS);
-            localStorage.setItem('lotes_produccion', JSON.stringify(INITIAL_COSECHAS));
-        }
+        setIsLoading(true);
+        getCosechas()
+            .then((data) => {
+                setCosechas(data);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar las cosechas');
+                setIsLoading(false);
+            });
     }, []);
 
-    const updateLotes = (newCosechas: any[]) => {
+    const updateLotes = async (newCosechas: any[]) => {
         setCosechas(newCosechas);
-        localStorage.setItem('lotes_produccion', JSON.stringify(newCosechas));
+        try {
+            await saveCosechas(newCosechas);
+        } catch (err) {
+            toast.error('Error al guardar las cosechas');
+        }
     };
 
     // Al abrir un modal, limpiamos los inputs
@@ -438,7 +397,25 @@ export function MisCosechas() {
 
             {/* Listado de Lotes (Tarjetas Limpias y Enfocadas) */}
             <div className="space-y-6">
-                {filteredCosechas.map((lote) => (
+                {isLoading ? (
+                    <div className="space-y-6 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-white rounded-[32px] border-2 border-gray-100 p-8 h-48 flex flex-col justify-between">
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="p-12 text-center bg-red-50 rounded-[32px] border border-red-100 space-y-4">
+                        <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                        <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+                        <p className="text-red-700/80 font-medium">{error}</p>
+                        <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
+                    </div>
+                ) : (
+                    <>
+                        {filteredCosechas.map((lote) => (
                     <div key={lote.id} className="bg-white rounded-[32px] border-2 border-gray-100 p-6 sm:p-8 shadow-sm space-y-6 hover:border-gray-200 transition-all">
                         
                         {/* Fila Superior: Identificación y Estado */}
@@ -690,8 +667,6 @@ export function MisCosechas() {
                             >
                                 📊 Ver Historia y Mermas
                             </Button>
-                        </div>
-
                     </div>
                 ))}
 
@@ -700,6 +675,8 @@ export function MisCosechas() {
                         <p className="text-gray-400 font-bold text-lg">No se encontraron lotes activos.</p>
                         <p className="text-gray-400 text-sm mt-1">Usa el botón superior para empezar a rastrear tu café.</p>
                     </div>
+                )}
+                    </>
                 )}
             </div>
 
