@@ -16,105 +16,53 @@ import { cn } from '../ui/utils';
 import { Badge } from '../ui/badge';
 import { SensorRadar } from '../SensorRadar';
 
-// MOCK DATA para el Historial
-const HISTORIAL_MOCK = [
-    {
-        id: 'LOT-HUILA-084',
-        productor: 'María González',
-        bache: 'Bache #3',
-        fecha: '09 Mar 2024',
-        puntaje: 86.5,
-        nivel: 'Especialidad',
-        perfil: [
-            { attribute: 'Acidez', value: 8.0 },
-            { attribute: 'Cuerpo', value: 7.5 },
-            { attribute: 'Dulzor', value: 8.5 },
-            { attribute: 'Balance', value: 8.0 },
-            { attribute: 'Limpieza', value: 8.5 }
-        ]
-    },
-    {
-        id: 'LOT-HUILA-084',
-        productor: 'María González',
-        bache: 'Bache #2',
-        fecha: '15 Feb 2024',
-        puntaje: 86.0,
-        nivel: 'Especialidad',
-        perfil: [
-            { attribute: 'Acidez', value: 7.5 },
-            { attribute: 'Cuerpo', value: 8.0 },
-            { attribute: 'Dulzor', value: 8.0 },
-            { attribute: 'Balance', value: 8.0 },
-            { attribute: 'Limpieza', value: 8.5 }
-        ]
-    },
-    {
-        id: 'LOT-ANT-112',
-        productor: 'Carlos Martínez',
-        bache: 'Bache #1',
-        fecha: '05 Mar 2024',
-        puntaje: 83.0,
-        nivel: 'Premium',
-        perfil: [
-            { attribute: 'Acidez', value: 7.5 },
-            { attribute: 'Cuerpo', value: 7.5 },
-            { attribute: 'Dulzor', value: 7.5 },
-            { attribute: 'Balance', value: 7.0 },
-            { attribute: 'Limpieza', value: 8.0 }
-        ]
-    },
-    {
-        id: 'LOT-NAR-225',
-        productor: 'Jorge Torres',
-        bache: 'Bache #1',
-        fecha: '01 Mar 2024',
-        puntaje: 88.2,
-        nivel: 'Especialidad',
-        perfil: [
-            { attribute: 'Acidez', value: 8.5 },
-            { attribute: 'Cuerpo', value: 8.0 },
-            { attribute: 'Dulzor', value: 8.5 },
-            { attribute: 'Balance', value: 8.5 },
-            { attribute: 'Limpieza', value: 9.0 }
-        ]
-    }
-];
-
-import { getLotesMaster, LoteUnificado } from '../../utils/loteStore';
+import { getLotes } from '../../../services/lotesService';
+import type { LoteUnificado } from '../../types/lote';
+import { HISTORIAL_MOCK } from '../../../data/historialCatas.mock';
 
 export function HistorialCatas() {
     const [historial, setHistorial] = useState<any[]>([]);
     const [filtroProductor, setFiltroProductor] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const loaded = getLotesMaster();
-        // lotes catados
-        const realizadas = loaded.filter(l => l.calificacion && l.calificacion > 0);
-        const items = realizadas.map(l => {
-            const det = {
-                acidez: 8.0,
-                cuerpo: 7.5,
-                dulzor: 8.0,
-                balance: 8.0,
-                limpieza: 8.5
-            };
-            return {
-                id: l.id,
-                productor: l.productor,
-                bache: 'Bache #1',
-                fecha: l.fecha || 'Reciente',
-                puntaje: l.calificacion,
-                nivel: l.calificacion && l.calificacion >= 85 ? 'Especialidad' : 'Premium',
-                perfil: [
-                    { attribute: 'Acidez', value: det.acidez },
-                    { attribute: 'Cuerpo', value: det.cuerpo },
-                    { attribute: 'Dulzor', value: det.dulzor },
-                    { attribute: 'Balance', value: det.balance },
-                    { attribute: 'Limpieza', value: det.limpieza }
-                ]
-            };
-        });
-        setHistorial(items);
+        setIsLoading(true);
+        getLotes()
+            .then((loaded) => {
+                // lotes catados
+                const realizadas = loaded.filter(l => l.calificacion && l.calificacion > 0);
+                const items = realizadas.map(l => {
+                    const det = {
+                        acidez: 8.0,
+                        cuerpo: 7.5,
+                        dulzor: 8.0,
+                        balance: 8.0,
+                        limpieza: 8.5
+                    };
+                    return {
+                        id: l.id,
+                        productor: l.productor,
+                        bache: 'Bache #1',
+                        fecha: l.fecha || 'Reciente',
+                        puntaje: l.calificacion,
+                        nivel: l.calificacion && l.calificacion >= 85 ? 'Especialidad' : 'Premium',
+                        perfil: [
+                            { attribute: 'Acidez', value: det.acidez },
+                            { attribute: 'Cuerpo', value: det.cuerpo },
+                            { attribute: 'Dulzor', value: det.dulzor },
+                            { attribute: 'Balance', value: det.balance },
+                            { attribute: 'Limpieza', value: det.limpieza }
+                        ]
+                    };
+                });
+                setHistorial(items);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar historial de catas');
+                setIsLoading(false);
+            });
     }, []);
 
     const historialFiltrado = historial.filter(cata => 
@@ -207,7 +155,30 @@ export function HistorialCatas() {
 
             {/* HISTORY LIST */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {historialFiltrado.map((cata) => (
+                {isLoading ? (
+                    <div className="col-span-full space-y-6 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-white rounded-[40px] border border-[#EADDCA] p-8 h-48 flex flex-col justify-between">
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="col-span-full p-12 text-center bg-red-50 rounded-[40px] border border-red-100 space-y-4">
+                        <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                        <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+                        <p className="text-red-700/80 font-medium">{error}</p>
+                        <Button onClick={() => window.location.reload()} className="bg-[#5D4037] hover:bg-[#3E2723] text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
+                    </div>
+                ) : historialFiltrado.length === 0 ? (
+                    <div className="col-span-full p-16 text-center rounded-[40px] border border-dashed border-[#EADDCA] bg-[#FDFBF9]/50">
+                        <Coffee className="text-[#8D6E63]/40 mx-auto mb-4" size={48} />
+                        <p className="text-gray-500 font-bold text-lg">No hay historial de catas registradas aún.</p>
+                    </div>
+                ) : (
+                    <>
+                        {historialFiltrado.map((cata) => (
                     <motion.div
                         key={cata.id + '-' + cata.bache}
                         whileHover={{ y: -5 }}
@@ -250,6 +221,8 @@ export function HistorialCatas() {
                         </div>
                     </motion.div>
                 ))}
+                    </>
+                )}
             </div>
 
             {/* Notice */}

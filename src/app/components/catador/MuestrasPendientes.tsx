@@ -52,28 +52,39 @@ const MUESTRAS_MOCK = [
     },
 ];
 
-import { getLotesMaster, LoteUnificado } from '../../utils/loteStore';
+import { getLotes } from '../../../services/lotesService';
+import type { LoteUnificado } from '../../types/lote';
 
 export function MuestrasPendientes() {
     const navigate = useNavigate();
     const [muestras, setMuestras] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const loaded = getLotesMaster();
-        // Muestras pendientes: lotes que no tengan calificación (o con calificacion <= 0)
-        const pendientes = loaded.filter(l => !(l.calificacion && l.calificacion > 0));
-        const items = pendientes.map(l => ({
-            id: l.id,
-            bache: 'Bache #1',
-            productor: l.productor,
-            finca: l.finca,
-            municipio: l.municipio,
-            variedad: l.variedad,
-            proceso: l.proceso,
-            fechaIngreso: l.fecha || 'Reciente',
-        }));
-        setMuestras(items);
+        setIsLoading(true);
+        getLotes()
+            .then((loaded) => {
+                // Muestras pendientes: lotes que no tengan calificación (o con calificacion <= 0)
+                const pendientes = loaded.filter(l => !(l.calificacion && l.calificacion > 0));
+                const items = pendientes.map(l => ({
+                    id: l.id,
+                    bache: 'Bache #1',
+                    productor: l.productor,
+                    finca: l.finca,
+                    municipio: l.municipio,
+                    variedad: l.variedad,
+                    proceso: l.proceso,
+                    fechaIngreso: l.fecha || 'Reciente',
+                }));
+                setMuestras(items);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar muestras');
+                setIsLoading(false);
+            });
     }, []);
 
     const muestrasFiltradas = muestras.filter(item => {
@@ -134,7 +145,30 @@ export function MuestrasPendientes() {
 
             {/* 4. LISTA DE MUESTRAS (GRANDES BLOQUES) */}
             <div className="space-y-6">
-                {muestrasFiltradas.map((item) => (
+                {isLoading ? (
+                    <div className="space-y-6 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-white rounded-[48px] border border-[#EADDCA]/50 p-10 h-48 flex flex-col justify-between">
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="p-12 text-center bg-red-50 rounded-[48px] border border-red-100 space-y-4">
+                        <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                        <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+                        <p className="text-red-700/80 font-medium">{error}</p>
+                        <Button onClick={() => window.location.reload()} className="bg-[#5D4037] hover:bg-[#3E2723] text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
+                    </div>
+                ) : muestrasFiltradas.length === 0 ? (
+                    <div className="p-16 text-center rounded-[48px] border border-dashed border-[#EADDCA] bg-[#FDFBF9]/50">
+                        <Coffee className="text-[#8D6E63]/40 mx-auto mb-4" size={48} />
+                        <p className="text-gray-500 font-bold text-lg">No hay muestras pendientes de cata en el laboratorio.</p>
+                    </div>
+                ) : (
+                    <>
+                        {muestrasFiltradas.map((item) => (
                     <motion.div
                         key={item.id}
                         whileHover={{ y: -4 }}
@@ -195,6 +229,8 @@ export function MuestrasPendientes() {
                         </div>
                     </motion.div>
                 ))}
+                    </>
+                )}
             </div>
 
             {/* Footer Notice */}
