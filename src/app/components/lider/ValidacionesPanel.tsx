@@ -23,21 +23,11 @@ import {
 import { cn } from '../ui/utils';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
-import { getLotesMaster, updateLote } from '../../utils/loteStore';
+import { updateLote } from '../../utils/loteStore';
 import { useMemo } from 'react';
-
-interface ValidacionItem {
-    id: string;
-    loteId: string;
-    agricultor: string;
-    finca: string;
-    vereda: string;
-    municipio: string;
-    estado: 'Pendiente' | 'Revisado';
-    fecha: string;
-    tipo: string;
-    alistamiento: 'Apto' | 'Subsanable' | 'No Apto';
-}
+import type { LoteUnificado } from '../../types/lote';
+import type { ValidacionItem } from '../../types/validation';
+import { getLotes } from '../../../services/lotesService';
 
 const VALIDACIONES_MOCK: ValidacionItem[] = [
     {
@@ -84,8 +74,22 @@ export function ValidacionesPanel() {
     const [isOffline, setIsOffline] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [draftCount, setDraftCount] = useState(0);
+    const [lotesMaster, setLotesMaster] = useState<LoteUnificado[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const lotesMaster = getLotesMaster();
+    useEffect(() => {
+        setIsLoading(true);
+        getLotes()
+            .then((data) => {
+                setLotesMaster(data);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar validaciones');
+                setIsLoading(false);
+            });
+    }, []);
 
     const validacionesList = useMemo(() => {
         return lotesMaster.map((l, index) => {
@@ -292,13 +296,30 @@ export function ValidacionesPanel() {
 
             {/* 4. LISTA DE TAREAS CON SEMÁFORO DE ALISTAMIENTO */}
             <div className="space-y-4">
-                {filtradas.length === 0 ? (
+                {isLoading ? (
+                    <div className="space-y-4 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-white rounded-[36px] border border-slate-100 p-8 h-32 flex flex-col justify-between">
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="p-12 text-center bg-red-50 rounded-[36px] border border-red-100 space-y-4">
+                        <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                        <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+                        <p className="text-red-700/80 font-medium">{error}</p>
+                        <Button onClick={() => window.location.reload()} className="bg-[#1A365D] hover:bg-[#11223F] text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
+                    </div>
+                ) : filtradas.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-[32px] border border-slate-100">
                         <AlertTriangle className="mx-auto text-slate-300 mb-4" size={48} />
                         <p className="text-sm font-black uppercase text-slate-400 tracking-widest">No se encontraron tareas pendientes</p>
                     </div>
                 ) : (
-                    filtradas.map((item) => (
+                    <>
+                        {filtradas.map((item) => (
                         <motion.div
                             key={item.id}
                             whileHover={{ y: -2 }}
@@ -365,6 +386,8 @@ export function ValidacionesPanel() {
                             </div>
                         </motion.div>
                     ))
+                        </>
+                    )
                 )}
             </div>
         </div>
