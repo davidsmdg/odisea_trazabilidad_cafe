@@ -15,69 +15,13 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
 
-interface Experimento {
-    id: string;
-    lote: string;
-    fechaRegistro: string;
-    tipoProceso: string;
-    humedad: string;
-    temperatura: string;
-    notas: string;
-    estado: 'En Proceso' | 'Evaluado' | 'Descartado';
-    resultadoFinal?: 'Replicar Maestra' | 'Descartar';
-    puntajeObjetivo?: number;
-    puntajeObtenido?: number;
-    insumos?: string;
-    pasosReplicacion: string[];
-}
-
-const EXPERIMENTOS_MOCK: Experimento[] = [
-    {
-        id: 'EXP-001',
-        lote: 'Lote El Mirador - Bourbon',
-        fechaRegistro: '2026-03-10',
-        tipoProceso: 'Fermentación Anaeróbica',
-        humedad: '11.5%',
-        temperatura: '18°C',
-        notas: 'Fermentación en cereza controlada en tanques plásticos.',
-        estado: 'Evaluado',
-        resultadoFinal: 'Replicar Maestra',
-        puntajeObjetivo: 87.5,
-        puntajeObtenido: 88.0,
-        insumos: 'Levadura frutal (Saccharomyces cerevisiae)',
-        pasosReplicacion: [
-            'Selección estricta de cereza muy madura (mín. 20° Brix)',
-            'Reposo inicial en cereza por 24 horas a la sombra',
-            'Fermentación anaeróbica sellada por 72h con temperatura a 18°C',
-            'Secado lento en marquesina con polisombra por 15 días'
-        ]
-    },
-    {
-        id: 'EXP-002',
-        lote: 'Lote San Juan - Caturra',
-        fechaRegistro: '2026-02-28',
-        tipoProceso: 'Honey Amarillo',
-        humedad: '12%',
-        temperatura: '20°C',
-        notas: 'Despulpe sin agua para conservar mucílago intacto.',
-        estado: 'En Proceso',
-        puntajeObjetivo: 85.0,
-        insumos: 'Ninguno (Proceso natural de la finca)',
-        pasosReplicacion: [
-            'Despulpe en seco el mismo día de la recolección',
-            'Tendido inmediato en camas africanas elevadas'
-        ]
-    }
-];
+import type { Experimento } from '../../types/experimento';
+import { getExperimentos, saveExperimentos } from '../../../services/experimentosService';
 
 export function ExperimentosCafe() {
-    const [experimentos, setExperimentos] = useState<Experimento[]>(() => {
-        const saved = localStorage.getItem('experimentos_cafe');
-        if (saved) {
-            try { return JSON.parse(saved); } catch (e) {}
-        }
-        return EXPERIMENTOS_MOCK;
-    });
+    const [experimentos, setExperimentos] = useState<Experimento[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Modal de Creación Inicial
     const [openCrear, setOpenCrear] = useState(false);
@@ -112,9 +56,26 @@ export function ExperimentosCafe() {
         }
     }, []);
 
-    const saveExperimentosStorage = (updated: Experimento[]) => {
+    useEffect(() => {
+        setIsLoading(true);
+        getExperimentos()
+            .then((data) => {
+                setExperimentos(data);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar los experimentos');
+                setIsLoading(false);
+            });
+    }, []);
+
+    const saveExperimentosStorage = async (updated: Experimento[]) => {
         setExperimentos(updated);
-        localStorage.setItem('experimentos_cafe', JSON.stringify(updated));
+        try {
+            await saveExperimentos(updated);
+        } catch (err) {
+            toast.error('Error al guardar los experimentos');
+        }
     };
 
     // 1. Guardar Intención / Nuevo Experimento
@@ -438,7 +399,29 @@ export function ExperimentosCafe() {
                 <h2 className="text-xl font-black text-gray-900 tracking-tight">Bitácoras y Recetas Maestras</h2>
                 
                 <div className="grid grid-cols-1 gap-6">
-                    {experimentos.map((exp) => {
+                    {isLoading ? (
+                        <div className="space-y-6 animate-pulse">
+                            {[1, 2].map((i) => (
+                                <div key={i} className="bg-white rounded-[32px] border-2 border-gray-100 p-8 h-48 flex flex-col justify-between">
+                                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : error ? (
+                        <div className="p-12 text-center bg-red-50 rounded-[32px] border border-red-100 space-y-4">
+                            <h3 className="text-xl font-sans font-black text-red-900">Algo salió mal</h3>
+                            <p className="text-red-700/80 font-medium">{error}</p>
+                        </div>
+                    ) : (
+                        <>
+                            {experimentos.length === 0 && (
+                                <div className="p-16 text-center rounded-[32px] border-2 border-dashed border-gray-200">
+                                    <p className="text-gray-400 font-bold text-lg">No hay experimentos en curso.</p>
+                                    <p className="text-gray-400 text-sm mt-1">Usa el botón superior para crear tu primer experimento.</p>
+                                </div>
+                            )}
+                            {experimentos.map((exp) => {
                         const isExpanded = openRecetaId === exp.id;
                         const isMaestra = exp.resultadoFinal === 'Replicar Maestra';
                         const isDescartado = exp.estado === 'Descartado' || exp.resultadoFinal === 'Descartar';
@@ -593,7 +576,9 @@ export function ExperimentosCafe() {
                                 </div>
                             </div>
                         );
-                    })}
+                            })}
+                        </>
+                    )}
                 </div>
             </div>
         </div>
