@@ -1,20 +1,8 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import type { UserRole, AuthUser } from '../../types/usuario';
+import { MOCK_USERS } from '../../data/usuarios.mock';
 
-export type UserRole =
-  | 'AGRICULTOR'
-  | 'COMMUNITY_LEADER'
-  | 'ENV_VERIFIER'
-  | 'TASTER'
-  | 'CERES'
-  | 'ROASTER';
-
-export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  avatarInitials: string;
-}
+export type { UserRole, AuthUser };
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -27,24 +15,6 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const SESSION_KEY = 'cerescrop_user';
-
-// Usuarios mock precargados para demo
-const MOCK_USERS: AuthUser[] = [
-  {
-    id: 'u1',
-    name: 'María González',
-    email: 'maria@finca.co',
-    role: 'AGRICULTOR',
-    avatarInitials: 'MG',
-  },
-  {
-    id: 'u2',
-    name: 'Carlos Martínez',
-    email: 'carlos@beneficio.co',
-    role: 'CERES',
-    avatarInitials: 'CM',
-  },
-];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
