@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
-import { getLotesMaster } from '../../utils/loteStore';
+import { getLotes } from '../../../services/lotesService';
 
 const PUERTOS_DESTINO: Record<string, { eta: string; fleteBasePalletUSD: number }> = {
     hamburgo: { eta: '18 Días', fleteBasePalletUSD: 450 },
@@ -20,23 +20,33 @@ export function SimuladorLogistico() {
     const [puerto, setPuerto] = useState('roterdam');
     const [incoterm, setIncoterm] = useState<'FOB' | 'DDP'>('DDP');
     const [lotesDisponibles, setLotesDisponibles] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const master = getLotesMaster();
-        const mapped = master.map(l => ({
-            id: l.id,
-            variedad: l.variedad,
-            origen: l.municipio.split(',')[0],
-            sacosDisponibles: l.id === 'LOT-HUILA-084' ? 7 : (l.id === 'LOT-ANT-112' ? 3 : 5),
-            precioSacoUSD: l.id === 'LOT-HUILA-084' ? 507.50 : (l.id === 'LOT-ANT-112' ? 770.00 : 588.00)
-        }));
-        setLotesDisponibles(mapped);
-        
-        const initialPallet: Record<string, number> = {};
-        mapped.forEach(l => {
-            initialPallet[l.id] = l.id === 'LOT-HUILA-084' ? 2 : (l.id === 'LOT-ANT-112' ? 1 : 0);
-        });
-        setPallet(initialPallet);
+        setIsLoading(true);
+        getLotes()
+            .then((master) => {
+                const mapped = master.map(l => ({
+                    id: l.id,
+                    variedad: l.variedad,
+                    origen: l.municipio.split(',')[0],
+                    sacosDisponibles: l.id === 'LOT-HUILA-084' ? 7 : (l.id === 'LOT-ANT-112' ? 3 : 5),
+                    precioSacoUSD: l.id === 'LOT-HUILA-084' ? 507.50 : (l.id === 'LOT-ANT-112' ? 770.00 : 588.00)
+                }));
+                setLotesDisponibles(mapped);
+                
+                const initialPallet: Record<string, number> = {};
+                mapped.forEach(l => {
+                    initialPallet[l.id] = l.id === 'LOT-HUILA-084' ? 2 : (l.id === 'LOT-ANT-112' ? 1 : 0);
+                });
+                setPallet(initialPallet);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar simulador logístico');
+                setIsLoading(false);
+            });
     }, []);
 
     const totalSacos = useMemo(() => {
@@ -84,6 +94,27 @@ export function SimuladorLogistico() {
             style: { background: '#bb8d3b', color: '#ffffff', border: 'none' }
         });
     };
+
+    if (isLoading) {
+        return (
+            <div className="max-w-[1200px] mx-auto pb-24 animate-pulse font-sans space-y-10">
+                <div className="bg-white rounded-[40px] border border-gray-100 p-12 h-48 flex flex-col justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-[1200px] mx-auto pb-24 font-sans space-y-10 text-center py-20 bg-white border border-gray-100 rounded-[40px] p-10">
+                <h2 className="text-2xl font-black text-red-900">Algo salió mal</h2>
+                <p className="text-red-700/80 font-bold">{error}</p>
+                <Button onClick={() => window.location.reload()} className="bg-[#5f705f] text-white font-black px-6 py-2 rounded-xl border-none mt-4">Reintentar</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-[1200px] mx-auto pb-24 animate-in fade-in duration-500 font-sans space-y-10">

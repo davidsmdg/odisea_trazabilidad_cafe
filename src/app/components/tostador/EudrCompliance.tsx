@@ -9,49 +9,60 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
-import { getLotesMaster, isLotePublicado } from '../../utils/loteStore';
+import { getLotes } from '../../../services/lotesService';
+import { isLotePublicado } from '../../utils/loteStore';
+import { AlertTriangle, Coffee } from 'lucide-react';
 
 export function EudrCompliance() {
     const [lotesEudr, setLotesEudr] = useState<any[]>([]);
     const [selectedLote, setSelectedLote] = useState<any>(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const master = getLotesMaster();
-        
-        const rawLinks = localStorage.getItem('links_tostador');
-        let links: any[] = [];
-        if (rawLinks) {
-            try { links = JSON.parse(rawLinks); } catch (e) {}
-        } else {
-            links = [
-                { id: '1', loteId: 'LOT-HUILA-084', tostador: 'Blue Bottle Coffee (USA)' },
-                { id: '2', loteId: 'LOT-ANT-112', tostador: 'Workshop Coffee (UK)' }
-            ];
-        }
+        setIsLoading(true);
+        getLotes()
+            .then((master) => {
+                const rawLinks = localStorage.getItem('links_tostador');
+                let links: any[] = [];
+                if (rawLinks) {
+                    try { links = JSON.parse(rawLinks); } catch (e) {}
+                } else {
+                    links = [
+                        { id: '1', loteId: 'LOT-HUILA-084', tostador: 'Blue Bottle Coffee (USA)' },
+                        { id: '2', loteId: 'LOT-ANT-112', tostador: 'Workshop Coffee (UK)' }
+                    ];
+                }
 
-        const linkedLotes = master.filter(l => links.some(link => link.loteId === l.id) && isLotePublicado(l.id));
-        
-        const items = linkedLotes.map(l => ({
-            id: l.id,
-            finca: l.finca,
-            productor: l.productor,
-            coordenadas: l.coordenadas || (l.id === 'LOT-HUILA-084' ? '1.8843° N, 76.2931° W' : '5.6421° N, 75.6120° W'),
-            areaPoligono: l.areaPoligono || (l.id === 'LOT-HUILA-084' ? '12.04 Hectáreas (Polígono Cerrado)' : '6.50 Hectáreas (Polígono Cerrado)'),
-            riesgoDeforestacion: l.riesgoDeforestacion || (l.verificadoEUDR === false ? '100.0% (Alerta de Deforestación)' : '0.0% (Riesgo Nulo)'),
-            fechaVerificacion: l.fecha || '12 Mayo 2026',
-            ultimaImagenSat: 'Sentinel-2 (Resolución 10m)',
-            certificados: [
-                'Libre de Deforestación (Post 31-Dic-2020)',
-                'Legalidad: Legislación País Productor',
-                'Polígono Georreferenciado Validado'
-            ],
-        }));
-        
-        setLotesEudr(items);
-        if (items.length > 0) {
-            setSelectedLote(items[0]);
-        }
+                const linkedLotes = master.filter(l => links.some(link => link.loteId === l.id) && isLotePublicado(l.id));
+                
+                const items = linkedLotes.map(l => ({
+                    id: l.id,
+                    finca: l.finca,
+                    productor: l.productor,
+                    coordenadas: l.coordenadas || (l.id === 'LOT-HUILA-084' ? '1.8843° N, 76.2931° W' : '5.6421° N, 75.6120° W'),
+                    areaPoligono: l.areaPoligono || (l.id === 'LOT-HUILA-084' ? '12.04 Hectáreas (Polígono Cerrado)' : '6.50 Hectáreas (Polígono Cerrado)'),
+                    riesgoDeforestacion: l.riesgoDeforestacion || (l.verificadoEUDR === false ? '100.0% (Alerta de Deforestación)' : '0.0% (Riesgo Nulo)'),
+                    fechaVerificacion: l.fecha || '12 Mayo 2026',
+                    ultimaImagenSat: 'Sentinel-2 (Resolución 10m)',
+                    certificados: [
+                        'Libre de Deforestación (Post 31-Dic-2020)',
+                        'Legalidad: Legislación País Productor',
+                        'Polígono Georreferenciado Validado'
+                    ],
+                }));
+                
+                setLotesEudr(items);
+                if (items.length > 0) {
+                    setSelectedLote(items[0]);
+                }
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError('Error al cargar lotes para cumplimiento EUDR');
+                setIsLoading(false);
+            });
     }, []);
 
     const handleDownload = () => {
@@ -64,6 +75,28 @@ export function EudrCompliance() {
             });
         }, 1500);
     };
+
+    if (isLoading) {
+        return (
+            <div className="max-w-[1200px] mx-auto pb-24 animate-pulse space-y-8">
+                <div className="bg-white rounded-[40px] border border-gray-100 p-12 h-48 flex flex-col justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="text-center py-20 bg-white border border-gray-100 rounded-[40px] max-w-[1200px] mx-auto p-10 space-y-4">
+                <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                <h2 className="text-2xl font-black text-red-900">Algo salió mal</h2>
+                <p className="text-red-700/80 font-medium">{error}</p>
+                <Button onClick={() => window.location.reload()} className="bg-[#5f705f] text-white font-black px-6 py-2 rounded-xl border-none">Reintentar</Button>
+            </div>
+        );
+    }
 
     if (lotesEudr.length === 0 || !selectedLote) {
         return (
