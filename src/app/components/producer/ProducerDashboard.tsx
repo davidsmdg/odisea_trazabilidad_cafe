@@ -24,7 +24,7 @@ import { Badge } from '../ui/badge';
 import { cn } from '../ui/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { getLotesMaster } from '../../utils/loteStore';
+import { getLotes } from '../../../services/lotesService';
 import { useMemo } from 'react';
 
 // Mock data para departamentos (precios y clima robustecido)
@@ -107,11 +107,21 @@ export function ProducerDashboard() {
     const { user } = useAuth();
     const [departamento, setDepartamento] = useState('Antioquia');
     const [valoracionesAprobadas, setValoracionesAprobadas] = useState<any[]>([]);
+    const [lotes, setLotes] = useState<any[]>([]);
 
-    const lotesMaster = getLotesMaster();
+    useEffect(() => {
+        getLotes()
+            .then(fetched => {
+                setLotes(fetched);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+    }, []);
+
     const lotesVendidos = useMemo(() => {
         const prodName = user?.name || 'María González';
-        const filtered = lotesMaster.filter(l => 
+        const filtered = lotes.filter(l => 
             l.productor.toLowerCase().includes(prodName.toLowerCase().split(' ')[0]) &&
             l.tostadorAsignado
         );
@@ -131,7 +141,7 @@ export function ProducerDashboard() {
                 final: 4.8 
             }
         }));
-    }, [lotesMaster, user]);
+    }, [lotes, user]);
 
     const [categoriaSimulacion, setCategoriaSimulacion] = useState<'regional' | 'diferenciado' | 'exotico'>('regional');
     const [sobrepreciosConfig, setSobrepreciosConfig] = useState({ regional: 5, diferenciado: 10, exotico: 30 });
