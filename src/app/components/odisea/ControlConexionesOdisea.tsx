@@ -51,7 +51,7 @@ const INITIAL_TOSTADORES_LINKS: LinkTostador[] = [
     { id: '2', loteId: 'LOT-ANT-112', tostador: 'Workshop Coffee (UK)' }
 ];
 
-import { getLotesMaster } from '../../utils/loteStore';
+import { getLotes } from '../../../services/lotesService';
 
 const MOCK_PRODUCTORES = ['María González', 'Carlos Martínez', 'Jorge Torres', 'Elena Ruiz'];
 const MOCK_LIDERES = ['Carlos Augusto Restrepo', 'Dora Estela Muñoz'];
@@ -65,6 +65,7 @@ export function ControlConexionesOdisea() {
     const [catadorLinks, setCatadorLinks] = useState<LinkCatador[]>([]);
     const [tostadorLinks, setLinkTostador] = useState<LinkTostador[]>([]);
     const [lotesList, setLotesList] = useState<string[]>([]);
+    const [isLoadingLotes, setIsLoadingLotes] = useState(true);
 
     // Form inputs
     const [selectedProductor, setSelectedProductor] = useState(MOCK_PRODUCTORES[0]);
@@ -74,11 +75,19 @@ export function ControlConexionesOdisea() {
     const [selectedTostador, setSelectedTostador] = useState(MOCK_TOSTADORES[0]);
 
     useEffect(() => {
-        const loadedLotes = getLotesMaster();
-        if (loadedLotes && loadedLotes.length > 0) {
-            setLotesList(loadedLotes.map(l => l.id));
-            setSelectedLote(loadedLotes[0].id);
-        }
+        setIsLoadingLotes(true);
+        getLotes()
+            .then((loadedLotes) => {
+                if (loadedLotes && loadedLotes.length > 0) {
+                    setLotesList(loadedLotes.map(l => l.id));
+                    setSelectedLote(loadedLotes[0].id);
+                }
+                setIsLoadingLotes(false);
+            })
+            .catch((err) => {
+                console.error(err);
+                setIsLoadingLotes(false);
+            });
 
         const storedLider = localStorage.getItem('links_lider');
         if (storedLider) {
@@ -281,8 +290,15 @@ export function ControlConexionesOdisea() {
                                         value={selectedLote}
                                         onChange={(e) => setSelectedLote(e.target.value)}
                                         className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-800 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 outline-none"
+                                        disabled={isLoadingLotes}
                                     >
-                                        {lotesList.map(l => <option key={l} value={l}>{l}</option>)}
+                                        {isLoadingLotes ? (
+                                            <option>Cargando lotes...</option>
+                                        ) : lotesList.length === 0 ? (
+                                            <option>No hay lotes disponibles</option>
+                                        ) : (
+                                            lotesList.map(l => <option key={l} value={l}>{l}</option>)
+                                        )}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
