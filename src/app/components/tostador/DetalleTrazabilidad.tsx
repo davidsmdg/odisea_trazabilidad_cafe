@@ -93,23 +93,34 @@ const MOCK_TRAZABILIDAD = [
     }
 ];
 
-import { getLotesMaster } from '../../utils/loteStore';
+import { getLotePorId } from '../../../services/lotesService';
+import { AlertTriangle } from 'lucide-react';
 
 export function DetalleTrazabilidadRoaster() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [lote, setLote] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const master = getLotesMaster();
-        const found = master.find(l => l.id === id);
-        if (found) {
-            setLote(found);
-        } else {
-            // fallback a buscar por el ID de prueba pre-cargado
-            const fallback = master.find(l => l.id === 'LOT-HUILA-084');
-            setLote(fallback);
-        }
+        setIsLoading(true);
+        const targetId = id || 'LOT-HUILA-084';
+        getLotePorId(targetId)
+            .then(found => {
+                if (found) {
+                    setLote(found);
+                } else {
+                    getLotePorId('LOT-HUILA-084').then(fallback => {
+                        setLote(fallback);
+                    });
+                }
+                setIsLoading(false);
+            })
+            .catch(err => {
+                setError('Error al cargar detalle de trazabilidad');
+                setIsLoading(false);
+            });
     }, [id]);
 
     const variedad = lote?.variedad || 'Bourbon Rosado';
@@ -201,6 +212,28 @@ export function DetalleTrazabilidadRoaster() {
         costos: { pct: 20.0, usd: '2.90', label: 'Consolidación, Trilla y Logística Asociada' },
         odisea: { pct: 5.5, usd: '0.80', label: 'Gestión Logística y Trazabilidad Odisea Trace' }
     };
+
+    if (isLoading) {
+        return (
+            <div className="max-w-[1200px] mx-auto pb-24 animate-pulse font-sans space-y-10">
+                <div className="bg-white rounded-[40px] border border-gray-100 p-12 h-48 flex flex-col justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-[1200px] mx-auto pb-24 font-sans text-center py-20 bg-white border border-gray-100 rounded-[40px] p-10 space-y-4">
+                <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                <h2 className="text-2xl font-black text-red-900">Algo salió mal</h2>
+                <p className="text-red-700/80 font-bold">{error}</p>
+                <Button onClick={() => window.location.reload()} className="bg-[#5f705f] text-white font-black px-6 py-2 rounded-xl border-none">Reintentar</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-[1200px] mx-auto pb-24 animate-in fade-in duration-500 font-sans">
