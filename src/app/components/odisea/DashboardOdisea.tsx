@@ -20,8 +20,10 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import { useNavigate } from 'react-router';
-import { getLotesMaster, updateLote, LoteUnificado } from '../../utils/loteStore';
+import type { LoteUnificado } from '../../types/lote';
+import { getLotes, updateLote } from '../../../services/lotesService';
 import { toast } from 'sonner';
+import { AlertTriangle } from 'lucide-react';
 
 interface ProducerDetail {
     nombre: string;
@@ -43,34 +45,46 @@ export function DashboardOdisea() {
     const [lotes, setLotes] = useState<LoteUnificado[]>([]);
     const [tostadorLinks, setTostadorLinks] = useState<any[]>([]);
     const [recentLogs, setRecentLogs] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadDataAsync = async () => {
+        setIsLoading(true);
+        try {
+            const master = await getLotes();
+            setLotes(Array.isArray(master) ? master : []);
+
+            // Cargar reservas/compras de tostadores con fallback de seguridad
+            const rawLinks = localStorage.getItem('links_tostador');
+            if (rawLinks) {
+                try {
+                    const parsed = JSON.parse(rawLinks);
+                    setTostadorLinks(Array.isArray(parsed) ? parsed : []);
+                } catch (e) {
+                    setTostadorLinks([]);
+                }
+            } else {
+                const defaults = [
+                    { id: '1', loteId: 'LOT-HUILA-084', tostador: 'Blue Bottle Coffee (USA)' },
+                    { id: '2', loteId: 'LOT-ANT-112', tostador: 'Workshop Coffee (UK)' }
+                ];
+                setTostadorLinks(defaults);
+            }
+
+            setRecentLogs([
+                { id: 1, text: "Líder Carlos Restrepo pre-validó Finca La Esperanza offline.", type: "leader", time: "Hace 10 min" },
+                { id: 2, text: "Catador Pedro Nel inició evaluación organoléptica del Bourbon Rosado.", type: "taster", time: "Hace 1 hora" },
+                { id: 3, text: "Embarque FOB de 800kg con destino Hamburgo verificado en puerto.", type: "shipping", time: "Hace 4 horas" }
+            ]);
+        } catch (err) {
+            setError('Error al cargar datos del tablero operativo');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        // Cargar lotes unificados con fallback de seguridad
-        const master = getLotesMaster();
-        setLotes(Array.isArray(master) ? master : []);
-
-        // Cargar reservas/compras de tostadores con fallback de seguridad
-        const rawLinks = localStorage.getItem('links_tostador');
-        if (rawLinks) {
-            try {
-                const parsed = JSON.parse(rawLinks);
-                setTostadorLinks(Array.isArray(parsed) ? parsed : []);
-            } catch (e) {
-                setTostadorLinks([]);
-            }
-        } else {
-            const defaults = [
-                { id: '1', loteId: 'LOT-HUILA-084', tostador: 'Blue Bottle Coffee (USA)' },
-                { id: '2', loteId: 'LOT-ANT-112', tostador: 'Workshop Coffee (UK)' }
-            ];
-            setTostadorLinks(defaults);
-        }
-
-        setRecentLogs([
-            { id: 1, text: "Líder Carlos Restrepo pre-validó Finca La Esperanza offline.", type: "leader", time: "Hace 10 min" },
-            { id: 2, text: "Catador Pedro Nel inició evaluación organoléptica del Bourbon Rosado.", type: "taster", time: "Hace 1 hora" },
-            { id: 3, text: "Embarque FOB de 800kg con destino Hamburgo verificado en puerto.", type: "shipping", time: "Hace 4 horas" }
-        ]);
+        loadDataAsync();
     }, []);
 
     const [prefRegional, setPrefRegional] = useState(5);
@@ -90,44 +104,46 @@ export function DashboardOdisea() {
         }
     }, []);
 
-    const handleSavePref = () => {
+    const handleSavePref = async () => {
         setIsSavingPref(true);
-        setTimeout(() => {
-            localStorage.setItem('odisea_sobreprecios_config', JSON.stringify({
-                regional: prefRegional,
-                diferenciado: prefDiferenciado,
-                exotico: prefExotico
-            }));
-            setIsSavingPref(false);
-            toast.success('Políticas de Sobreprecio Guardadas', {
-                description: 'Los nuevos porcentajes se aplicarán automáticamente en el simulador del productor.',
-                style: { borderRadius: '24px', background: '#f8fafc', border: '1px solid #e2e8f0' }
-            });
-        }, 1000);
+        localStorage.setItem('odisea_sobreprecios_config', JSON.stringify({
+            regional: prefRegional,
+            diferenciado: prefDiferenciado,
+            exotico: prefExotico
+        }));
+        setIsSavingPref(false);
+        toast.success('Políticas de Sobreprecio Guardadas', {
+            description: 'Los nuevos porcentajes se aplicarán automáticamente en el simulador del productor.',
+            style: { borderRadius: '24px', background: '#f8fafc', border: '1px solid #e2e8f0' }
+        });
     };
 
-    const reloadData = () => {
-        const master = getLotesMaster();
-        setLotes(Array.isArray(master) ? master : []);
+    const reloadData = async () => {
+        try {
+            const master = await getLotes();
+            setLotes(Array.isArray(master) ? master : []);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     // Acciones de aprobación de comercialización
-    const handleApproveComercializacion = (loteId: string) => {
-        updateLote(loteId, { aprobadoComercializacion: true });
+    const handleApproveComercializacion = async (loteId: string) => {
+        await updateLote(loteId, { aprobadoComercializacion: true });
         toast.success('Lote Aprobado', {
             description: `El lote ${loteId} ahora es visible en el marketplace de tostadores.`,
             style: { borderRadius: '24px', background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#14532D' }
         });
-        reloadData();
+        await reloadData();
     };
 
-    const handleRejectComercializacion = (loteId: string) => {
-        updateLote(loteId, { ofrecidoPorProductor: false });
+    const handleRejectComercializacion = async (loteId: string) => {
+        await updateLote(loteId, { ofrecidoPorProductor: false });
         toast.warning('Lote Ocultado', {
             description: `El lote ${loteId} ha sido devuelto a gestión interna del agricultor.`,
             style: { borderRadius: '24px' }
         });
-        reloadData();
+        await reloadData();
     };
 
     // Asegurar arrays seguros para evitar cualquier crash de renderizado
@@ -160,6 +176,28 @@ export function DashboardOdisea() {
             pendientes: lotesSafe.filter(l => l.catadorAsignado === 'Sofía Andrade' && !(l.calificacion && l.calificacion > 0))
         }
     ];
+
+    if (isLoading) {
+        return (
+            <div className="space-y-12 max-w-[1200px] mx-auto animate-pulse pb-20 px-4 text-left font-sans">
+                <div className="bg-white rounded-[40px] border border-slate-100 p-12 h-48 flex flex-col justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-[1200px] mx-auto pb-24 font-sans text-center py-20 bg-white border border-slate-200 rounded-[40px] p-10 space-y-4 text-left">
+                <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                <h2 className="text-2xl font-black text-red-900">Algo salió mal</h2>
+                <p className="text-red-700/80 font-bold">{error}</p>
+                <Button onClick={() => window.location.reload()} className="bg-slate-900 text-white font-black px-6 py-2 rounded-xl border-none">Reintentar</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-12 max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-20 px-4 text-left font-sans">
