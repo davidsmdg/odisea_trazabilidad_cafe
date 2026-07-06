@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getLotes } from '../../../services/lotesService';
 import type { LoteUnificado } from '../../types/lote';
-import { isLotePublicado } from '../../utils/loteStore';
+import { isLotePublicado } from '../../../services/lotesService';
 import {
     Compass,
     Search,
@@ -46,9 +46,12 @@ export function ExplorarCafes() {
     useEffect(() => {
         setIsLoading(true);
         getLotes()
-            .then((master) => {
+            .then(async (master) => {
                 // Filtrar solo los lotes ofrecidos por el productor, aprobados por Odisea y que estén PUBLICADOS en el Stage Gate
-                const commercialLotes = master.filter(l => l.ofrecidoPorProductor && l.aprobadoComercializacion && isLotePublicado(l.id));
+                const publicStatuses = await Promise.all(
+                    master.map(l => isLotePublicado(l.id))
+                );
+                const commercialLotes = master.filter((l, idx) => l.ofrecidoPorProductor && l.aprobadoComercializacion && publicStatuses[idx]);
                 const mappedMaster = commercialLotes.map(l => ({
                     id: l.id,
                     codigo: l.id,
