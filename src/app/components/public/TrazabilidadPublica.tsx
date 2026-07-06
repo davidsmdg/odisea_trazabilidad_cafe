@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
-import { isLotePublicado } from '../../utils/loteStore';
+import { isLotePublicado } from '../../../services/lotesService';
+import { useEffect } from 'react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -147,7 +148,21 @@ export function TrazabilidadPublica() {
     const { loteId } = useParams();
 
     const idToQuery = loteId || MOCK.loteId;
-    const isPublic = isLotePublicado(idToQuery);
+    const [isPublic, setIsPublic] = useState<boolean | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        setIsLoading(true);
+        isLotePublicado(idToQuery)
+            .then(res => {
+                setIsPublic(res);
+                setIsLoading(false);
+            })
+            .catch(() => {
+                setIsPublic(false);
+                setIsLoading(false);
+            });
+    }, [idToQuery]);
 
     // Destino
     const [destino, setDestino] = useState<Destino>('exportacion');
@@ -203,6 +218,16 @@ export function TrazabilidadPublica() {
         setDestino(d);
         setPasoActivo(0);
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[85vh] p-8 bg-[#FDFCFB] text-center font-sans max-w-md mx-auto animate-pulse">
+                <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-6"></div>
+                <div className="h-6 bg-slate-200 rounded w-3/4 mb-4"></div>
+                <div className="h-4 bg-slate-150 rounded w-1/2"></div>
+            </div>
+        );
+    }
 
     if (!isPublic) {
         return (

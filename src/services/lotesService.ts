@@ -36,3 +36,8 @@ export async function updateValidationStage(loteId: string, nextStage: any, resp
     await new Promise(r => setTimeout(r, 500));
     storeUpdateValidationStage(loteId, nextStage, responsable, motivo);
 }
+
+export async function isLotePublicado(loteId: string): Promise<boolean> {
+    await new Promise(r => setTimeout(r, 350));
+    return storeGetValidationStage(loteId).stage === 'Publicado';
+}
