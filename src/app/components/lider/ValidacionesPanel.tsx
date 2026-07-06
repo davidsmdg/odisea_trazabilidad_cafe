@@ -23,11 +23,10 @@ import {
 import { cn } from '../ui/utils';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
-import { updateLote } from '../../utils/loteStore';
 import { useMemo } from 'react';
 import type { LoteUnificado } from '../../types/lote';
 import type { ValidacionItem } from '../../types/validation';
-import { getLotes } from '../../../services/lotesService';
+import { getLotes, updateLote } from '../../../services/lotesService';
 
 const VALIDACIONES_MOCK: ValidacionItem[] = [
     {
@@ -139,37 +138,48 @@ export function ValidacionesPanel() {
             icon: <RefreshCw className="animate-spin text-blue-600" />
         });
 
-        setTimeout(() => {
-            setIsSyncing(false);
-            setDraftCount(0);
-            
+        (async () => {
             const savedDrafts = localStorage.getItem('borradores_offline_lider');
             if (savedDrafts) {
                 try {
                     const list = JSON.parse(savedDrafts);
                     if (Array.isArray(list)) {
-                        list.forEach((draft: any) => {
+                        for (const draft of list) {
                             const draftLoteId = typeof draft === 'object' ? draft.loteId : null;
                             const draftStatus = typeof draft === 'object' ? draft.alistamiento : 'Apto';
                             const draftGps = typeof draft === 'object' ? draft.gpsCapturado : false;
                             
                             if (draftLoteId) {
-                                updateLote(draftLoteId, {
+                                await updateLote(draftLoteId, {
                                     estadoJAC: draftStatus,
                                     coordenadas: draftGps ? '1.88452° N, 76.29712° W' : undefined
                                 });
                             }
-                        });
+                        }
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.error(e);
+                }
             }
             
             localStorage.removeItem('borradores_offline_lider');
+            setIsSyncing(false);
+            setDraftCount(0);
             toast.success('Sincronización finalizada con éxito', {
                 description: 'Todos los borradores offline han sido cargados al panel global de Odisea.',
                 style: { borderRadius: '24px', background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#14532D' }
             });
-        }, 2000);
+            // Refrescar listado
+            setIsLoading(true);
+            try {
+                const data = await getLotes();
+                setLotesMaster(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        })();
     };
 
     const toggleOfflineMode = () => {
