@@ -31,7 +31,7 @@ import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
-import { updateLote } from '../../utils/loteStore';
+import { updateLote } from '../../../services/lotesService';
 
 type Tab = 'mapa' | 'visita' | 'auditoria';
 
@@ -88,11 +88,9 @@ export function AnalisisEspacial() {
     // Visita de Campo
     const [observacion, setObservacion] = useState('');
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setIsSaving(true);
-        setTimeout(() => {
-            setIsSaving(false);
-            
+        try {
             const idMap: Record<string, string> = {
                 '1': 'LOT-HUILA-084',
                 '2': 'LOT-ANT-112',
@@ -100,7 +98,7 @@ export function AnalisisEspacial() {
             };
             const targetLoteId = idMap[id || '1'] || id || '1';
 
-            updateLote(targetLoteId, {
+            await updateLote(targetLoteId, {
                 verificadoEUDR: valDeforestacion,
                 riesgoDeforestacion: valDeforestacion ? '0.0% (Riesgo Nulo)' : '100.0% (Alerta de Deforestación)',
             });
@@ -110,7 +108,11 @@ export function AnalisisEspacial() {
                 style: { borderRadius: '24px', background: '#ecfdf5', border: '1px solid #4A5B4A20', color: '#4A5B4A' }
             });
             navigate('/odisea/ambiental/historial');
-        }, 1500);
+        } catch (err) {
+            toast.error('Error al guardar la auditoría');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
