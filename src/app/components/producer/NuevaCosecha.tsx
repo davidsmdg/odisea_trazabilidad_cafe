@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { addLote } from '../../utils/loteStore';
-import { detectAnomaly, detectHarvestDateAnomaly } from '../../utils/anomalyStore';
+import { addLote } from '../../../services/lotesService';
+import { detectAnomaly, detectHarvestDateAnomaly } from '../../../services/anomaliesService';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Calendar,
@@ -54,7 +54,7 @@ export function NuevaCosecha() {
     const [madurez, setMadurez] = useState([4]);
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!finca || !parcela) {
             toast.error('Selecciona el Origen', { description: 'Finca y lote son obligatorios.' });
             return;
@@ -76,10 +76,7 @@ export function NuevaCosecha() {
         }
 
         setIsLoading(true);
-
-        setTimeout(() => {
-            setIsLoading(false);
-            
+        try {
             // Create the new Lot Object
             const randomCode = `LOT-HUI-${Math.floor(100 + Math.random()*900)}`;
             const factor = 1.5625;
@@ -111,11 +108,11 @@ export function NuevaCosecha() {
             // Ejecutar validaciones estadísticas históricas en caliente
             let hasHistoricalAnomaly = false;
             if (modalidad === 'diario') {
-                const checkPeso = detectAnomaly(randomCode, 'peso_cereza', Number(peso), finca, 'María González');
-                const checkFecha = detectHarvestDateAnomaly(randomCode, fecha, finca, 'María González');
+                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', Number(peso), finca, 'María González');
+                const checkFecha = await detectHarvestDateAnomaly(randomCode, fecha, finca, 'María González');
                 if (checkPeso || checkFecha) hasHistoricalAnomaly = true;
             } else if (modalidad === 'objetivo' && kilosObjetivoCereza) {
-                const checkPeso = detectAnomaly(randomCode, 'peso_cereza', kilosObjetivoCereza, finca, 'María González');
+                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', kilosObjetivoCereza, finca, 'María González');
                 if (checkPeso) hasHistoricalAnomaly = true;
             }
 
@@ -147,7 +144,7 @@ export function NuevaCosecha() {
             localStorage.setItem('lotes_produccion', JSON.stringify(currentLotes));
 
             // Save to Master Odisea list
-            addLote({
+            await addLote({
                 id: randomCode,
                 productor: 'María González',
                 finca: finca,
@@ -176,7 +173,11 @@ export function NuevaCosecha() {
                 });
             }
             navigate('/producer/cosechas');
-        }, 1000);
+        } catch (err) {
+            toast.error('Error al guardar el lote');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
