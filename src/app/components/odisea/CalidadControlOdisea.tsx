@@ -30,11 +30,31 @@ import { Label } from '../ui/label';
 import { toast } from 'sonner';
 import { SensorRadar } from '../SensorRadar';
 import { cn } from '../ui/utils';
-import { getLotesMaster, updateLote } from '../../utils/loteStore';
+import type { LoteUnificado } from '../../types/lote';
+import { getLotes, updateLote } from '../../../services/lotesService';
+import { AlertTriangle } from 'lucide-react';
 
 export function CalidadControlOdisea() {
     const navigate = useNavigate();
-    const lotes = getLotesMaster();
+    const [lotes, setLotes] = useState<LoteUnificado[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const reloadData = async () => {
+        setIsLoading(true);
+        try {
+            const master = await getLotes();
+            setLotes(Array.isArray(master) ? master : []);
+        } catch (err) {
+            setError('Error al obtener los lotes');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        reloadData();
+    }, []);
 
     // Query param detection on load
     const queryParams = new URLSearchParams(window.location.search);
@@ -146,26 +166,30 @@ export function CalidadControlOdisea() {
         return { total, evaluated, pending, avg };
     }, [filteredLotes]);
 
-    const handleSaveRecata = () => {
+    const handleSaveRecata = async () => {
         if (!selectedLote) return;
         setIsSaving(true);
-        setTimeout(() => {
-            updateLote(selectedLote.id, {
+        try {
+            await updateLote(selectedLote.id, {
                 calificacion: parseFloat(totalScore)
             });
-            setIsSaving(false);
+            await reloadData();
             toast.success('Puntaje de Recata Guardado', {
                 description: `ID: ${selectedLote.id} - Calificación recalibrada a ${totalScore} PTS.`,
                 style: { borderRadius: '24px', background: '#f8fafc', border: '1px solid #e2e8f0' }
             });
-        }, 1200);
+        } catch (err) {
+            toast.error('Error al guardar la recata');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handleSavePrep = () => {
+    const handleSavePrep = async () => {
         if (!selectedLote) return;
         setIsSaving(true);
-        setTimeout(() => {
-            updateLote(selectedLote.id, {
+        try {
+            await updateLote(selectedLote.id, {
                 pruebasAlistamiento: {
                     humedad,
                     actividadAgua,
@@ -174,12 +198,16 @@ export function CalidadControlOdisea() {
                     fecha: fechaPrueba
                 }
             });
-            setIsSaving(false);
+            await reloadData();
             toast.success('Pruebas de Alistamiento Guardadas', {
                 description: `ID: ${selectedLote.id} - Mediciones de humedad y empaque de exportación sincronizadas con éxito.`,
                 style: { borderRadius: '24px', background: '#f8fafc', border: '1px solid #e2e8f0' }
             });
-        }, 1200);
+        } catch (err) {
+            toast.error('Error al guardar las pruebas de alistamiento');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const radarData = useMemo(() => [
@@ -193,6 +221,28 @@ export function CalidadControlOdisea() {
     const totalScore = useMemo(() => {
         return (60 + (recata.acidez + recata.cuerpo + recata.dulzor + recata.balance + recata.limpieza) / 5 * 5).toFixed(2);
     }, [recata]);
+
+    if (isLoading) {
+        return (
+            <div className="max-w-[1400px] mx-auto pb-24 animate-pulse font-sans space-y-10 text-left">
+                <div className="bg-white rounded-[40px] border border-slate-200 p-12 h-48 flex flex-col justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-[1400px] mx-auto pb-24 font-sans text-center py-20 bg-white border border-slate-200 rounded-[40px] p-10 space-y-4 text-left">
+                <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                <h2 className="text-2xl font-black text-red-900">Algo salió mal</h2>
+                <p className="text-red-700/80 font-bold">{error}</p>
+                <Button onClick={() => window.location.reload()} className="bg-slate-900 text-white font-black px-6 py-2 rounded-xl border-none">Reintentar</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-[1400px] mx-auto pb-24 animate-in fade-in slide-in-from-bottom-8 duration-700 text-left font-sans">
