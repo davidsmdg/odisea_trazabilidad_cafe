@@ -10,7 +10,7 @@ import {
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
 import { getLotes } from '../../../services/lotesService';
-import { isLotePublicado } from '../../utils/loteStore';
+import { isLotePublicado } from '../../../services/lotesService';
 import { AlertTriangle, Coffee } from 'lucide-react';
 
 export function EudrCompliance() {
@@ -23,7 +23,7 @@ export function EudrCompliance() {
     useEffect(() => {
         setIsLoading(true);
         getLotes()
-            .then((master) => {
+            .then(async (master) => {
                 const rawLinks = localStorage.getItem('links_tostador');
                 let links: any[] = [];
                 if (rawLinks) {
@@ -35,7 +35,10 @@ export function EudrCompliance() {
                     ];
                 }
 
-                const linkedLotes = master.filter(l => links.some(link => link.loteId === l.id) && isLotePublicado(l.id));
+                const publicStatuses = await Promise.all(
+                    master.map(l => isLotePublicado(l.id))
+                );
+                const linkedLotes = master.filter((l, idx) => links.some(link => link.loteId === l.id) && publicStatuses[idx]);
                 
                 const items = linkedLotes.map(l => ({
                     id: l.id,
