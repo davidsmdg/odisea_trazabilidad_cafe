@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { PackageCheck, Truck, FlaskConical, FileText } from 'lucide-react';
 import { Button } from '../ui/button';
 import { getLotes } from '../../../services/lotesService';
-import { isLotePublicado } from '../../utils/loteStore';
+import { isLotePublicado } from '../../../services/lotesService';
 import { AlertTriangle, Coffee } from 'lucide-react';
 
 export function MisLotesTostador() {
@@ -15,7 +15,7 @@ export function MisLotesTostador() {
     useEffect(() => {
         setIsLoading(true);
         getLotes()
-            .then((master) => {
+            .then(async (master) => {
                 // Cargar enlaces activos
                 const rawLinks = localStorage.getItem('links_tostador');
                 let links: any[] = [];
@@ -29,7 +29,10 @@ export function MisLotesTostador() {
                 }
 
                 // Filtrar lotes master que están asociados en los vínculos de tostadores y publicados
-                const linkedLotes = master.filter(l => links.some(link => link.loteId === l.id) && isLotePublicado(l.id));
+                const publicStatuses = await Promise.all(
+                    master.map(l => isLotePublicado(l.id))
+                );
+                const linkedLotes = master.filter((l, idx) => links.some(link => link.loteId === l.id) && publicStatuses[idx]);
                 
                 // Mapear al esquema de visualización
                 const items = linkedLotes.map(l => {
