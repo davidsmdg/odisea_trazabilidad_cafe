@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
-import { updateLote } from '../../utils/loteStore';
+import { updateLote } from '../../../services/lotesService';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     ChevronLeft,
@@ -97,11 +97,9 @@ export function EvaluacionSensorial() {
         { attribute: 'Limpieza', value: values.limpieza || 0 },
     ], [values]);
 
-    const onSubmit = (data: FormCata) => {
+    const onSubmit = async (data: FormCata) => {
         setIsSaving(true);
-        setTimeout(() => {
-            setIsSaving(false);
-            
+        try {
             const selectedProfiles = data.macroperfil || [];
             const macroperfilString = selectedProfiles.join(', ');
 
@@ -135,7 +133,7 @@ export function EvaluacionSensorial() {
 
             // Sincronizar en el almacén master de Odisea
             if (loteId) {
-                updateLote(loteId, {
+                await updateLote(loteId, {
                     calificacion: parseFloat(totalScore),
                     macroperfil: macroperfilString
                 });
@@ -146,7 +144,11 @@ export function EvaluacionSensorial() {
                 style: { borderRadius: '24px', background: '#FDFBF9', border: '1px solid #D7CCC8' }
             });
             navigate('/catador/muestras');
-        }, 1500);
+        } catch (err) {
+            toast.error('Error al registrar la cata');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
