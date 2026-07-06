@@ -36,24 +36,50 @@ import {
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
 
-import { getLotesMaster, updateLote, LoteUnificado, MovimientoHistorial } from '../../utils/loteStore';
+import type { LoteUnificado, MovimientoHistorial } from '../../types/lote';
+import { getLotePorId, updateLote } from '../../../services/lotesService';
+import { useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 export function DetalleLoteOdisea() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [isSaving, setIsSaving] = useState(false);
-
-    const lotes = getLotesMaster();
-    const lote = lotes.find(l => l.id === id) || lotes[0];
+    const [lote, setLote] = useState<LoteUnificado | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Local states initialized from lote
-    const [localEstado, setLocalEstado] = useState<'En Finca' | 'En Bodega' | 'Listo Exportación' | 'En Tránsito' | 'Entregado'>(lote.estado);
-    const [localRegiones, setLocalRegiones] = useState<('USA' | 'EU')[]>(lote.regionesDisponibles || ['USA', 'EU']);
-    const [localAprobado, setLocalAprobado] = useState<boolean>(lote.aprobadoComercializacion || false);
-    const [localMovimientos, setLocalMovimientos] = useState<MovimientoHistorial[]>(lote.historialMovimientos || []);
+    const [localEstado, setLocalEstado] = useState<'En Finca' | 'En Bodega' | 'Listo Exportación' | 'En Tránsito' | 'Entregado'>('En Finca');
+    const [localRegiones, setLocalRegiones] = useState<('USA' | 'EU')[]>(['USA', 'EU']);
+    const [localAprobado, setLocalAprobado] = useState<boolean>(false);
+    const [localMovimientos, setLocalMovimientos] = useState<MovimientoHistorial[]>([]);
     
     // Almacenamiento fields
-    const [localAlmacenamiento, setLocalAlmacenamiento] = useState(lote.almacenamiento || '');
+    const [localAlmacenamiento, setLocalAlmacenamiento] = useState('');
+
+    useEffect(() => {
+        setIsLoading(true);
+        const targetId = id || '';
+        getLotePorId(targetId)
+            .then(found => {
+                if (found) {
+                    setLote(found);
+                    setLocalEstado(found.estado);
+                    setLocalRegiones(found.regionesDisponibles || ['USA', 'EU']);
+                    setLocalAprobado(found.aprobadoComercializacion || false);
+                    setLocalMovimientos(found.historialMovimientos || []);
+                    setLocalAlmacenamiento(found.almacenamiento || '');
+                } else {
+                    setError('Lote no encontrado');
+                }
+                setIsLoading(false);
+            })
+            .catch(err => {
+                setError('Error al obtener el lote');
+                setIsLoading(false);
+            });
+    }, [id]);
     
     // New movement fields
     const [newMovEstado, setNewMovEstado] = useState<'En Finca' | 'En Bodega' | 'Listo Exportación' | 'En Tránsito' | 'Entregado'>('En Bodega');
@@ -85,6 +111,28 @@ export function DetalleLoteOdisea() {
         toast.info('Movimiento removido localmente.');
     };
 
+    if (isLoading) {
+        return (
+            <div className="max-w-[1400px] mx-auto pb-24 animate-pulse font-sans space-y-10 text-left">
+                <div className="bg-white rounded-[40px] border border-slate-200 p-12 h-48 flex flex-col justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !lote) {
+        return (
+            <div className="max-w-[1400px] mx-auto pb-24 font-sans text-center py-20 bg-white border border-slate-200 rounded-[40px] p-10 space-y-4 text-left">
+                <AlertTriangle className="text-red-500 mx-auto" size={48} />
+                <h2 className="text-2xl font-black text-red-950">Algo salió mal</h2>
+                <p className="text-red-700/80 font-bold">{error || 'Lote no encontrado'}</p>
+                <Button onClick={() => navigate('/odisea/lotes')} className="bg-slate-900 text-white font-black px-6 py-2 rounded-xl border-none">Volver a lotes</Button>
+            </div>
+        );
+    }
+
     const displayProductor = {
         nombre: lote.productor,
         cedula: '1.092.344.XXX',
@@ -106,24 +154,27 @@ export function DetalleLoteOdisea() {
         secado: 'Marquesina 15 días',
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        if (!lote) return;
         setIsSaving(true);
-        setTimeout(() => {
-            // Save updates in the master store
-            updateLote(lote.id, {
+        try {
+            await updateLote(lote.id, {
                 estado: localEstado,
                 regionesDisponibles: localRegiones,
                 aprobadoComercializacion: localAprobado,
                 historialMovimientos: localMovimientos,
                 almacenamiento: localAlmacenamiento
             });
-            setIsSaving(false);
             toast.success('Expediente actualizado', {
                 description: `ID: ${id} - Información logítica, destinos y bitácora de movimientos sincronizados.`,
                 style: { borderRadius: '24px', background: '#f8fafc', border: '1px solid #e2e8f0' }
             });
             navigate('/odisea/lotes');
-        }, 1500);
+        } catch (err) {
+            toast.error('Error al actualizar el expediente');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
