@@ -24,8 +24,8 @@ import {
     Scale,
     AlertTriangle
 } from 'lucide-react';
-import { getValidationStageForLote, updateValidationStage, updateLote } from '../../utils/loteStore';
-import { detectAnomaly } from '../../utils/anomalyStore';
+import { getValidationStageForLote, updateValidationStage, updateLote } from '../../../services/lotesService';
+import { detectAnomaly } from '../../../services/anomaliesService';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -84,7 +84,7 @@ export function MisCosechas() {
         setIsCorrectionOpen(true);
     };
 
-    const handleSaveCorrection = (e: React.FormEvent) => {
+    const handleSaveCorrection = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!correctionLote) return;
         
@@ -103,10 +103,10 @@ export function MisCosechas() {
             }
             return l;
         });
-        updateLotes(updated);
+        await updateLotes(updated);
         
         // Actualizar en odisea_lotes_master
-        updateLote(correctionLote.codigo, {
+        await updateLote(correctionLote.codigo, {
             variedad: correctionVariedad,
             proceso: correctionProceso,
             pesos: {
@@ -117,7 +117,12 @@ export function MisCosechas() {
         });
         
         // Cambiar Stage Gate a 'En validación'
-        updateValidationStage(correctionLote.codigo, 'En validación', 'Productor María González', 'Registro corregido y enviado para re-evaluación.');
+        await updateValidationStage(correctionLote.codigo, 'En validación', 'Productor María González', 'Registro corregido y enviado para re-evaluación.');
+        const newStage = await getValidationStageForLote(correctionLote.codigo);
+        setValidationStages(prev => ({
+            ...prev,
+            [correctionLote.codigo]: newStage
+        }));
         
         setIsCorrectionOpen(false);
         toast.success(`Lote ${correctionLote.codigo} re-sometido con éxito`, {
@@ -127,12 +132,19 @@ export function MisCosechas() {
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [validationStages, setValidationStages] = useState<Record<string, any>>({});
 
     useEffect(() => {
         setIsLoading(true);
         getCosechas()
-            .then((data) => {
+            .then(async (data) => {
                 setCosechas(data);
+                // Pre-load validation stages
+                const stages: Record<string, any> = {};
+                for (const item of data) {
+                    stages[item.codigo] = await getValidationStageForLote(item.codigo);
+                }
+                setValidationStages(stages);
                 setIsLoading(false);
             })
             .catch((err) => {
@@ -169,7 +181,7 @@ export function MisCosechas() {
         toast.success(`Lote ${lote.codigo} trasladado a marquesinas de secado.`);
     };
 
-    const handleConfirmarAccion = () => {
+    const handleConfirmarAccion = async () => {
         if (!modalAccion) return;
         const { tipo, lote } = modalAccion;
 
@@ -179,24 +191,30 @@ export function MisCosechas() {
                 toast.error('Ingresa una cantidad válida');
                 return;
             }
+            // Prepare updated array
+            let finalNewCereza = 0;
             const updated = cosechas.map(l => {
                 if (l.id === lote.id) {
                     const newCereza = (l.pesos.cereza || 0) + kilos;
-                    
-                    // Verificar anomalía histórica de cereza
-                    const check = detectAnomaly(lote.codigo, 'peso_cereza', newCereza, lote.finca || 'Finca La Esperanza', 'María González');
-                    if (check) {
-                        toast.warning('Discrepancia Histórica de Peso', {
-                            description: `Los ${newCereza} Kg acumulados difieren significativamente de la media de esta finca. Registrado para revisión.`
-                        });
-                    }
-
+                    finalNewCereza = newCereza;
                     return { ...l, pesos: { ...l.pesos, cereza: newCereza }, fase: Math.max(1, l.fase), estado: 'Cereza (Fresco)' };
                 }
                 return l;
             });
-            updateLotes(updated);
+            await updateLotes(updated);
             toast.success(`Sumados ${kilos} Kg de cereza al ${lote.codigo}`);
+
+            // Verificar anomalía histórica de cereza asíncronamente
+            try {
+                const check = await detectAnomaly(lote.codigo, 'peso_cereza', finalNewCereza, lote.finca || 'Finca La Esperanza', 'María González');
+                if (check) {
+                    toast.warning('Discrepancia Histórica de Peso', {
+                        description: `Los ${finalNewCereza} Kg acumulados difieren significativamente de la media de esta finca. Registrado para revisión.`
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
         } 
         else if (tipo === 'avanzar_seco') {
             const kilos = parseFloat(inputValue);
@@ -207,18 +225,6 @@ export function MisCosechas() {
             const factor = parseFloat(factorValue);
             const updated = cosechas.map(l => {
                 if (l.id === lote.id) {
-                    // Verificar anomalía de pergamino y factor
-                    const checkPeso = detectAnomaly(lote.codigo, 'peso_pergamino', kilos, lote.finca || 'Finca La Esperanza', 'María González');
-                    let checkFactor = null;
-                    if (!isNaN(factor) && factor > 0) {
-                        checkFactor = detectAnomaly(lote.codigo, 'factor_rendimiento', factor, lote.finca || 'Finca La Esperanza', 'María González');
-                    }
-                    if (checkPeso || checkFactor) {
-                        toast.warning('Discrepancia Histórica Detectada', {
-                            description: 'Los valores de pergamino o factor de rendimiento se desvían de los históricos de la finca. Registrado para revisión.'
-                        });
-                    }
-
                     return { 
                         ...l, 
                         pesos: { ...l.pesos, pergamino: kilos }, 
@@ -229,8 +235,24 @@ export function MisCosechas() {
                 }
                 return l;
             });
-            updateLotes(updated);
+            await updateLotes(updated);
             toast.success(`Lote ${lote.codigo} actualizado con ${kilos} Kg de pergamino seco.`);
+
+            // Verificar anomalía de pergamino y factor asíncronamente
+            try {
+                const checkPeso = await detectAnomaly(lote.codigo, 'peso_pergamino', kilos, lote.finca || 'Finca La Esperanza', 'María González');
+                let checkFactor = null;
+                if (!isNaN(factor) && factor > 0) {
+                    checkFactor = await detectAnomaly(lote.codigo, 'factor_rendimiento', factor, lote.finca || 'Finca La Esperanza', 'María González');
+                }
+                if (checkPeso || checkFactor) {
+                    toast.warning('Discrepancia Histórica Detectada', {
+                        description: 'Los valores de pergamino o factor de rendimiento se desvían de los históricos de la finca. Registrado para revisión.'
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
         else if (tipo === 'avanzar_verde') {
             const kilos = parseFloat(inputValue);
@@ -291,20 +313,24 @@ export function MisCosechas() {
             }
             const updated = cosechas.map(l => {
                 if (l.id === lote.id) {
-                    // Verificar anomalía de factor de rendimiento
-                    const check = detectAnomaly(lote.codigo, 'factor_rendimiento', factor, lote.finca || 'Finca La Esperanza', 'María González');
-                    if (check) {
-                        toast.warning('Factor de Rendimiento Atípico', {
-                            description: `El factor de rendimiento (${factor}) se desvía del historial de la finca. Registrado para revisión.`
-                        });
-                    }
-
                     return { ...l, factorRendimiento: factor };
                 }
                 return l;
             });
-            updateLotes(updated);
+            await updateLotes(updated);
             toast.success(`Factor de Rendimiento de ${factor} registrado para el lote ${lote.codigo}`);
+
+            // Verificar anomalía de factor de rendimiento asíncronamente
+            try {
+                const check = await detectAnomaly(lote.codigo, 'factor_rendimiento', factor, lote.finca || 'Finca La Esperanza', 'María González');
+                if (check) {
+                    toast.warning('Factor de Rendimiento Atípico', {
+                        description: `El factor de rendimiento (${factor}) se desvía del historial de la finca. Registrado para revisión.`
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         setModalAccion(null);
@@ -438,7 +464,7 @@ export function MisCosechas() {
                                     
                                     {/* Stage Gate Validation Status Badge */}
                                     {(() => {
-                                        const vRecord = getValidationStageForLote(lote.codigo);
+                                        const vRecord = validationStages[lote.codigo] || { stage: 'Capturado', historial: [] };
                                         const badgeColors = {
                                             'Capturado': 'bg-slate-100 text-slate-700 border border-slate-200',
                                             'En validación': 'bg-amber-100 text-amber-700 border border-amber-200',
@@ -457,7 +483,7 @@ export function MisCosechas() {
                                 
                                 {/* Alerta de rechazo con botón de corrección */}
                                 {(() => {
-                                    const vRecord = getValidationStageForLote(lote.codigo);
+                                    const vRecord = validationStages[lote.codigo] || { stage: 'Capturado', historial: [] };
                                     if (vRecord.stage === 'Rechazado') {
                                         const lastLog = [...vRecord.historial].reverse().find(h => h.estadoNuevo === 'Rechazado');
                                         return (
