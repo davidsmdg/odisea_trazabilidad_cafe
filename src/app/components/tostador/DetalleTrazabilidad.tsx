@@ -102,6 +102,7 @@ export function DetalleTrazabilidadRoaster() {
     const [lote, setLote] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [activeMoneda, setActiveMoneda] = useState<'COP' | 'USD' | 'EUR'>('USD');
 
     useEffect(() => {
         setIsLoading(true);
@@ -110,9 +111,11 @@ export function DetalleTrazabilidadRoaster() {
             .then(found => {
                 if (found) {
                     setLote(found);
+                    setActiveMoneda(found.monedaVisualizacion || 'USD');
                 } else {
                     getLotePorId('LOT-HUILA-084').then(fallback => {
                         setLote(fallback);
+                        if (fallback) setActiveMoneda(fallback.monedaVisualizacion || 'USD');
                     });
                 }
                 setIsLoading(false);
@@ -202,21 +205,44 @@ export function DetalleTrazabilidadRoaster() {
         }
     ];
 
-    // Estructura de precios calculada a partir del lote
-    const basePrice = lote?.precioBaseKgUSD !== undefined ? lote.precioBaseKgUSD : 10.00;
-    const odiseaFee = lote?.tarifaOdisea !== undefined ? lote.tarifaOdisea : 0.8;
-    const logisticsPct = lote?.porcentajeLogistica !== undefined ? lote.porcentajeLogistica : 30;
-    const logisticsUsd = basePrice * logisticsPct / 100;
-    const totalPrice = basePrice + odiseaFee + logisticsUsd;
+    // Estructura de precios calculada de forma multimoneda
+    const pProdCOP = lote?.precioProductorCOP !== undefined ? lote.precioProductorCOP : 40000;
+    const pTransCOP = lote?.costoTransporteNacionalCOP !== undefined ? lote.costoTransporteNacionalCOP : 4000;
+    const pOdiseaUSD = lote?.tarifaOdiseaUSD !== undefined ? lote.tarifaOdiseaUSD : 0.8;
+    const pLogUSD = lote?.costoLogisticaExportImportUSD !== undefined ? lote.costoLogisticaExportImportUSD : 3.3;
 
-    const basePct = parseFloat(((basePrice / totalPrice) * 100).toFixed(1));
-    const logisticsPctOfTotal = parseFloat(((logisticsUsd / totalPrice) * 100).toFixed(1));
-    const odiseaPctOfTotal = parseFloat((100 - basePct - logisticsPctOfTotal).toFixed(1));
+    const tasaCOP = lote?.tasaCambioUSD_COP !== undefined ? lote.tasaCambioUSD_COP : 4000;
+    const tasaEUR = lote?.tasaCambioEUR_USD !== undefined ? lote.tasaCambioEUR_USD : 0.92;
+
+    const prodUSD = pProdCOP / tasaCOP;
+    const transUSD = pTransCOP / tasaCOP;
+    const odiseaUSD = pOdiseaUSD;
+    const logUSD = pLogUSD;
+    const totalUSD = prodUSD + transUSD + odiseaUSD + logUSD;
+
+    const convertValue = (valInUSD: number) => {
+        if (activeMoneda === 'COP') return { val: valInUSD * tasaCOP, symbol: '$', suffix: 'COP' };
+        if (activeMoneda === 'EUR') return { val: valInUSD * tasaEUR, symbol: '€', suffix: 'EUR' };
+        return { val: valInUSD, symbol: '$', suffix: 'USD' };
+    };
+
+    const cProd = convertValue(prodUSD);
+    const cTrans = convertValue(transUSD);
+    const cOdisea = convertValue(odiseaUSD);
+    const cLog = convertValue(logUSD);
+    const cTotal = convertValue(totalUSD);
+
+    // Calcular porcentajes relativos al total USD
+    const prodPct = parseFloat(((prodUSD / totalUSD) * 100).toFixed(1));
+    const transPct = parseFloat(((transUSD / totalUSD) * 100).toFixed(1));
+    const odiseaPct = parseFloat(((odiseaUSD / totalUSD) * 100).toFixed(1));
+    const logPct = parseFloat((100 - prodPct - transPct - odiseaPct).toFixed(1));
 
     const distribucion = {
-        productor: { pct: basePct, usd: basePrice.toFixed(2), label: 'Precio de Compra al Productor (Finca)' },
-        costos: { pct: logisticsPctOfTotal, usd: logisticsUsd.toFixed(2), label: `Transporte y Logística de Exportación/Importación (${logisticsPct}%)` },
-        odisea: { pct: odiseaPctOfTotal, usd: odiseaFee.toFixed(2), label: 'Tarifa por Gestión y Trazabilidad Odisea Trace' }
+        productor: { pct: prodPct, formatted: `${cProd.symbol}${cProd.val.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cProd.suffix}`, label: 'Precio de Compra al Productor (Finca)' },
+        transporte: { pct: transPct, formatted: `${cTrans.symbol}${cTrans.val.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cTrans.suffix}`, label: 'Transporte y Consolidación Nacional' },
+        logistica: { pct: logPct, formatted: `${cLog.symbol}${cLog.val.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cLog.suffix}`, label: 'Logística de Exportación e Importación' },
+        odisea: { pct: odiseaPct, formatted: `${cOdisea.symbol}${cOdisea.val.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cOdisea.suffix}`, label: 'Tarifa Gestión Odisea Trace' }
     };
 
     if (isLoading) {
@@ -317,9 +343,39 @@ export function DetalleTrazabilidadRoaster() {
                         </h2>
                     </div>
 
-                    <div className="text-left md:text-right">
-                        <span className="text-[10px] font-black text-gray-400 block uppercase tracking-wider">Precio de Referencia</span>
-                        <span className="text-3xl font-black text-[#5f705f]">${totalPrice.toFixed(2)} <span className="text-xs font-bold text-gray-500">USD / Kg</span></span>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1">
+                                <Info size={13} className="text-[#bb8d3b]" /> Auditado en Origen
+                            </span>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tight mt-2 flex items-center gap-2">
+                                <Coins className="text-[#bb8d3b]" size={24} />
+                                Distribución Transparente del Precio
+                            </h2>
+                        </div>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {/* Selector de Moneda */}
+                            <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200">
+                                {(['COP', 'USD', 'EUR'] as const).map((m) => (
+                                    <button
+                                        key={m}
+                                        onClick={() => setActiveMoneda(m)}
+                                        className={cn(
+                                            "px-3 py-1 rounded-md text-[10px] font-black transition-all cursor-pointer border-none",
+                                            activeMoneda === m
+                                                ? "bg-white text-gray-800 shadow-sm"
+                                                : "bg-transparent text-gray-400 hover:text-gray-600"
+                                        )}
+                                    >
+                                        {m}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="text-left md:text-right">
+                                <span className="text-[10px] font-black text-gray-400 block uppercase tracking-wider">Precio Total FOB</span>
+                                <span className="text-3xl font-black text-[#5f705f]">{cTotal.symbol}{cTotal.val.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-bold text-gray-500">{cTotal.suffix} / Kg</span></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -331,17 +387,26 @@ export function DetalleTrazabilidadRoaster() {
                             style={{ width: `${distribucion.productor.pct}%` }} 
                             className="bg-[#5f705f] h-full rounded-l-full relative group transition-all duration-500 flex items-center justify-center"
                         >
-                            <span className="text-[10px] font-black text-white px-2 truncate">
-                                {distribucion.productor.pct}% Finca
+                            <span className="text-[9px] font-black text-white px-1 truncate">
+                                {distribucion.productor.pct}% Productor
                             </span>
                         </div>
-                        {/* Costos Asociados */}
+                        {/* Transporte */}
                         <div 
-                            style={{ width: `${distribucion.costos.pct}%` }} 
+                            style={{ width: `${distribucion.transporte.pct}%` }} 
+                            className="bg-[#7a8a7a] h-full relative group transition-all duration-500 flex items-center justify-center"
+                        >
+                            <span className="text-[9px] font-black text-white px-1 truncate">
+                                {distribucion.transporte.pct}% Trans.
+                            </span>
+                        </div>
+                        {/* Logística */}
+                        <div 
+                            style={{ width: `${distribucion.logistica.pct}%` }} 
                             className="bg-[#bb8d3b] h-full relative group transition-all duration-500 flex items-center justify-center"
                         >
-                            <span className="text-[10px] font-black text-white px-2 truncate">
-                                {distribucion.costos.pct}% Logística
+                            <span className="text-[9px] font-black text-white px-1 truncate">
+                                {distribucion.logistica.pct}% Logística
                             </span>
                         </div>
                         {/* Odisea Fee */}
@@ -350,53 +415,66 @@ export function DetalleTrazabilidadRoaster() {
                             className="bg-gray-700 h-full rounded-r-full relative group transition-all duration-500 flex items-center justify-center"
                         >
                             <span className="text-[9px] font-black text-white px-1 truncate">
-                                Odisea
+                                {distribucion.odisea.pct}% Odisea
                             </span>
                         </div>
                     </div>
                 </div>
 
                 {/* Desglose de Eslabones sin revelar márgenes brutos */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
                     {/* Eslabón Productor */}
                     <div className="bg-white p-4 rounded-2xl border border-gray-100/80 shadow-sm relative">
                         <div className="absolute top-4 right-4 text-[#5f705f] bg-[#5f705f]/10 p-1.5 rounded-xl">
                             <HeartHandshake size={16} />
                         </div>
-                        <span className="text-2xl font-black text-[#5f705f] block">
+                        <span className="text-xl font-black text-[#5f705f] block">
                             {distribucion.productor.pct}%
                         </span>
                         <span className="text-xs font-black text-gray-900 block mt-1">
                             {distribucion.productor.label}
                         </span>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                            Equivalente a <strong className="text-gray-700">${distribucion.productor.usd} USD/Kg</strong>. Refleja el precio pagado al productor por microlote y calidad en origen.
+                            Equivalente a <strong className="text-gray-700">{distribucion.productor.formatted}</strong>. Pago directo recibido por el productor en finca.
                         </p>
                     </div>
 
-                    {/* Eslabón Costos de Fases */}
+                    {/* Eslabón Transporte */}
                     <div className="bg-white p-4 rounded-2xl border border-gray-100/80 shadow-sm relative">
-                        <span className="text-2xl font-black text-[#bb8d3b] block">
-                            {distribucion.costos.pct}%
+                        <span className="text-xl font-black text-[#7a8a7a] block">
+                            {distribucion.transporte.pct}%
                         </span>
                         <span className="text-xs font-black text-gray-900 block mt-1">
-                            {distribucion.costos.label}
+                            {distribucion.transporte.label}
                         </span>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                            Equivalente a <strong className="text-gray-700">${distribucion.costos.usd} USD/Kg</strong>. Cubre transporte local, fletes aduaneros, exportación e importación.
+                            Equivalente a <strong className="text-gray-700">{distribucion.transporte.formatted}</strong>. Fletes locales y traslado seguro hasta el centro de acopio y puerto.
+                        </p>
+                    </div>
+
+                    {/* Eslabón Logística */}
+                    <div className="bg-white p-4 rounded-2xl border border-gray-100/80 shadow-sm relative">
+                        <span className="text-xl font-black text-[#bb8d3b] block">
+                            {distribucion.logistica.pct}%
+                        </span>
+                        <span className="text-xs font-black text-gray-900 block mt-1">
+                            {distribucion.logistica.label}
+                        </span>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                            Equivalente a <strong className="text-gray-700">{distribucion.logistica.formatted}</strong>. Agenciamiento aduanero, fletes transoceánicos e importación.
                         </p>
                     </div>
 
                     {/* Eslabón Odisea Fee */}
                     <div className="bg-white p-4 rounded-2xl border border-gray-100/80 shadow-sm relative">
-                        <span className="text-2xl font-black text-gray-700 block">
+                        <span className="text-xl font-black text-gray-700 block">
                             {distribucion.odisea.pct}%
                         </span>
                         <span className="text-xs font-black text-gray-900 block mt-1">
                             {distribucion.odisea.label}
                         </span>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                            Tarifa fija de trazabilidad y soporte tecnológico de <strong className="text-gray-700">${distribucion.odisea.usd} USD/Kg</strong>.
+                            Equivalente a <strong className="text-gray-700">{distribucion.odisea.formatted}</strong>. Fee de trazabilidad digital e infraestructura de Ceres/Odisea.
                         </p>
                     </div>
                 </div>

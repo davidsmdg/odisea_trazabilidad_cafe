@@ -47,6 +47,13 @@ export interface LoteUnificado {
     precioBaseKgUSD?: number;
     tarifaOdisea?: number;
     porcentajeLogistica?: number;
+    precioProductorCOP?: number;
+    costoTransporteNacionalCOP?: number;
+    tarifaOdiseaUSD?: number;
+    costoLogisticaExportImportUSD?: number;
+    tasaCambioUSD_COP?: number;
+    tasaCambioEUR_USD?: number;
+    monedaVisualizacion?: 'COP' | 'USD' | 'EUR';
 }
 
 export type ValidationStage = 'Capturado' | 'En validación' | 'Validado' | 'Rechazado' | 'Publicado';
