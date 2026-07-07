@@ -59,10 +59,14 @@ export function DetalleLoteOdisea() {
     // Almacenamiento fields
     const [localAlmacenamiento, setLocalAlmacenamiento] = useState('');
 
-    // Pricing configuration states
-    const [localPrecioBase, setLocalPrecioBase] = useState<number>(10.00);
-    const [localTarifaOdisea, setLocalTarifaOdisea] = useState<number>(0.8);
-    const [localPorcentajeLogistica, setLocalPorcentajeLogistica] = useState<number>(30);
+    // Pricing configuration states (expanded)
+    const [localPrecioProductorCOP, setLocalPrecioProductorCOP] = useState<number>(40000);
+    const [localCostoTransporteCOP, setLocalCostoTransporteCOP] = useState<number>(4000);
+    const [localTarifaOdiseaUSD, setLocalTarifaOdiseaUSD] = useState<number>(0.8);
+    const [localCostoLogisticaUSD, setLocalCostoLogisticaUSD] = useState<number>(3.3);
+    const [localTasaUSD_COP, setLocalTasaUSD_COP] = useState<number>(4000);
+    const [localTasaEUR_USD, setLocalTasaEUR_USD] = useState<number>(0.92);
+    const [localMoneda, setLocalMoneda] = useState<'COP' | 'USD' | 'EUR'>('USD');
 
     useEffect(() => {
         setIsLoading(true);
@@ -76,9 +80,13 @@ export function DetalleLoteOdisea() {
                     setLocalAprobado(found.aprobadoComercializacion || false);
                     setLocalMovimientos(found.historialMovimientos || []);
                     setLocalAlmacenamiento(found.almacenamiento || '');
-                    setLocalPrecioBase(found.precioBaseKgUSD !== undefined ? found.precioBaseKgUSD : 10.00);
-                    setLocalTarifaOdisea(found.tarifaOdisea !== undefined ? found.tarifaOdisea : 0.8);
-                    setLocalPorcentajeLogistica(found.porcentajeLogistica !== undefined ? found.porcentajeLogistica : 30);
+                    setLocalPrecioProductorCOP(found.precioProductorCOP !== undefined ? found.precioProductorCOP : 40000);
+                    setLocalCostoTransporteCOP(found.costoTransporteNacionalCOP !== undefined ? found.costoTransporteNacionalCOP : 4000);
+                    setLocalTarifaOdiseaUSD(found.tarifaOdiseaUSD !== undefined ? found.tarifaOdiseaUSD : 0.8);
+                    setLocalCostoLogisticaUSD(found.costoLogisticaExportImportUSD !== undefined ? found.costoLogisticaExportImportUSD : 3.3);
+                    setLocalTasaUSD_COP(found.tasaCambioUSD_COP !== undefined ? found.tasaCambioUSD_COP : 4000);
+                    setLocalTasaEUR_USD(found.tasaCambioEUR_USD !== undefined ? found.tasaCambioEUR_USD : 0.92);
+                    setLocalMoneda(found.monedaVisualizacion || 'USD');
                 } else {
                     setError('Lote no encontrado');
                 }
@@ -173,9 +181,18 @@ export function DetalleLoteOdisea() {
                 aprobadoComercializacion: localAprobado,
                 historialMovimientos: localMovimientos,
                 almacenamiento: localAlmacenamiento,
-                precioBaseKgUSD: localPrecioBase,
-                tarifaOdisea: localTarifaOdisea,
-                porcentajeLogistica: localPorcentajeLogistica
+                precioProductorCOP: localPrecioProductorCOP,
+                costoTransporteNacionalCOP: localCostoTransporteCOP,
+                tarifaOdiseaUSD: localTarifaOdiseaUSD,
+                costoLogisticaExportImportUSD: localCostoLogisticaUSD,
+                tasaCambioUSD_COP: localTasaUSD_COP,
+                tasaCambioEUR_USD: localTasaEUR_USD,
+                monedaVisualizacion: localMoneda,
+
+                // Campos legacy/compatibilidad
+                precioBaseKgUSD: localPrecioProductorCOP / localTasaUSD_COP,
+                tarifaOdisea: localTarifaOdiseaUSD,
+                porcentajeLogistica: Math.round((localCostoLogisticaUSD / (localPrecioProductorCOP / localTasaUSD_COP + localCostoTransporteCOP / localTasaUSD_COP)) * 100)
             });
             toast.success('Expediente actualizado', {
                 description: `ID: ${id} - Información logítica, destinos y bitácora de movimientos sincronizados.`,
@@ -430,75 +447,167 @@ export function DetalleLoteOdisea() {
                             <Badge className="bg-blue-100 text-blue-700 border-none px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">ERP: COST-GATE</Badge>
                         </div>
                         <div className="p-10 space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                {/* Precio Base del Café (x) */}
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Precio Base Café (x) - USD/Kg</Label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-350">$</span>
+                            {/* Tasas de Cambio */}
+                            <div className="bg-blue-50/50 border border-blue-100 p-6 rounded-3xl space-y-4">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block">1. Tasas de Cambio Ajustables</span>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Tasa Cambio USD ➔ COP</Label>
+                                        <Input
+                                            type="number"
+                                            value={localTasaUSD_COP}
+                                            onChange={(e) => setLocalTasaUSD_COP(parseFloat(e.target.value) || 4000)}
+                                            className="h-12 rounded-xl border-slate-100 font-bold text-slate-700"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Tasa Cambio EUR ➔ USD (Euros por Dólar)</Label>
                                         <Input
                                             type="number"
                                             step="0.01"
-                                            value={localPrecioBase}
-                                            onChange={(e) => setLocalPrecioBase(parseFloat(e.target.value) || 0)}
-                                            className="h-14 pl-10 rounded-2xl border-slate-100 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 font-bold text-slate-700"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Tarifa Odisea Trace (USD/Kg) */}
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Tarifa Odisea - USD/Kg</Label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-350">$</span>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={localTarifaOdisea}
-                                            onChange={(e) => setLocalTarifaOdisea(parseFloat(e.target.value) || 0)}
-                                            className="h-14 pl-10 rounded-2xl border-slate-100 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 font-bold text-slate-700"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Logística y Transporte (%) */}
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Logística y Transporte (%)</Label>
-                                    <div className="relative">
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-350">%</span>
-                                        <Input
-                                            type="number"
-                                            step="1"
-                                            value={localPorcentajeLogistica}
-                                            onChange={(e) => setLocalPorcentajeLogistica(parseInt(e.target.value) || 0)}
-                                            className="h-14 pr-10 rounded-2xl border-slate-100 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 font-bold text-slate-700"
+                                            value={localTasaEUR_USD}
+                                            onChange={(e) => setLocalTasaEUR_USD(parseFloat(e.target.value) || 0.92)}
+                                            className="h-12 rounded-xl border-slate-100 font-bold text-slate-700"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Simulador y Desglose Financiero */}
-                            <div className="bg-slate-50 border border-slate-200/50 p-6 rounded-3xl space-y-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 block">Simulador de Precio de Venta Final (Q-Grader Sourcing)</h4>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-bold text-slate-700">
-                                    <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
-                                        <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Finca / Productor (x)</span>
-                                        <p className="text-base font-black text-slate-900">${localPrecioBase.toFixed(2)} <span className="text-[9px] font-normal text-slate-400">USD/Kg</span></p>
+                            {/* Entradas de Costos */}
+                            <div className="space-y-4">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">2. Componentes de Costos y Sourcing</span>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {/* Precio Finca COP */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Compra Productor (COP/Kg)</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">$</span>
+                                            <Input
+                                                type="number"
+                                                value={localPrecioProductorCOP}
+                                                onChange={(e) => setLocalPrecioProductorCOP(parseFloat(e.target.value) || 0)}
+                                                className="h-12 pl-10 rounded-xl border-slate-100 font-bold text-slate-700"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
-                                        <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Odisea Trace Fee</span>
-                                        <p className="text-base font-black text-slate-900">${localTarifaOdisea.toFixed(2)} <span className="text-[9px] font-normal text-slate-400">USD/Kg</span></p>
+
+                                    {/* Transporte Nacional COP */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Transporte Nacional (COP/Kg)</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">$</span>
+                                            <Input
+                                                type="number"
+                                                value={localCostoTransporteCOP}
+                                                onChange={(e) => setLocalCostoTransporteCOP(parseFloat(e.target.value) || 0)}
+                                                className="h-12 pl-10 rounded-xl border-slate-100 font-bold text-slate-700"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
-                                        <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Logística & Trans. ({localPorcentajeLogistica}%)</span>
-                                        <p className="text-base font-black text-slate-900">${(localPrecioBase * localPorcentajeLogistica / 100).toFixed(2)} <span className="text-[9px] font-normal text-slate-400">USD/Kg</span></p>
+
+                                    {/* Tarifa Odisea USD */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Tarifa Odisea (USD/Kg)</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">USD</span>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={localTarifaOdiseaUSD}
+                                                onChange={(e) => setLocalTarifaOdiseaUSD(parseFloat(e.target.value) || 0)}
+                                                className="h-12 pl-12 rounded-xl border-slate-100 font-bold text-slate-700"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200">
-                                        <span className="text-[8px] font-black text-blue-500 block uppercase mb-1">Precio Final Sourcing</span>
-                                        <p className="text-base font-black text-blue-900">${(localPrecioBase + localTarifaOdisea + (localPrecioBase * localPorcentajeLogistica / 100)).toFixed(2)} <span className="text-[9px] font-normal text-blue-400">USD/Kg</span></p>
+
+                                    {/* Logística Internacional USD */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Logística Exp/Imp (USD/Kg)</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">USD</span>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={localCostoLogisticaUSD}
+                                                onChange={(e) => setLocalCostoLogisticaUSD(parseFloat(e.target.value) || 0)}
+                                                className="h-12 pl-12 rounded-xl border-slate-100 font-bold text-slate-700"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Selector de Moneda de Visualización */}
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">3. Moneda de Visualización Predeterminada</Label>
+                                <div className="flex gap-4">
+                                    {(['COP', 'USD', 'EUR'] as const).map((m) => (
+                                        <button
+                                            key={m}
+                                            type="button"
+                                            onClick={() => setLocalMoneda(m)}
+                                            className={cn(
+                                                "px-6 py-2.5 rounded-xl border text-xs font-black transition-all cursor-pointer",
+                                                localMoneda === m
+                                                    ? "bg-[#5f705f] text-white border-[#5f705f] shadow-md"
+                                                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            {m}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Conversor Financiero Dinámico */}
+                            {(() => {
+                                const prodUSD = localPrecioProductorCOP / localTasaUSD_COP;
+                                const transUSD = localCostoTransporteCOP / localTasaUSD_COP;
+                                const totalUSD = prodUSD + transUSD + localTarifaOdiseaUSD + localCostoLogisticaUSD;
+
+                                const getConverted = (usdVal: number) => {
+                                    if (localMoneda === 'COP') return { symbol: '$', value: usdVal * localTasaUSD_COP, suffix: 'COP' };
+                                    if (localMoneda === 'EUR') return { symbol: '€', value: usdVal * localTasaEUR_USD, suffix: 'EUR' };
+                                    return { symbol: '$', value: usdVal, suffix: 'USD' };
+                                };
+
+                                const formattedProd = getConverted(prodUSD);
+                                const formattedTrans = getConverted(transUSD);
+                                const formattedOdisea = getConverted(localTarifaOdiseaUSD);
+                                const formattedLogistics = getConverted(localCostoLogisticaUSD);
+                                const formattedTotal = getConverted(totalUSD);
+
+                                return (
+                                    <div className="bg-slate-50 border border-slate-200/50 p-6 rounded-3xl space-y-4">
+                                        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5f705f] block">Desglose Final (Moneda Seleccionada: {localMoneda})</h4>
+                                            <span className="text-[9px] font-bold text-slate-400">Conversión en Tiempo Real</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs font-bold text-slate-700">
+                                            <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
+                                                <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Precio Productor (Finca)</span>
+                                                <p className="text-base font-black text-slate-900">{formattedProd.symbol}{formattedProd.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[8px] font-bold text-slate-400">{formattedProd.suffix}</span></p>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
+                                                <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Transporte Nacional</span>
+                                                <p className="text-base font-black text-slate-900">{formattedTrans.symbol}{formattedTrans.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[8px] font-bold text-slate-400">{formattedTrans.suffix}</span></p>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
+                                                <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Tarifa Odisea Trace</span>
+                                                <p className="text-base font-black text-slate-900">{formattedOdisea.symbol}{formattedOdisea.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[8px] font-bold text-slate-400">{formattedOdisea.suffix}</span></p>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
+                                                <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Logística Internacional</span>
+                                                <p className="text-base font-black text-slate-900">{formattedLogistics.symbol}{formattedLogistics.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[8px] font-bold text-slate-400">{formattedLogistics.suffix}</span></p>
+                                            </div>
+                                            <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 col-span-2 sm:col-span-1">
+                                                <span className="text-[8px] font-black text-emerald-600 block uppercase mb-1">Precio Total FOB</span>
+                                                <p className="text-base font-black text-emerald-950">{formattedTotal.symbol}{formattedTotal.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[8px] font-bold text-emerald-600">{formattedTotal.suffix}</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
 
