@@ -694,7 +694,8 @@ export function MisCosechas() {
                                 📊 Ver Historia y Mermas
                             </Button>
                     </div>
-                ))}
+                </div>
+            ))}
 
                 {filteredCosechas.length === 0 && (
                     <div className="p-16 text-center rounded-[32px] border-2 border-dashed border-gray-200">

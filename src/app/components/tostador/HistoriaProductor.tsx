@@ -21,7 +21,7 @@ import {
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
-import { LOTES_MARKET_DEFAULT } from './ExplorarCafes';
+import { LOTES_MARKET_DEFAULT } from '../../../data/lotes.mock';
 
 // Mock de historias completas de productores por código de lote
 const HISTORIAS_PRODUCTORES: Record<string, any> = {

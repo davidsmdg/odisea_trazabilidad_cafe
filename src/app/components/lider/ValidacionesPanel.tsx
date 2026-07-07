@@ -395,9 +395,8 @@ export function ValidacionesPanel() {
                                 </Button>
                             </div>
                         </motion.div>
-                    ))
-                        </>
-                    )
+                        ))}
+                    </>
                 )}
             </div>
         </div>
