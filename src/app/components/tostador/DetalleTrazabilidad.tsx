@@ -202,15 +202,21 @@ export function DetalleTrazabilidadRoaster() {
         }
     ];
 
-    // Estructura transparente solicitada:
-    // Precio Final de Ejemplo: $14.50 USD/Kg
-    // Odisea Trace Fee: $0.80 USD/Kg fijos (~5.5%)
-    // Costos de Consolidación y Procesos Asociados (~10% por fase, asumimos 2 fases = 20%): $2.90 USD/Kg
-    // Retorno Directo al Productor: Remanente mayoritario ($10.80 USD/Kg = ~74.5%)
+    // Estructura de precios calculada a partir del lote
+    const basePrice = lote?.precioBaseKgUSD !== undefined ? lote.precioBaseKgUSD : 10.00;
+    const odiseaFee = lote?.tarifaOdisea !== undefined ? lote.tarifaOdisea : 0.8;
+    const logisticsPct = lote?.porcentajeLogistica !== undefined ? lote.porcentajeLogistica : 30;
+    const logisticsUsd = basePrice * logisticsPct / 100;
+    const totalPrice = basePrice + odiseaFee + logisticsUsd;
+
+    const basePct = parseFloat(((basePrice / totalPrice) * 100).toFixed(1));
+    const logisticsPctOfTotal = parseFloat(((logisticsUsd / totalPrice) * 100).toFixed(1));
+    const odiseaPctOfTotal = parseFloat((100 - basePct - logisticsPctOfTotal).toFixed(1));
+
     const distribucion = {
-        productor: { pct: 74.5, usd: '10.80', label: 'Retorno Directo Finca / Productor' },
-        costos: { pct: 20.0, usd: '2.90', label: 'Consolidación, Trilla y Logística Asociada' },
-        odisea: { pct: 5.5, usd: '0.80', label: 'Gestión Logística y Trazabilidad Odisea Trace' }
+        productor: { pct: basePct, usd: basePrice.toFixed(2), label: 'Precio de Compra al Productor (Finca)' },
+        costos: { pct: logisticsPctOfTotal, usd: logisticsUsd.toFixed(2), label: `Transporte y Logística de Exportación/Importación (${logisticsPct}%)` },
+        odisea: { pct: odiseaPctOfTotal, usd: odiseaFee.toFixed(2), label: 'Tarifa por Gestión y Trazabilidad Odisea Trace' }
     };
 
     if (isLoading) {
@@ -313,7 +319,7 @@ export function DetalleTrazabilidadRoaster() {
 
                     <div className="text-left md:text-right">
                         <span className="text-[10px] font-black text-gray-400 block uppercase tracking-wider">Precio de Referencia</span>
-                        <span className="text-3xl font-black text-[#5f705f]">$14.50 <span className="text-xs font-bold text-gray-500">USD / Kg</span></span>
+                        <span className="text-3xl font-black text-[#5f705f]">${totalPrice.toFixed(2)} <span className="text-xs font-bold text-gray-500">USD / Kg</span></span>
                     </div>
                 </div>
 
@@ -335,7 +341,7 @@ export function DetalleTrazabilidadRoaster() {
                             className="bg-[#bb8d3b] h-full relative group transition-all duration-500 flex items-center justify-center"
                         >
                             <span className="text-[10px] font-black text-white px-2 truncate">
-                                {distribucion.costos.pct}% Fases
+                                {distribucion.costos.pct}% Logística
                             </span>
                         </div>
                         {/* Odisea Fee */}
@@ -364,20 +370,20 @@ export function DetalleTrazabilidadRoaster() {
                             {distribucion.productor.label}
                         </span>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                            Equivalente a <strong className="text-gray-700">${distribucion.productor.usd} USD/Kg</strong>. Refleja la prima directa por alta especialidad y prácticas sostenibles.
+                            Equivalente a <strong className="text-gray-700">${distribucion.productor.usd} USD/Kg</strong>. Refleja el precio pagado al productor por microlote y calidad en origen.
                         </p>
                     </div>
 
                     {/* Eslabón Costos de Fases */}
                     <div className="bg-white p-4 rounded-2xl border border-gray-100/80 shadow-sm relative">
                         <span className="text-2xl font-black text-[#bb8d3b] block">
-                            ~{distribucion.costos.pct}%
+                            {distribucion.costos.pct}%
                         </span>
                         <span className="text-xs font-black text-gray-900 block mt-1">
                             {distribucion.costos.label}
                         </span>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                            Aprox. <strong className="text-gray-700">10% adicional por fase</strong> desde el punto de consolidación hasta trilla y empaque para exportación.
+                            Equivalente a <strong className="text-gray-700">${distribucion.costos.usd} USD/Kg</strong>. Cubre transporte local, fletes aduaneros, exportación e importación.
                         </p>
                     </div>
 
@@ -390,18 +396,18 @@ export function DetalleTrazabilidadRoaster() {
                             {distribucion.odisea.label}
                         </span>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                            Tarifa fija transparente de <strong className="text-gray-700">${distribucion.odisea.usd} USD/Kg</strong> por el aseguramiento tecnológico, auditoría y soporte logístico.
+                            Tarifa fija de trazabilidad y soporte tecnológico de <strong className="text-gray-700">${distribucion.odisea.usd} USD/Kg</strong>.
                         </p>
                     </div>
                 </div>
 
                 <div className="mt-6 bg-[#bb8d3b]/5 border border-[#bb8d3b]/20 rounded-2xl p-3 text-[11px] text-gray-600 italic">
-                    💡 <strong>Nota de Sourcing Transparente:</strong> Presentamos la distribución porcentual para garantizar el pago justo en origen sin divulgar acuerdos confidenciales de fletes aduaneros, demostrando un retorno económico al caficultor sustancialmente superior a los esquemas tradicionales de bolsa.
+                    💡 <strong>Nota de Sourcing Transparente:</strong> Los costos reflejan los parámetros configurados para este lote en origen (precio base + tarifa de trazabilidad de $0.80/Kg + 30% de costos logísticos y transporte).
                 </div>
             </div>
 
-            {/* The Timeline / Chapters */}
-            <div className="space-y-12 relative">
+            {/* Capítulos ocultados por solicitud de articulación de información */}
+            <div className="hidden space-y-12 relative">
                 {/* Visual Line */}
                 <div className="absolute left-1/2 -translate-x-1/2 top-10 bottom-10 w-px bg-gradient-to-b from-transparent via-[#bb8d3b]/40 to-transparent hidden lg:block" />
 

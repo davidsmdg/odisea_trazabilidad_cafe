@@ -44,6 +44,9 @@ export interface LoteUnificado {
         pergamino: number;
         verde: number;
     };
+    precioBaseKgUSD?: number;
+    tarifaOdisea?: number;
+    porcentajeLogistica?: number;
 }
 
 export type ValidationStage = 'Capturado' | 'En validación' | 'Validado' | 'Rechazado' | 'Publicado';

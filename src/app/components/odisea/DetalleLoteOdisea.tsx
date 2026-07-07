@@ -21,7 +21,8 @@ import {
     Trash2,
     Globe,
     Eye,
-    Plus
+    Plus,
+    Coins
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -58,6 +59,11 @@ export function DetalleLoteOdisea() {
     // Almacenamiento fields
     const [localAlmacenamiento, setLocalAlmacenamiento] = useState('');
 
+    // Pricing configuration states
+    const [localPrecioBase, setLocalPrecioBase] = useState<number>(10.00);
+    const [localTarifaOdisea, setLocalTarifaOdisea] = useState<number>(0.8);
+    const [localPorcentajeLogistica, setLocalPorcentajeLogistica] = useState<number>(30);
+
     useEffect(() => {
         setIsLoading(true);
         const targetId = id || '';
@@ -70,6 +76,9 @@ export function DetalleLoteOdisea() {
                     setLocalAprobado(found.aprobadoComercializacion || false);
                     setLocalMovimientos(found.historialMovimientos || []);
                     setLocalAlmacenamiento(found.almacenamiento || '');
+                    setLocalPrecioBase(found.precioBaseKgUSD !== undefined ? found.precioBaseKgUSD : 10.00);
+                    setLocalTarifaOdisea(found.tarifaOdisea !== undefined ? found.tarifaOdisea : 0.8);
+                    setLocalPorcentajeLogistica(found.porcentajeLogistica !== undefined ? found.porcentajeLogistica : 30);
                 } else {
                     setError('Lote no encontrado');
                 }
@@ -163,7 +172,10 @@ export function DetalleLoteOdisea() {
                 regionesDisponibles: localRegiones,
                 aprobadoComercializacion: localAprobado,
                 historialMovimientos: localMovimientos,
-                almacenamiento: localAlmacenamiento
+                almacenamiento: localAlmacenamiento,
+                precioBaseKgUSD: localPrecioBase,
+                tarifaOdisea: localTarifaOdisea,
+                porcentajeLogistica: localPorcentajeLogistica
             });
             toast.success('Expediente actualizado', {
                 description: `ID: ${id} - Información logítica, destinos y bitácora de movimientos sincronizados.`,
@@ -403,6 +415,87 @@ export function DetalleLoteOdisea() {
                                                 </button>
                                             );
                                         })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Configuración de Costos y Distribución de Precio */}
+                    <div className="bg-white rounded-[48px] border border-slate-200 shadow-xl overflow-hidden group">
+                        <div className="bg-slate-50 px-10 py-6 border-b border-slate-200 flex items-center justify-between">
+                            <h3 className="text-xl font-sans font-black text-slate-900 flex items-center gap-4">
+                                <Coins className="text-blue-600" size={24} /> Configuración de Costos y Distribución de Precio
+                            </h3>
+                            <Badge className="bg-blue-100 text-blue-700 border-none px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">ERP: COST-GATE</Badge>
+                        </div>
+                        <div className="p-10 space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {/* Precio Base del Café (x) */}
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Precio Base Café (x) - USD/Kg</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-350">$</span>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={localPrecioBase}
+                                            onChange={(e) => setLocalPrecioBase(parseFloat(e.target.value) || 0)}
+                                            className="h-14 pl-10 rounded-2xl border-slate-100 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 font-bold text-slate-700"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Tarifa Odisea Trace (USD/Kg) */}
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Tarifa Odisea - USD/Kg</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-350">$</span>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={localTarifaOdisea}
+                                            onChange={(e) => setLocalTarifaOdisea(parseFloat(e.target.value) || 0)}
+                                            className="h-14 pl-10 rounded-2xl border-slate-100 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 font-bold text-slate-700"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Logística y Transporte (%) */}
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-1">Logística y Transporte (%)</Label>
+                                    <div className="relative">
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-350">%</span>
+                                        <Input
+                                            type="number"
+                                            step="1"
+                                            value={localPorcentajeLogistica}
+                                            onChange={(e) => setLocalPorcentajeLogistica(parseInt(e.target.value) || 0)}
+                                            className="h-14 pr-10 rounded-2xl border-slate-100 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 font-bold text-slate-700"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Simulador y Desglose Financiero */}
+                            <div className="bg-slate-50 border border-slate-200/50 p-6 rounded-3xl space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 block">Simulador de Precio de Venta Final (Q-Grader Sourcing)</h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-bold text-slate-700">
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
+                                        <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Finca / Productor (x)</span>
+                                        <p className="text-base font-black text-slate-900">${localPrecioBase.toFixed(2)} <span className="text-[9px] font-normal text-slate-400">USD/Kg</span></p>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
+                                        <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Odisea Trace Fee</span>
+                                        <p className="text-base font-black text-slate-900">${localTarifaOdisea.toFixed(2)} <span className="text-[9px] font-normal text-slate-400">USD/Kg</span></p>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-200/50">
+                                        <span className="text-[8px] font-black text-slate-400 block uppercase mb-1">Logística & Trans. ({localPorcentajeLogistica}%)</span>
+                                        <p className="text-base font-black text-slate-900">${(localPrecioBase * localPorcentajeLogistica / 100).toFixed(2)} <span className="text-[9px] font-normal text-slate-400">USD/Kg</span></p>
+                                    </div>
+                                    <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200">
+                                        <span className="text-[8px] font-black text-blue-500 block uppercase mb-1">Precio Final Sourcing</span>
+                                        <p className="text-base font-black text-blue-900">${(localPrecioBase + localTarifaOdisea + (localPrecioBase * localPorcentajeLogistica / 100)).toFixed(2)} <span className="text-[9px] font-normal text-blue-400">USD/Kg</span></p>
                                     </div>
                                 </div>
                             </div>
