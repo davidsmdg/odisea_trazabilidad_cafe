@@ -184,33 +184,39 @@ export function HistorialCatas() {
                         whileHover={{ y: -5 }}
                         className="bg-white rounded-[40px] border border-[#EADDCA] p-8 shadow-sm hover:shadow-xl transition-all group flex flex-col"
                     >
-                        <div className="flex justify-between items-start gap-4 mb-6">
-                            <div className="space-y-2">
-                                <div className="flex gap-2 items-center">
-                                    <Badge className="bg-[#5D4037]/5 text-[#5D4037] font-black text-[10px] uppercase tracking-widest border-none px-3">
-                                        {cata.id}
-                                    </Badge>
-                                    <Badge className="bg-emerald-50 text-emerald-700 font-black text-[10px] uppercase tracking-widest border border-emerald-200 px-2">
-                                        {cata.bache}
-                                    </Badge>
-                                </div>
-                                <p className="text-sm font-bold text-gray-400 flex items-center gap-1"><Calendar size={12} /> {cata.fecha}</p>
+                        {/* Fila Superior de Metadatos */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EADDCA]/40 pb-4 mb-4">
+                            <div className="flex flex-wrap gap-1.5 items-center">
+                                <Badge className="bg-[#5D4037]/5 text-[#5D4037] font-black text-[9px] uppercase tracking-wider border-none px-2.5 py-0.5">
+                                    {cata.id}
+                                </Badge>
+                                <Badge className="bg-emerald-50 text-emerald-700 font-black text-[9px] uppercase tracking-wider border border-emerald-200 px-2 py-0.5 animate-pulse">
+                                    {cata.bache}
+                                </Badge>
                             </div>
-
-                            <div className="text-center bg-[#FDFBF9] border border-[#EADDCA] p-3 rounded-2xl min-w-[100px] shadow-inner shrink-0">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[#8D6E63] mb-1">SCA Score</p>
-                                <p className={cn(
-                                    "text-3xl font-sans font-black leading-none",
-                                    cata.puntaje >= 85 ? "text-emerald-600" : "text-amber-600"
-                                )}>{cata.puntaje}</p>
-                            </div>
+                            <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1.5">
+                                <Calendar size={12} className="text-[#8D6E63]" /> {cata.fecha}
+                            </span>
                         </div>
 
-                        <div className="mb-6">
-                            <h3 className="text-xl font-sans font-black text-[#5D4037]">{cata.productor}</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1 mt-1">
-                                <CheckCircle2 size={12} /> {cata.nivel}
-                            </p>
+                        {/* Fila Principal: Productor y SCA Score */}
+                        <div className="flex items-center justify-between gap-4 mb-6">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-lg font-sans font-black text-[#5D4037] tracking-tight leading-tight group-hover:text-[#3E2723] transition-colors truncate">
+                                    {cata.productor}
+                                </h3>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1 mt-1.5">
+                                    <CheckCircle2 size={12} /> {cata.nivel}
+                                </p>
+                            </div>
+
+                            <div className="text-center bg-[#FDFBF9] border border-[#EADDCA] p-2.5 rounded-2xl min-w-[85px] shadow-sm shrink-0 flex flex-col justify-center items-center">
+                                <span className="text-[8px] font-black uppercase tracking-wider text-[#8D6E63] mb-0.5 block leading-none">SCA Score</span>
+                                <span className={cn(
+                                    "text-2xl font-sans font-black leading-none",
+                                    cata.puntaje >= 85 ? "text-emerald-600" : "text-amber-600"
+                                )}>{cata.puntaje}</span>
+                            </div>
                         </div>
 
                         {/* Mini Radar Chart */}
