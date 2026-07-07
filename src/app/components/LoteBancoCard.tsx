@@ -3,6 +3,8 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Shield, ExternalLink, MapPin } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
+import { useAuth } from '../context/AuthContext';
 import { cn } from './ui/utils';
 
 interface LoteBancoCardProps {
@@ -55,6 +57,8 @@ const getMacroperfiles = (mp: any): string[] => {
 
 export function LoteBancoCard({ lote, onClick }: LoteBancoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <motion.div
@@ -64,7 +68,7 @@ export function LoteBancoCard({ lote, onClick }: LoteBancoCardProps) {
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       className="bg-white rounded-[32px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all cursor-pointer overflow-hidden group relative flex flex-col"
-      onClick={onClick}
+      onClick={user ? onClick : () => navigate('/auth/login')}
     >
       {/* Container de Imagen con Overlay */}
       <div className="relative h-48 overflow-hidden">
@@ -153,26 +157,40 @@ export function LoteBancoCard({ lote, onClick }: LoteBancoCardProps) {
         </div>
 
         {/* Acciones */}
-        <div className="flex gap-2 pt-2">
-          <Button
-            className="flex-1 h-10 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 rounded-xl font-medium text-[11px] shadow-sm transition-all"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick();
-            }}
-          >
-            Ver Trazabilidad
-          </Button>
-          <Button
-            variant="outline"
-            className="px-4 h-10 border border-[#5f705f]/20 text-[#5f705f] rounded-xl font-medium text-[11px] hover:border-[#5f705f]/40 hover:bg-[#5f705f]/5 transition-all bg-white"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Acción reservar
-            }}
-          >
-            Reservar
-          </Button>
+        <div className="pt-2">
+          {!user ? (
+            <Button
+              className="w-full h-11 bg-[#5f705f] hover:bg-[#4b594b] text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer border-none"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/auth/login');
+              }}
+            >
+              Ver más
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 h-10 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 rounded-xl font-medium text-[11px] shadow-sm transition-all cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+              >
+                Ver Trazabilidad
+              </Button>
+              <Button
+                variant="outline"
+                className="px-4 h-10 border border-[#5f705f]/20 text-[#5f705f] rounded-xl font-medium text-[11px] hover:border-[#5f705f]/40 hover:bg-[#5f705f]/5 transition-all bg-white cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Acción reservar
+                }}
+              >
+                Reservar
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
