@@ -172,7 +172,7 @@ export function HistorialCatas() {
                         <Button onClick={() => window.location.reload()} className="bg-[#5D4037] hover:bg-[#3E2723] text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
                     </div>
                 ) : historialFiltrado.length === 0 ? (
-                    <div className="col-span-full p-16 text-center rounded-[40px] border border-dashed border-[#EADDCA] bg-[#FDFBF9]/50">
+                    <div className="col-span-full p-6 md:p-16 text-center rounded-[40px] border border-dashed border-[#EADDCA] bg-[#FDFBF9]/50">
                         <Coffee className="text-[#8D6E63]/40 mx-auto mb-4" size={48} />
                         <p className="text-gray-500 font-bold text-lg">No hay historial de catas registradas aún.</p>
                     </div>

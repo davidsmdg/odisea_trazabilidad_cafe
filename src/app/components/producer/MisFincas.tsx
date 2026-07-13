@@ -430,7 +430,7 @@ export function MisFincas() {
             toast.success('Finca actualizada');
         } else {
             const newFinca: Finca = {
-                id: Date.now().toString(),
+                id: crypto.randomUUID(),
                 lotesDeCafe: [],
                 ...fincaData,
             } as Finca;
@@ -458,7 +458,7 @@ export function MisFincas() {
         }
 
         const loteData: LoteCafe = {
-            id: editingLoteId || Date.now().toString(),
+            id: editingLoteId || crypto.randomUUID(),
             nombre: loteNombre,
             area: loteTab === 'poligono' && polygonAreaCalculada ? polygonAreaCalculada.toString() : loteArea,
             variedades: loteVariedades,
@@ -596,10 +596,20 @@ export function MisFincas() {
                 ) : (
                     <>
                         {fincas.length === 0 && (
-                            <div className="p-10 text-center bg-gray-50/50 rounded-[40px] border border-dashed border-gray-200 py-16 space-y-4">
-                                <Tractor className="text-[#5f705f]/40 mx-auto" size={48} />
-                                <h3 className="text-lg font-sans font-black text-gray-700">No hay fincas registradas</h3>
-                                <p className="text-xs text-gray-500 font-medium max-w-sm mx-auto">Comienza registrando tu primera finca productora para administrar tus lotes de café.</p>
+                            <div className="p-6 md:p-16 text-center bg-white rounded-[48px] border border-gray-100 shadow-xl py-12 md:py-24 space-y-6 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700">
+                                <div className="h-20 w-20 md:h-24 md:w-24 bg-[#5f705f]/10 rounded-full flex items-center justify-center mx-auto text-[#5f705f] mb-4">
+                                    <Tractor size={40} className="md:w-12 md:h-12" />
+                                </div>
+                                <h3 className="text-2xl md:text-3xl font-sans font-black text-gray-800">No hay fincas registradas</h3>
+                                <p className="text-xs md:text-sm text-gray-500 font-medium max-w-md mx-auto leading-relaxed">
+                                    Registrar tu finca es el primer paso obligatorio. Al ingresar los polígonos y las coordenadas de tu finca, podremos validar el cumplimiento de la normativa de no-deforestación (EUDR) para la comercialización internacional de tu café.
+                                </p>
+                                <Button 
+                                    onClick={openAddFinca} 
+                                    className="bg-emerald-500 hover:bg-emerald-400 text-white font-black px-6 md:px-8 py-3 md:py-4 h-12 md:h-14 rounded-2xl text-xs md:text-sm uppercase tracking-widest gap-2 shadow-lg transition-all duration-300 transform hover:scale-[1.02] cursor-pointer w-full sm:w-auto flex items-center justify-center"
+                                >
+                                    <Plus size={16} /> Registrar Mi Primera Finca
+                                </Button>
                             </div>
                         )}
                         {fincas.map((finca) => {
@@ -626,17 +636,17 @@ export function MisFincas() {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex gap-3 relative z-10">
+                                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto relative z-10">
                                     <Button
                                         onClick={() => openEditFinca(finca)}
                                         variant="outline"
-                                        className="border-white/40 bg-white/10 hover:bg-white/20 text-white h-12 rounded-xl font-black text-xs uppercase tracking-widest cursor-pointer"
+                                        className="border-white/40 bg-white/10 hover:bg-white/20 text-white h-12 rounded-xl font-black text-xs uppercase tracking-widest cursor-pointer w-full sm:w-auto"
                                     >
                                         Editar Finca
                                     </Button>
                                     <Button
                                         onClick={() => openAddLote(finca.id)}
-                                        className="bg-emerald-500 hover:bg-emerald-400 text-white border-emerald-400 h-12 rounded-xl font-black text-xs uppercase tracking-widest gap-2 shadow-lg cursor-pointer"
+                                        className="bg-emerald-500 hover:bg-emerald-400 text-white border-emerald-400 h-12 rounded-xl font-black text-xs uppercase tracking-widest gap-2 shadow-lg cursor-pointer w-full sm:w-auto flex items-center justify-center"
                                     >
                                         <Plus size={16} /> Añadir Lote de Café
                                     </Button>
@@ -797,16 +807,16 @@ export function MisFincas() {
 
             {/* Finca Form Dialog */}
             <Dialog open={isFincaDialogOpen} onOpenChange={setIsFincaDialogOpen}>
-                <DialogContent className="sm:max-w-[600px] rounded-[40px] p-0 overflow-hidden bg-[#FDFDF8]">
-                    <div className="bg-[#5f705f] p-8 text-white">
+                <DialogContent className="sm:max-w-[600px] rounded-[40px] p-0 overflow-hidden bg-[#FDFDF8] max-h-[90vh] flex flex-col">
+                    <div className="bg-[#5f705f] p-4 md:p-8 text-white">
                         <DialogHeader>
-                            <DialogTitle className="text-3xl font-sans font-black">
+                            <DialogTitle className="text-2xl md:text-3xl font-sans font-black">
                                 {editingFincaId ? 'Editar Finca' : 'Nueva Finca'}
                             </DialogTitle>
-                            <DialogDescription className="text-white/70 font-medium">Información general de la propiedad.</DialogDescription>
+                            <DialogDescription className="text-white/70 font-medium text-xs md:text-sm">Información general de la propiedad.</DialogDescription>
                         </DialogHeader>
                     </div>
-                    <div className="p-8 space-y-6">
+                    <div className="p-4 md:p-8 space-y-6 overflow-y-auto flex-1 text-left">
                         <div className="space-y-4">
                             <div>
                                 <Label className="text-[10px] font-black uppercase mb-1 block opacity-40">Nombre de la Finca / Predio</Label>
@@ -883,26 +893,26 @@ export function MisFincas() {
                             </div>
                         </div>
                     </div>
-                    <DialogFooter className="p-8 border-t bg-gray-50">
+                    <DialogFooter className="p-4 md:p-8 border-t bg-gray-50">
                         <Button variant="ghost" onClick={() => setIsFincaDialogOpen(false)}>Cancelar</Button>
-                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-8 rounded-xl font-black" onClick={handleSaveFinca}>Guardar Finca</Button>
+                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-6 md:px-8 rounded-xl font-black" onClick={handleSaveFinca}>Guardar Finca</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Lote Dialog */}
             <Dialog open={isLoteDialogOpen} onOpenChange={setIsLoteDialogOpen}>
-                <DialogContent className="sm:max-w-[700px] rounded-[40px] p-0 overflow-hidden bg-[#FDFDF8]">
-                    <div className="bg-emerald-950 p-8 text-white">
+                <DialogContent className="sm:max-w-[700px] rounded-[40px] p-0 overflow-hidden bg-[#FDFDF8] max-h-[90vh] flex flex-col">
+                    <div className="bg-emerald-950 p-4 md:p-8 text-white">
                         <DialogHeader>
-                            <DialogTitle className="text-3xl font-sans font-black flex items-center gap-3">
+                            <DialogTitle className="text-2xl md:text-3xl font-sans font-black flex items-center gap-3">
                                 <Sprout className="text-emerald-400" /> {editingLoteId ? 'Editar Lote de Café' : 'Nuevo Lote de Café'}
                             </DialogTitle>
-                            <DialogDescription className="text-white/50">Crea un lote y captura sus datos para el cumplimiento.</DialogDescription>
+                            <DialogDescription className="text-white/50 text-xs md:text-sm">Crea un lote y captura sus datos para el cumplimiento.</DialogDescription>
                         </DialogHeader>
                     </div>
 
-                    <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto text-left">
+                    <div className="p-4 md:p-8 space-y-4 md:space-y-8 max-h-[50vh] md:max-h-[65vh] overflow-y-auto text-left flex-1">
                         {/* Selector de modo de georreferenciación */}
                         <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl">
                             <button
@@ -1090,9 +1100,9 @@ export function MisFincas() {
                         </div>
                     </div>
 
-                    <DialogFooter className="p-8 border-t bg-gray-50 flex justify-between items-center sm:justify-end">
+                    <DialogFooter className="p-4 md:p-8 border-t bg-gray-50 flex justify-between items-center sm:justify-end">
                         <Button variant="ghost" onClick={() => setIsLoteDialogOpen(false)}>Cancelar</Button>
-                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-10 rounded-xl font-black cursor-pointer" onClick={handleSaveLote}>Guardar Lote</Button>
+                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-6 md:px-10 rounded-xl font-black cursor-pointer" onClick={handleSaveLote}>Guardar Lote</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

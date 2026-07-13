@@ -416,7 +416,7 @@ export function ExperimentosCafe() {
                     ) : (
                         <>
                             {experimentos.length === 0 && (
-                                <div className="p-16 text-center rounded-[32px] border-2 border-dashed border-gray-200">
+                                <div className="p-6 md:p-16 text-center rounded-[32px] border-2 border-dashed border-gray-200">
                                     <p className="text-gray-400 font-bold text-lg">No hay experimentos en curso.</p>
                                     <p className="text-gray-400 text-sm mt-1">Usa el botón superior para crear tu primer experimento.</p>
                                 </div>

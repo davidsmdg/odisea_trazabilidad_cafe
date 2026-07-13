@@ -698,9 +698,20 @@ export function MisCosechas() {
             ))}
 
                 {filteredCosechas.length === 0 && (
-                    <div className="p-16 text-center rounded-[32px] border-2 border-dashed border-gray-200">
-                        <p className="text-gray-400 font-bold text-lg">No se encontraron lotes activos.</p>
-                        <p className="text-gray-400 text-sm mt-1">Usa el botón superior para empezar a rastrear tu café.</p>
+                    <div className="p-6 md:p-16 text-center bg-white rounded-[48px] border border-gray-100 shadow-xl py-12 md:py-24 space-y-6 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="h-20 w-20 md:h-24 md:w-24 bg-[#5f705f]/10 rounded-full flex items-center justify-center mx-auto text-[#5f705f] mb-4">
+                            <Coffee size={40} className="md:w-12 md:h-12" />
+                        </div>
+                        <h3 className="text-2xl md:text-3xl font-sans font-black text-gray-800">No hay cosechas registradas</h3>
+                        <p className="text-xs md:text-sm text-gray-500 font-medium max-w-md mx-auto leading-relaxed">
+                            Aquí se listará el progreso de tus lotes desde cereza fresca hasta pergamino seco. Comienza registrando tu primera recolección de café.
+                        </p>
+                        <Button 
+                            onClick={() => navigate('/producer/cosechas/nueva')}
+                            className="bg-emerald-500 hover:bg-emerald-400 text-white font-black px-6 md:px-8 py-3 md:py-4 h-12 md:h-14 rounded-2xl text-xs md:text-sm uppercase tracking-widest gap-2 shadow-lg transition-all duration-300 transform hover:scale-[1.02] cursor-pointer w-full sm:w-auto flex items-center justify-center"
+                        >
+                            <Plus size={16} /> Registrar Nueva Cosecha
+                        </Button>
                     </div>
                 )}
                     </>

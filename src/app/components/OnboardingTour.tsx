@@ -21,6 +21,7 @@ import {
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { cn } from './ui/utils';
+import { toast } from 'sonner';
 
 interface Step {
     title: string;
@@ -268,7 +269,7 @@ export function OnboardingTour({ role, forceShow = false, onClose }: OnboardingT
                     className={cn(
                         "bg-white shadow-2xl relative z-10 flex flex-col justify-between overflow-hidden",
                         deviceType === 'mobile'
-                            ? "w-full max-w-[400px] h-[550px] rounded-[36px] border-4 border-slate-900 bottom-0"
+                            ? "w-full max-w-[380px] h-[520px] rounded-[36px] border-4 border-slate-900"
                             : "w-full max-w-[580px] h-[500px] rounded-[48px] border border-slate-100 p-10"
                     )}
                 >
@@ -305,7 +306,7 @@ export function OnboardingTour({ role, forceShow = false, onClose }: OnboardingT
                     </div>
 
                     {/* Content Body */}
-                    <div className="flex-1 p-6 md:p-0 flex flex-col justify-center space-y-6">
+                    <div className="flex-1 p-6 md:p-0 flex flex-col justify-center space-y-3">
                         {/* Welcome header of the role */}
                         <div className="space-y-1.5">
                             <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-none font-sans font-black text-[9px] px-2.5 py-1 uppercase tracking-wider">
@@ -348,7 +349,10 @@ export function OnboardingTour({ role, forceShow = false, onClose }: OnboardingT
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="p-6 md:p-0 border-t border-slate-100 pt-6 flex items-center justify-between shrink-0 bg-white">
+                    <div className={cn(
+                        "border-t border-slate-100 flex items-center justify-between shrink-0 bg-white",
+                        deviceType === 'mobile' ? "px-6 pt-3 pb-8" : "p-0 pt-6"
+                    )}>
                         <button
                             onClick={handleComplete}
                             className="text-xs font-black text-slate-400 hover:text-slate-600 border-none bg-transparent cursor-pointer uppercase tracking-wider"

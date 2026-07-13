@@ -104,7 +104,7 @@ export function BandejaRevision() {
                         <Button onClick={() => window.location.reload()} className="bg-emerald-950 text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
                     </div>
                 ) : revisiones.length === 0 ? (
-                    <div className="p-16 text-center rounded-[48px] border border-dashed border-emerald-250 bg-emerald-50/10">
+                    <div className="p-6 md:p-16 text-center rounded-[48px] border border-dashed border-emerald-250 bg-emerald-50/10">
                         <p className="text-emerald-800/60 font-bold text-lg">No hay revisiones de cumplimiento EUDR asignadas.</p>
                     </div>
                 ) : (

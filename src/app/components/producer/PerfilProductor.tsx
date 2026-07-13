@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     User,
@@ -43,20 +44,21 @@ import { cn } from '../ui/utils';
 import { toast } from 'sonner';
 
 export function PerfilProductor() {
+    const { user } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
 
     // Form State
-    const [nombre, setNombre] = useState('María González');
-    const [genero, setGenero] = useState('Femenino');
-    const [fechaNacimiento, setFechaNacimiento] = useState('1980-05-15');
-    const [celular, setCelular] = useState('312 455 9876');
-    const [aniosCafe, setAniosCafe] = useState('25');
+    const [nombre, setNombre] = useState('');
+    const [genero, setGenero] = useState('');
+    const [fechaNacimiento, setFechaNacimiento] = useState('');
+    const [celular, setCelular] = useState('');
+    const [aniosCafe, setAniosCafe] = useState('');
 
     // Family & Identity State
-    const [tieneHijos, setTieneHijos] = useState('Si');
-    const [cuantosHijos, setCuantosHijos] = useState('2');
-    const [cuantosMenores, setCuantosMenores] = useState('1');
-    const [familiaresConviven, setFamiliaresConviven] = useState('3');
+    const [tieneHijos, setTieneHijos] = useState('No');
+    const [cuantosHijos, setCuantosHijos] = useState('0');
+    const [cuantosMenores, setCuantosMenores] = useState('0');
+    const [familiaresConviven, setFamiliaresConviven] = useState('0');
     const [perteneceEtno, setPerteneceEtno] = useState('No');
 
     // Photos State
@@ -76,7 +78,9 @@ export function PerfilProductor() {
 
     // Cargar perfil guardado en localStorage
     useEffect(() => {
-        const saved = localStorage.getItem('perfil_productor');
+        if (!user) return;
+        const key = `perfil_productor_${user.email}`;
+        const saved = localStorage.getItem(key);
         if (saved) {
             try {
                 const data = JSON.parse(saved);
@@ -92,8 +96,38 @@ export function PerfilProductor() {
                 if (data.historia) setHistoria(data.historia);
                 if (data.profilePhoto) setProfilePhoto(data.profilePhoto);
             } catch (e) {}
+        } else {
+            // No saved profile yet, check if it's Maria's demo
+            if (user.email === 'maria@finca.co') {
+                setNombre('María González');
+                setGenero('Femenino');
+                setFechaNacimiento('1980-05-15');
+                setCelular('312 455 9876');
+                setAniosCafe('25');
+                setTieneHijos('Si');
+                setCuantosHijos('2');
+                setCuantosMenores('1');
+                setFamiliaresConviven('3');
+                setPerteneceEtno('No');
+                setHistoria('');
+                setProfilePhoto(null);
+            } else {
+                // Initialize empty for other users
+                setNombre(user.name || '');
+                setGenero('');
+                setFechaNacimiento('');
+                setCelular('');
+                setAniosCafe('');
+                setTieneHijos('No');
+                setCuantosHijos('0');
+                setCuantosMenores('0');
+                setFamiliaresConviven('0');
+                setPerteneceEtno('No');
+                setHistoria('');
+                setProfilePhoto(null);
+            }
         }
-    }, []);
+    }, [user]);
 
     const handleSimulateAudio = () => {
         setIsRecording(true);
@@ -109,6 +143,7 @@ export function PerfilProductor() {
     };
 
     const handleSave = () => {
+        if (!user) return;
         setIsSaving(true);
         setTimeout(() => {
             const profileData = {
@@ -116,7 +151,7 @@ export function PerfilProductor() {
                 tieneHijos, cuantosHijos, cuantosMenores, perteneceEtno,
                 historia, profilePhoto
             };
-            localStorage.setItem('perfil_productor', JSON.stringify(profileData));
+            localStorage.setItem(`perfil_productor_${user.email}`, JSON.stringify(profileData));
             setIsSaving(false);
             toast.success('Perfil actualizado correctamente', {
                 description: 'La información social ha sido guardada para cumplimiento de trazabilidad.',

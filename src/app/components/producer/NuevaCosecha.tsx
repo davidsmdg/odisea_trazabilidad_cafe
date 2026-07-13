@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { useAuth } from '../../context/AuthContext';
 import { addLote } from '../../../services/lotesService';
+import { getFincas } from '../../../services/fincasService';
 import { detectAnomaly, detectHarvestDateAnomaly } from '../../../services/anomaliesService';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -35,11 +37,48 @@ import { toast } from 'sonner';
 
 export function NuevaCosecha() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
 
     // Common states
     const [finca, setFinca] = useState('');
     const [parcela, setParcela] = useState('');
+
+    const [fincasDisponibles, setFincasDisponibles] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!user) return;
+        getFincas().then(data => {
+            if (data.length > 0) {
+                setFincasDisponibles(data);
+            } else if (user.email === 'maria@finca.co') {
+                setFincasDisponibles([
+                    {
+                        id: '1',
+                        nombre: 'Finca La Esperanza',
+                        lotesDeCafe: [
+                            { id: 'p1', nombre: 'Lote El Mirador' },
+                            { id: 'p2', nombre: 'Lote Las Piedras' }
+                        ]
+                    },
+                    {
+                        id: '2',
+                        nombre: 'Finca Santa Helena',
+                        lotesDeCafe: []
+                    }
+                ]);
+            } else {
+                setFincasDisponibles([]);
+            }
+        }).catch(err => {
+            console.error('Error fetching fincas in NuevaCosecha:', err);
+        });
+    }, [user]);
+
+    const lotesDeFincaSeleccionada = useMemo(() => {
+        const found = fincasDisponibles.find(f => f.nombre === finca);
+        return found ? (found.lotesDeCafe || []) : [];
+    }, [finca, fincasDisponibles]);
     
     // Path selection: 'objetivo' | 'diario' | null
     const [modalidad, setModalidad] = useState<'objetivo' | 'diario' | null>(null);
@@ -85,7 +124,7 @@ export function NuevaCosecha() {
             const newLot = {
                 id: `lc-new-${Date.now()}`,
                 codigo: randomCode,
-                productor: 'Tú',
+                productor: user?.name || 'Tú',
                 cosecha: fecha,
                 finca,
                 parcelas: [parcela],
@@ -108,11 +147,11 @@ export function NuevaCosecha() {
             // Ejecutar validaciones estadísticas históricas en caliente
             let hasHistoricalAnomaly = false;
             if (modalidad === 'diario') {
-                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', Number(peso), finca, 'María González');
-                const checkFecha = await detectHarvestDateAnomaly(randomCode, fecha, finca, 'María González');
+                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', Number(peso), finca, user?.name || 'María González');
+                const checkFecha = await detectHarvestDateAnomaly(randomCode, fecha, finca, user?.name || 'María González');
                 if (checkPeso || checkFecha) hasHistoricalAnomaly = true;
             } else if (modalidad === 'objetivo' && kilosObjetivoCereza) {
-                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', kilosObjetivoCereza, finca, 'María González');
+                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', kilosObjetivoCereza, finca, user?.name || 'María González');
                 if (checkPeso) hasHistoricalAnomaly = true;
             }
 
@@ -124,11 +163,12 @@ export function NuevaCosecha() {
             }
 
             // Save to localStorage
-            const saved = localStorage.getItem('lotes_produccion');
+            const userEmail = user?.email || 'general';
+            const saved = localStorage.getItem(`lotes_produccion_${userEmail}`);
             let currentLotes = [];
             if (saved) {
                 try { currentLotes = JSON.parse(saved); } catch (e) {}
-            } else {
+            } else if (userEmail === 'maria@finca.co') {
                 currentLotes = [
                     {
                         id: 'lc1', codigo: 'MG-ESP-042', productor: 'María', cosecha: 'Oct-Nov 2024',
@@ -141,12 +181,12 @@ export function NuevaCosecha() {
             }
             
             currentLotes.unshift(newLot);
-            localStorage.setItem('lotes_produccion', JSON.stringify(currentLotes));
+            localStorage.setItem(`lotes_produccion_${userEmail}`, JSON.stringify(currentLotes));
 
             // Save to Master Odisea list
             await addLote({
                 id: randomCode,
-                productor: 'María González',
+                productor: user?.name || 'María González',
                 finca: finca,
                 municipio: 'San Agustín, Huila',
                 variedad: variedad || 'Bourbon Rosado',
@@ -219,8 +259,12 @@ export function NuevaCosecha() {
                                     <SelectValue placeholder="Selecciona tu finca..." />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-3xl border-gray-100">
-                                    <SelectItem value="Finca La Esperanza">Finca La Esperanza</SelectItem>
-                                    <SelectItem value="Finca Santa Helena">Finca Santa Helena</SelectItem>
+                                    {fincasDisponibles.map(f => (
+                                        <SelectItem key={f.id} value={f.nombre}>{f.nombre}</SelectItem>
+                                    ))}
+                                    {fincasDisponibles.length === 0 && (
+                                        <SelectItem value="none" disabled>No tienes fincas registradas</SelectItem>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -231,8 +275,12 @@ export function NuevaCosecha() {
                                     <SelectValue placeholder="Selecciona la parcela..." />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-3xl border-gray-100">
-                                    <SelectItem value="Lote El Mirador">Lote El Mirador</SelectItem>
-                                    <SelectItem value="Lote Las Piedras">Lote Las Piedras</SelectItem>
+                                    {lotesDeFincaSeleccionada.map((l: any) => (
+                                        <SelectItem key={l.id} value={l.nombre}>{l.nombre}</SelectItem>
+                                    ))}
+                                    {lotesDeFincaSeleccionada.length === 0 && (
+                                        <SelectItem value="none" disabled>Finca sin lotes</SelectItem>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>

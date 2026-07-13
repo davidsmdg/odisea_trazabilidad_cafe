@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { UserRole, AuthUser } from '../../types/usuario';
-import { MOCK_USERS } from '../../data/usuarios.mock';
+import { supabase } from '../utils/supabaseClient';
 
 export type { UserRole, AuthUser };
 
@@ -14,70 +14,99 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const SESSION_KEY = 'cerescrop_user';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restaurar sesión al montar
-  useEffect(() => {
-    const stored = sessionStorage.getItem(SESSION_KEY);
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        sessionStorage.removeItem(SESSION_KEY);
-      }
+  const fetchUserProfile = async (userId: string): Promise<AuthUser | null> => {
+    const { data, error } = await supabase
+      .from('perfiles')
+      .select('id, nombre, email, rol, avatar_initials')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      console.error('Error fetching user profile:', error);
+      return null;
     }
-    setIsLoading(false);
+
+    return {
+      id: data.id,
+      name: data.nombre,
+      email: data.email,
+      role: data.rol as UserRole,
+      avatarInitials: data.avatar_initials || 'US',
+    };
+  };
+
+  // Restore and listen to session
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUser(profile);
+      }
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUser(profile);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const persistUser = (u: AuthUser) => {
-    setUser(u);
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
-  };
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  const login = async (email: string, _password: string) => {
-    // Simulamos latencia de red
-    await new Promise((r) => setTimeout(r, 800));
+    if (error) throw error;
+    if (!data.user) throw new Error('Login failed');
 
-    const found = MOCK_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (found) {
-      persistUser(found);
-      return;
+    const profile = await fetchUserProfile(data.user.id);
+    if (profile) {
+      setUser(profile);
+    } else {
+      throw new Error('User profile not found');
     }
-    // Si no existe, creamos uno genérico para demo
-    const genericUser: AuthUser = {
-      id: `u_${Date.now()}`,
-      name: email.split('@')[0],
-      email,
-      role: 'AGRICULTOR',
-      avatarInitials: email.slice(0, 2).toUpperCase(),
-    };
-    persistUser(genericUser);
   };
 
-  const register = async (name: string, email: string, _password: string, role: UserRole) => {
-    await new Promise((r) => setTimeout(r, 900));
-    const newUser: AuthUser = {
-      id: `u_${Date.now()}`,
-      name,
+  const register = async (name: string, email: string, password: string, role: UserRole) => {
+    const { data, error } = await supabase.auth.signUp({
       email,
-      role,
-      avatarInitials: name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase(),
-    };
-    persistUser(newUser);
+      password,
+      options: {
+        data: {
+          nombre: name,
+          rol: role,
+        },
+      },
+    });
+
+    if (error) throw error;
+    if (!data.user) throw new Error('Registration failed');
+
+    // Wait a brief moment to allow PostgreSQL trigger to create profile
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const profile = await fetchUserProfile(data.user.id);
+    if (profile) {
+      setUser(profile);
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    sessionStorage.removeItem(SESSION_KEY);
   };
 
   return (
@@ -92,3 +121,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;
 }
+

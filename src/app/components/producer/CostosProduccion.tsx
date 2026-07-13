@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     PiggyBank,
@@ -21,6 +22,7 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
+import { getLotes } from '../../../services/lotesService';
 
 // --- Tipos Simples ---
 type TipoMovimiento = 'ingreso' | 'gasto';
@@ -53,19 +55,66 @@ const CATEGORIAS_INGRESO = [
 ];
 
 export function CostosProduccion() {
+    const { user } = useAuth();
     // --- Estado Principal (La Realidad) ---
-    const [movimientos, setMovimientos] = useState<Movimiento[]>([
-        { id: '1', tipo: 'ingreso', categoria: 'Venta Café Pergamino', monto: 2500000, fecha: new Date(Date.now() - 86400000 * 2).toISOString(), nota: 'Venta a la cooperativa', icono: Coffee, loteAsociado: 'MG-ESP-042' },
-        { id: '2', tipo: 'gasto', categoria: 'Jornales y Recolección', monto: 450000, fecha: new Date(Date.now() - 86400000 * 5).toISOString(), nota: 'Pago de semana', icono: Tractor, loteAsociado: 'MG-ESP-042' },
-        { id: '3', tipo: 'gasto', categoria: 'Abonos y Venenos', monto: 800000, fecha: new Date(Date.now() - 86400000 * 10).toISOString(), nota: '3 bultos de abono', icono: Leaf },
-    ]);
+    const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
 
-    // Mock Lotes Activos (En el futuro vendrán de un contexto o LocalStorage)
-    const lotesActivos = [
-        { id: 'MG-ESP-042', nombre: 'MG-ESP-042 (La Esperanza)' },
-        { id: 'MG-ESP-043', nombre: 'MG-ESP-043 (La Esperanza)' },
-        { id: 'MG-SH-101', nombre: 'MG-SH-101 (Santa Helena)' }
-    ];
+    const [lotesActivos, setLotesActivos] = useState<{ id: string; nombre: string }[]>([]);
+
+    useEffect(() => {
+        if (!user) return;
+        
+        // Fetch lotes from Supabase (filtered by productor_id for AGRICULTOR)
+        getLotes().then(fetched => {
+            const mapped = fetched.map(l => ({
+                id: l.id,
+                nombre: `${l.id} (${l.finca})`
+            }));
+            
+            if (mapped.length > 0) {
+                setLotesActivos(mapped);
+            } else if (user.email === 'maria@finca.co') {
+                setLotesActivos([
+                    { id: 'MG-ESP-042', nombre: 'MG-ESP-042 (La Esperanza)' },
+                    { id: 'MG-ESP-043', nombre: 'MG-ESP-043 (La Esperanza)' },
+                    { id: 'MG-SH-101', nombre: 'MG-SH-101 (Santa Helena)' }
+                ]);
+            } else {
+                setLotesActivos([]);
+            }
+        }).catch(err => {
+            console.error('Error fetching lotes in CostosProduccion:', err);
+        });
+
+        const key = `movimientos_produccion_${user.email}`;
+        const saved = localStorage.getItem(key);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Map icons from category type
+                const withIcons = parsed.map((m: any) => {
+                    let iconComponent = Coffee;
+                    if (m.categoria === 'Jornales y Recolección') iconComponent = Tractor;
+                    else if (m.categoria === 'Abonos y Venenos') iconComponent = Leaf;
+                    else if (m.categoria === 'Fletes y Transporte') iconComponent = Truck;
+                    else if (m.categoria === 'Herramientas o Arreglos') iconComponent = Wrench;
+                    else if (m.categoria === 'Otros Gastos' || m.categoria === 'Otros Ingresos') iconComponent = Wallet;
+                    return { ...m, icono: iconComponent };
+                });
+                setMovimientos(withIcons);
+            } catch (e) {}
+        } else if (user.email === 'maria@finca.co') {
+            const mock = [
+                { id: '1', tipo: 'ingreso' as const, categoria: 'Venta Café Pergamino', monto: 2500000, fecha: new Date(Date.now() - 86400000 * 2).toISOString(), nota: 'Venta a la cooperativa', icono: Coffee, loteAsociado: 'MG-ESP-042' },
+                { id: '2', tipo: 'gasto' as const, categoria: 'Jornales y Recolección', monto: 450000, fecha: new Date(Date.now() - 86400000 * 5).toISOString(), nota: 'Pago de semana', icono: Tractor, loteAsociado: 'MG-ESP-042' },
+                { id: '3', tipo: 'gasto' as const, categoria: 'Abonos y Venenos', monto: 800000, fecha: new Date(Date.now() - 86400000 * 10).toISOString(), nota: '3 bultos de abono', icono: Leaf },
+            ];
+            localStorage.setItem(key, JSON.stringify(mock));
+            setMovimientos(mock);
+        } else {
+            setMovimientos([]);
+        }
+    }, [user]);
 
     // --- Estados para Formularios ---
     const [modalActivo, setModalActivo] = useState<TipoMovimiento | null>(null);
@@ -122,7 +171,13 @@ export function CostosProduccion() {
             loteAsociado: loteSeleccionado === 'general' ? undefined : loteSeleccionado
         };
 
-        setMovimientos([nuevoMovimiento, ...movimientos]);
+        const updated = [nuevoMovimiento, ...movimientos];
+        setMovimientos(updated);
+        if (user) {
+            // strip react elements before stringifying
+            const rawToSave = updated.map(({ icono, ...rest }) => rest);
+            localStorage.setItem(`movimientos_produccion_${user.email}`, JSON.stringify(rawToSave));
+        }
         toast.success(modalActivo === 'ingreso' ? '¡Venta registrada con éxito!' : 'Gasto anotado correctamente.');
         cerrarModal();
     };

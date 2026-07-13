@@ -130,7 +130,7 @@ export function HistorialAprobaciones() {
                         <Button onClick={() => window.location.reload()} className="bg-blue-950 text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
                     </div>
                 ) : historial.length === 0 ? (
-                    <div className="p-16 text-center rounded-[32px] border border-dashed border-slate-200 bg-slate-50/50">
+                    <div className="p-6 md:p-16 text-center rounded-[32px] border border-dashed border-slate-200 bg-slate-50/50">
                         <p className="text-slate-500 font-bold text-lg">No hay auditorías registradas en el historial.</p>
                     </div>
                 ) : (

@@ -135,7 +135,7 @@ export function RegisterPage() {
     };
 
     return (
-        <div className={cn("mx-auto w-full px-4 sm:px-0 transition-all duration-500", step === 'role-select' ? "max-w-6xl" : "max-w-md")}>
+        <div className={cn("mx-auto w-full px-6 sm:px-0 transition-all duration-500 flex flex-col flex-1 h-full sm:h-auto", step === 'role-select' ? "max-w-6xl" : "max-w-md")}>
             <AnimatePresence mode="wait">
                 {step === 'role-select' && (
                     <motion.div
@@ -144,136 +144,146 @@ export function RegisterPage() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -24 }}
                         transition={{ duration: 0.3 }}
+                        className="flex flex-col h-[calc(100vh-85px)] sm:h-auto"
                     >
-                        {/* Header */}
-                        <div className="text-center sm:text-left mb-8 relative">
-                            {/* Option to return to Home */}
-                            <Link
-                                to="/"
-                                className="sm:absolute left-0 top-0 inline-flex items-center text-sm font-semibold text-[#5f705f] hover:text-[#bb8d3b] mb-6 group transition-colors"
-                            >
-                                <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                                Volver al Inicio
-                            </Link>
+                        {/* Scrollable middle container (Header + Cards) */}
+                        <div className="flex-1 overflow-y-auto pr-1 mb-4 space-y-6 sm:overflow-visible">
+                            {/* Header */}
+                            <div className="text-center sm:text-left relative">
+                                {/* Option to return to Home */}
+                                <Link
+                                    to="/"
+                                    className="sm:absolute left-0 top-0 inline-flex items-center text-sm font-semibold text-[#5f705f] hover:text-[#bb8d3b] mb-6 group transition-colors"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                                    Volver al Inicio
+                                </Link>
 
-                            <div className="mt-12 sm:mt-8">
-                                <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-4">
-                                    Paso 1 de 2
-                                </span>
-                                <h1 className="text-3xl sm:text-4xl font-sans text-[#5f705f] font-bold leading-tight">
-                                    ¿Cuál es tu rol en la cadena de valor?
-                                </h1>
-                                <p className="mt-3 text-gray-500 text-sm">
-                                    Elige el que mejor describe tu actividad principal.
-                                </p>
+                                <div className="mt-12 sm:mt-8">
+                                    <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-2">
+                                        Paso 1 de 2
+                                    </span>
+                                    <h1 className="text-3xl sm:text-4xl font-sans text-[#5f705f] font-bold leading-tight">
+                                        ¿Cuál es tu rol en la cadena de valor?
+                                    </h1>
+                                    <p className="mt-2 text-gray-500 text-sm">
+                                        Elige el que mejor describe tu actividad principal.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Role Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pb-2">
+                                {ROLES.map((roleCard) => {
+                                    const Icon = roleCard.icon;
+                                    const isSelected = selectedRole === roleCard.role;
+                                    return (
+                                        <div key={roleCard.role} className="flex flex-col gap-2">
+                                            <motion.button
+                                                onClick={() => handleRoleSelect(roleCard.role)}
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                className={cn(
+                                                    'relative w-full flex-1 flex flex-col text-left p-6 rounded-2xl border-2 transition-all cursor-pointer bg-white',
+                                                    isSelected
+                                                        ? `${roleCard.borderColor} shadow-lg`
+                                                        : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                                                )}
+                                            >
+                                                {/* Check badge */}
+                                                <AnimatePresence>
+                                                    {isSelected && (
+                                                        <motion.div
+                                                            initial={{ scale: 0, opacity: 0 }}
+                                                            animate={{ scale: 1, opacity: 1 }}
+                                                            exit={{ scale: 0, opacity: 0 }}
+                                                            className={cn(
+                                                                'absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center',
+                                                                roleCard.bgColor
+                                                            )}
+                                                        >
+                                                            <Check className="h-3.5 w-3.5 text-white" />
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+
+                                                {/* Icon */}
+                                                <div
+                                                    className={cn(
+                                                        'w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors',
+                                                        isSelected ? roleCard.bgColor : 'bg-gray-100'
+                                                    )}
+                                                >
+                                                    <Icon
+                                                        className={cn(
+                                                            'h-6 w-6 transition-colors',
+                                                            isSelected ? 'text-white' : 'text-gray-400'
+                                                        )}
+                                                    />
+                                                </div>
+
+                                                {/* Text */}
+                                                <h3
+                                                    className={cn(
+                                                        'font-bold text-base mb-1 transition-colors',
+                                                        isSelected ? roleCard.color : 'text-gray-800'
+                                                    )}
+                                                >
+                                                    {roleCard.title}
+                                                </h3>
+                                                <p className="text-sm text-gray-500 leading-relaxed">
+                                                    {roleCard.description}
+                                                </p>
+                                            </motion.button>
+
+                                            {/* Warning notice directly below this card if selected and not Agricultor */}
+                                            <AnimatePresence>
+                                                {isSelected && roleCard.role !== 'AGRICULTOR' && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                                                            🚧 El portal para <strong>{roleCard.title}</strong> está en construcción.
+                                                            Podrás completar el registro pero el acceso avanzado llegará pronto.
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {/* Role Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-                            {ROLES.map((roleCard) => {
-                                const Icon = roleCard.icon;
-                                const isSelected = selectedRole === roleCard.role;
-                                return (
-                                    <motion.button
-                                        key={roleCard.role}
-                                        onClick={() => handleRoleSelect(roleCard.role)}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        className={cn(
-                                            'relative w-full flex flex-col text-left p-6 rounded-2xl border-2 transition-all cursor-pointer bg-white',
-                                            isSelected
-                                                ? `${roleCard.borderColor} shadow-lg`
-                                                : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                                        )}
-                                    >
-                                        {/* Check badge */}
-                                        <AnimatePresence>
-                                            {isSelected && (
-                                                <motion.div
-                                                    initial={{ scale: 0, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    exit={{ scale: 0, opacity: 0 }}
-                                                    className={cn(
-                                                        'absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center',
-                                                        roleCard.bgColor
-                                                    )}
-                                                >
-                                                    <Check className="h-3.5 w-3.5 text-white" />
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-
-                                        {/* Icon */}
-                                        <div
-                                            className={cn(
-                                                'w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors',
-                                                isSelected ? roleCard.bgColor : 'bg-gray-100'
-                                            )}
-                                        >
-                                            <Icon
-                                                className={cn(
-                                                    'h-6 w-6 transition-colors',
-                                                    isSelected ? 'text-white' : 'text-gray-400'
-                                                )}
-                                            />
-                                        </div>
-
-                                        {/* Text */}
-                                        <h3
-                                            className={cn(
-                                                'font-bold text-base mb-1 transition-colors',
-                                                isSelected ? roleCard.color : 'text-gray-800'
-                                            )}
-                                        >
-                                            {roleCard.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-500 leading-relaxed">
-                                            {roleCard.description}
-                                        </p>
-                                    </motion.button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Non-producer notice */}
-                        <AnimatePresence>
-                            {selectedRole && selectedRole !== 'AGRICULTOR' && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -8 }}
-                                    className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700"
+                        {/* Fixed actions at the bottom (never scrolls) */}
+                        <div className="shrink-0 -mx-6 px-6 pt-5 pb-8 bg-[#e8efe8] border-t border-[#ccdccd] rounded-t-[28px] mt-auto shadow-[0_-8px_24px_rgba(95,112,95,0.08)]">
+                            <div className="flex flex-col sm:flex-row items-center gap-4">
+                                <Button
+                                    onClick={handleContinue}
+                                    disabled={!selectedRole}
+                                    className={cn(
+                                        'w-full sm:flex-1 h-12 rounded-xl font-bold gap-2 text-sm transition-all cursor-pointer',
+                                        selectedRole
+                                            ? 'bg-[#5f705f] hover:bg-[#234d24] text-white shadow-md'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    )}
                                 >
-                                    🚧 El portal para <strong>{selectedRoleData?.title}</strong> está en construcción.
-                                    Podrás completar el registro pero el acceso avanzado llegará pronto.
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                    Continuar con{' '}
+                                    {selectedRoleData ? selectedRoleData.title : 'selección'}
+                                    <ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </div>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
-                            <Button
-                                onClick={handleContinue}
-                                disabled={!selectedRole}
-                                className={cn(
-                                    'w-full sm:flex-1 h-12 rounded-xl font-bold gap-2 text-sm transition-all',
-                                    selectedRole
-                                        ? 'bg-[#5f705f] hover:bg-[#234d24] text-white'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                )}
-                            >
-                                Continuar con{' '}
-                                {selectedRoleData ? selectedRoleData.title : 'selección'}
-                                <ArrowRight className="h-4 w-4" />
-                            </Button>
+                            <p className="mt-4 text-center text-sm text-[#415341] font-semibold">
+                                ¿Ya tienes cuenta?{' '}
+                                <Link to="/auth/login" className="text-[#2a562a] font-bold hover:underline">
+                                    Iniciar sesión
+                                </Link>
+                            </p>
                         </div>
-
-                        <p className="mt-6 text-center text-sm text-gray-500">
-                            ¿Ya tienes cuenta?{' '}
-                            <Link to="/auth/login" className="text-[#5f705f] font-semibold hover:underline">
-                                Iniciar sesión
-                            </Link>
-                        </p>
                     </motion.div>
                 )}
 

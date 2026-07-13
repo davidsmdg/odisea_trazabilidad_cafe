@@ -25,6 +25,7 @@ import { cn } from '../ui/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { getLotes } from '../../../services/lotesService';
+import { getFincas } from '../../../services/fincasService';
 import { useMemo } from 'react';
 
 // Mock data para departamentos (precios y clima robustecido)
@@ -108,11 +109,19 @@ export function ProducerDashboard() {
     const [departamento, setDepartamento] = useState('Antioquia');
     const [valoracionesAprobadas, setValoracionesAprobadas] = useState<any[]>([]);
     const [lotes, setLotes] = useState<any[]>([]);
+    const [fincas, setFincas] = useState<any[]>([]);
 
     useEffect(() => {
         getLotes()
             .then(fetched => {
                 setLotes(fetched);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        getFincas()
+            .then(fetched => {
+                setFincas(fetched);
             })
             .catch(err => {
                 console.error(err);
@@ -125,7 +134,7 @@ export function ProducerDashboard() {
             l.productor.toLowerCase().includes(prodName.toLowerCase().split(' ')[0]) &&
             l.tostadorAsignado
         );
-        if (filtered.length === 0) return LOTES_VENDIDOS;
+        if (filtered.length === 0) return [];
         return filtered.map(l => ({
             id: l.id,
             nombre: l.id,
@@ -249,11 +258,11 @@ export function ProducerDashboard() {
                         </Select>
                     </div>
                     <Button
-                        onClick={() => navigate('/producer/cosechas/nueva')}
+                        onClick={() => navigate(fincas.length === 0 ? '/producer/fincas' : '/producer/cosechas/nueva')}
                         className="h-16 px-8 rounded-2xl bg-[#5f705f] hover:bg-[#234d24] text-white font-black text-lg shadow-xl shadow-[#5f705f]/30 transition-all flex items-center gap-3 cursor-pointer"
                     >
                         <PlusCircle size={24} />
-                        Registrar Lote de Producción
+                        {fincas.length === 0 ? 'Registrar Mi Primera Finca' : 'Registrar Lote de Producción'}
                     </Button>
                 </div>
             </section>
@@ -274,21 +283,21 @@ export function ProducerDashboard() {
                                 <div className="w-12 h-12 rounded-xl bg-[#e3d5b8]/20 flex items-center justify-center text-[#9a983b] mb-2">
                                     <Building2 size={24} />
                                 </div>
-                                <p className="text-3xl font-sans font-black text-gray-900">2</p>
+                                <p className="text-3xl font-sans font-black text-gray-900">{fincas.length}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Fincas Activas</p>
                             </div>
                             <div className="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col items-center sm:items-start text-center sm:text-left gap-2 shadow-sm">
                                 <div className="w-12 h-12 rounded-xl bg-[#8a9a8a]/20 flex items-center justify-center text-[#8a9a8a] mb-2">
                                     <MapPin size={24} />
                                 </div>
-                                <p className="text-3xl font-sans font-black text-gray-900">4</p>
+                                <p className="text-3xl font-sans font-black text-gray-900">{lotes.length}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Parcelas/Lotes</p>
                             </div>
                             <div className="bg-[#5f705f] p-6 rounded-3xl text-white flex flex-col items-center sm:items-start text-center sm:text-left gap-2 shadow-lg shadow-[#5f705f]/20">
                                 <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-2">
                                     <ShoppingBag size={24} />
                                 </div>
-                                <p className="text-3xl font-sans font-black">3.2t</p>
+                                <p className="text-3xl font-sans font-black">{lotes.length > 0 ? '3.2t' : '0.0t'}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Vendido 2026</p>
                             </div>
                         </div>
@@ -301,29 +310,37 @@ export function ProducerDashboard() {
                             <p className="text-gray-500 text-sm font-medium mt-1">Mira quién disfruta tu café y qué dicen de él.</p>
                         </div>
                         <div className="grid grid-cols-1 gap-4">
-                            {lotesVendidos.map((lote) => (
-                                <div key={lote.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col sm:flex-row items-center gap-6 group hover:border-[#5f705f]/20 transition-all">
-                                    <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
-                                        <Coffee size={28} />
-                                    </div>
-                                    <div className="flex-1 text-center sm:text-left">
-                                        <h3 className="text-2xl font-sans font-black text-gray-900">{lote.nombre}</h3>
-                                        <p className="text-sm font-bold text-gray-400">{lote.finca}</p>
-                                    </div>
-                                    <div className="flex flex-col items-center sm:items-end gap-2">
-                                        {lote.clientes.map((cli, idx) => (
-                                            <div key={idx} className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                                                <span className="text-lg">{cli.bandera}</span>
-                                                <span className="text-xs font-bold text-gray-700">{cli.nombre}</span>
+                            {lotesVendidos.length === 0 ? (
+                                <div className="bg-white rounded-[32px] border border-dashed border-gray-200 p-8 text-center text-gray-500 py-12 shadow-sm">
+                                    <ShoppingBag className="text-gray-400/40 mx-auto mb-3" size={32} />
+                                    <p className="text-xs font-bold text-gray-700">Aún no tienes lotes comercializados</p>
+                                    <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Conéctate con tostadores para vender tu café directamente.</p>
+                                </div>
+                            ) : (
+                                lotesVendidos.map((lote) => (
+                                    <div key={lote.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col sm:flex-row items-center gap-6 group hover:border-[#5f705f]/20 transition-all">
+                                        <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                                            <Coffee size={28} />
+                                        </div>
+                                        <div className="flex-1 text-center sm:text-left">
+                                            <h3 className="text-2xl font-sans font-black text-gray-900">{lote.nombre}</h3>
+                                            <p className="text-sm font-bold text-gray-400">{lote.finca}</p>
+                                        </div>
+                                        <div className="flex flex-col items-center sm:items-end gap-2">
+                                            {lote.clientes.map((cli, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                                                    <span className="text-lg">{cli.bandera}</span>
+                                                    <span className="text-xs font-bold text-gray-700">{cli.nombre}</span>
+                                                </div>
+                                            ))}
+                                            <div className="flex items-center gap-3 mt-2">
+                                                <div className="bg-[#5f705f]/10 text-[#5f705f] px-2 py-1 rounded text-xs font-bold">Cata: {lote.puntos.catador}</div>
+                                                <div className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><Star size={10} fill="currentColor" /> {lote.puntos.final}</div>
                                             </div>
-                                        ))}
-                                        <div className="flex items-center gap-3 mt-2">
-                                            <div className="bg-[#5f705f]/10 text-[#5f705f] px-2 py-1 rounded text-xs font-bold">Cata: {lote.puntos.catador}</div>
-                                            <div className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><Star size={10} fill="currentColor" /> {lote.puntos.final}</div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
                     </section>
 
