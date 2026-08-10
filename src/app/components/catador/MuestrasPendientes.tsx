@@ -54,9 +54,11 @@ const MUESTRAS_MOCK = [
 
 import { getLotes } from '../../../services/lotesService';
 import type { LoteUnificado } from '../../types/lote';
+import { useAuth } from '../../context/AuthContext';
 
 export function MuestrasPendientes() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [muestras, setMuestras] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +66,12 @@ export function MuestrasPendientes() {
 
     useEffect(() => {
         setIsLoading(true);
+        if (user?.email === 'andres@finca.co') {
+            setMuestras(MUESTRAS_MOCK);
+            setIsLoading(false);
+            return;
+        }
+
         getLotes()
             .then((loaded) => {
                 // Muestras pendientes: lotes que no tengan calificación (o con calificacion <= 0)
@@ -85,7 +93,7 @@ export function MuestrasPendientes() {
                 setError('Error al cargar muestras');
                 setIsLoading(false);
             });
-    }, []);
+    }, [user]);
 
     const muestrasFiltradas = muestras.filter(item => {
         const term = searchTerm.toLowerCase();
