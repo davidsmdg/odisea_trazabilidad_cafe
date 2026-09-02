@@ -5,6 +5,7 @@ export const MOCK_USERS: AuthUser[] = [
     id: 'u1',
     name: 'María González',
     email: 'maria@finca.co',
+    celular: '3124559876',
     role: 'AGRICULTOR',
     avatarInitials: 'MG',
   },

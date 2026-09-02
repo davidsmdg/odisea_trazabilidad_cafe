@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sprout, Users, Leaf, Coffee, Building, PackageOpen, Star, Check, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { Sprout, Users, Leaf, Coffee, Building, PackageOpen, Check, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth, type UserRole } from '../../context/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -35,6 +35,15 @@ const ROLES: RoleCard[] = [
         color: 'text-[#5a8f5b]',
         bgColor: 'bg-[#5a8f5b]',
         borderColor: 'border-[#5a8f5b]',
+    },
+    {
+        role: 'ENV_VERIFIER',
+        icon: Leaf,
+        title: 'Verificador ambiental',
+        description: 'Reviso cumplimiento EUDR y linderos.',
+        color: 'text-[#3f7d3f]',
+        bgColor: 'bg-[#3f7d3f]',
+        borderColor: 'border-[#3f7d3f]',
     },
     {
         role: 'TASTER',
@@ -76,13 +85,14 @@ export function RegisterPage() {
 
     // Form fields
     const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
+    const [contacto, setContacto] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
     const selectedRoleData = ROLES.find((r) => r.role === selectedRole);
+    const esProductor = selectedRole === 'AGRICULTOR';
 
     const handleRoleSelect = (role: UserRole) => {
         setSelectedRole(role);
@@ -95,8 +105,17 @@ export function RegisterPage() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !email || !password || !confirmPassword) {
+        if (!name || !contacto || !password || !confirmPassword) {
             setError('Por favor completa todos los campos.');
+            return;
+        }
+        if (esProductor) {
+            if (contacto.replace(/\D/g, '').length < 10) {
+                setError('Escribe un número de celular válido (10 dígitos).');
+                return;
+            }
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contacto)) {
+            setError('Escribe un correo electrónico válido.');
             return;
         }
         if (password !== confirmPassword) {
@@ -110,10 +129,21 @@ export function RegisterPage() {
         setError('');
         setIsLoading(true);
         try {
-            await register(name, email, password, selectedRole!);
+            await register(name, contacto, password, selectedRole!);
             // Redirige según rol
             if (selectedRole === 'AGRICULTOR') {
-                navigate('/producer/dashboard', { replace: true });
+                // Productor nuevo: arranca con la finca vacía y ve el onboarding guiado.
+                [
+                    'odisea_fincas',
+                    'odisea_onboarding_productor',
+                    'odisea_finanzas_movimientos',
+                    'odisea_finanzas_periodos',
+                    'odisea_finanzas_categorias_custom',
+                    'lotes_produccion',
+                    'perfil_productor',
+                ].forEach((k) => localStorage.removeItem(k));
+                localStorage.setItem('odisea_fincas', '[]');
+                navigate('/producer/inicio', { replace: true });
             } else if (selectedRole === 'COMMUNITY_LEADER') {
                 navigate('/lider/validaciones', { replace: true });
             } else if (selectedRole === 'ENV_VERIFIER') {
@@ -170,7 +200,7 @@ export function RegisterPage() {
                         </div>
 
                         {/* Role Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                             {ROLES.map((roleCard) => {
                                 const Icon = roleCard.icon;
                                 const isSelected = selectedRole === roleCard.role;
@@ -339,18 +369,24 @@ export function RegisterPage() {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label htmlFor="reg-email" className="text-sm font-semibold text-gray-700">
-                                    Correo electrónico
+                                <label htmlFor="reg-contacto" className="text-sm font-semibold text-gray-700">
+                                    {esProductor ? 'Número de celular' : 'Correo electrónico'}
                                 </label>
                                 <Input
-                                    id="reg-email"
-                                    type="email"
-                                    placeholder="tu@correo.co"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    autoComplete="email"
+                                    id="reg-contacto"
+                                    type={esProductor ? 'tel' : 'email'}
+                                    inputMode={esProductor ? 'numeric' : 'email'}
+                                    placeholder={esProductor ? '300 123 4567' : 'tu@correo.co'}
+                                    value={contacto}
+                                    onChange={(e) => setContacto(e.target.value)}
+                                    autoComplete={esProductor ? 'tel' : 'email'}
                                     className="h-11 rounded-xl"
                                 />
+                                {esProductor && (
+                                    <p className="text-xs text-gray-400">
+                                        Con este número entrarás a la app. No necesitas correo.
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-1.5">

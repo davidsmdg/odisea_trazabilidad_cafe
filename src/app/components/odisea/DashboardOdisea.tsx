@@ -20,7 +20,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import { useNavigate } from 'react-router';
-import type { LoteUnificado } from '../../types/lote';
+import type { LoteUnificado } from '../../../types/lote';
 import { getLotes, updateLote } from '../../../services/lotesService';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';

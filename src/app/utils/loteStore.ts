@@ -21,21 +21,8 @@ export function saveLotesMaster(lotes: LoteUnificado[]) {
     localStorage.setItem('odisea_lotes_master', JSON.stringify(lotes));
 }
 
-export type ValidationStage = 'Capturado' | 'En validación' | 'Validado' | 'Rechazado' | 'Publicado';
-
-export interface ValidationLogEntry {
-    timestamp: string;
-    estadoAnterior?: ValidationStage;
-    estadoNuevo: ValidationStage;
-    responsable: string;
-    motivo?: string;
-}
-
-export interface RegistroValidacionStage {
-    loteId: string;
-    stage: ValidationStage;
-    historial: ValidationLogEntry[];
-}
+// ValidationStage / ValidationLogEntry / RegistroValidacionStage viven en types/lote.ts
+// (se importan y re-exportan arriba).
 
 export function getValidationStages(): RegistroValidacionStage[] {
     const raw = localStorage.getItem('odisea_validaciones_stage_gate');

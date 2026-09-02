@@ -114,7 +114,7 @@ export function EvaluacionSensorial() {
                                 ...l,
                                 calificacion: parseFloat(totalScore),
                                 macroperfil: macroperfilString,
-                                perfilTaza: data.notes || data.notas,
+                                perfilTaza: data.notas,
                                 fase: 3, // Asegurar que pasa a verde/trillado tras cata si aplica
                                 cataDetalle: {
                                     acidez: data.acidez,

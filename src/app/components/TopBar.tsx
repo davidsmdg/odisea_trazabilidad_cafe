@@ -105,7 +105,7 @@ export function TopBar({ activeItem }: TopBarProps) {
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => {
-                          if (user.role === 'AGRICULTOR') navigate('/producer/dashboard');
+                          if (user.role === 'AGRICULTOR') navigate('/producer/inicio');
                           else if (user.role === 'COMMUNITY_LEADER') navigate('/lider/validaciones');
                           else if (user.role === 'ENV_VERIFIER') navigate('/odisea/ambiental/revisiones');
                           else if (user.role === 'TASTER') navigate('/catador/muestras');

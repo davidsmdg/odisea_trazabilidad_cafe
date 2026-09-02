@@ -9,7 +9,10 @@ export type UserRole =
 export interface AuthUser {
   id: string;
   name: string;
-  email: string;
+  /** Correo (usuarios institucionales) o vacío para productores que entran con celular. */
+  email?: string;
+  /** Celular con el que se registra el productor. */
+  celular?: string;
   role: UserRole;
   avatarInitials: string;
 }

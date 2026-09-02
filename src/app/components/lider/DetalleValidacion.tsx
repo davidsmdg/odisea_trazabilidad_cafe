@@ -147,7 +147,7 @@ export function DetalleValidacion() {
             setIsDraftSaving(false);
             
             const savedDrafts = localStorage.getItem('borradores_offline_lider');
-            let list = [];
+            let list: any[] = [];
             if (savedDrafts) {
                 try {
                     list = JSON.parse(savedDrafts);

@@ -12,24 +12,24 @@ export function LoginPage() {
     const location = useLocation();
     const { login } = useAuth();
 
-    const [email, setEmail] = useState('');
+    const [identificador, setIdentificador] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const from = (location.state as any)?.from?.pathname || '/producer/dashboard';
+    const from = (location.state as any)?.from?.pathname || '/producer/inicio';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email || !password) {
+        if (!identificador || !password) {
             setError('Por favor completa todos los campos.');
             return;
         }
         setError('');
         setIsLoading(true);
         try {
-            await login(email, password);
+            await login(identificador, password);
             navigate(from, { replace: true });
         } catch {
             setError('Credenciales inválidas. Intenta de nuevo.');
@@ -104,25 +104,28 @@ export function LoginPage() {
                     <div className="mb-6 rounded-xl bg-[#5f705f]/5 border border-[#5f705f]/10 p-4">
                         <p className="text-xs text-[#5f705f] font-medium mb-1">🧪 Demo rápido</p>
                         <p className="text-xs text-gray-500">
-                            Usa <strong>maria@finca.co</strong> con cualquier contraseña.
+                            Productor: <strong>3124559876</strong> · Institucional: <strong>maria@finca.co</strong>. Cualquier contraseña.
                         </p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Email */}
+                        {/* Correo o celular */}
                         <div className="space-y-1.5">
-                            <label htmlFor="email" className="text-sm font-semibold text-gray-700">
-                                Correo electrónico
+                            <label htmlFor="identificador" className="text-sm font-semibold text-gray-700">
+                                Correo o número de celular
                             </label>
                             <Input
-                                id="email"
-                                type="email"
-                                placeholder="tu@correo.co"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                autoComplete="email"
+                                id="identificador"
+                                type="text"
+                                placeholder="tu@correo.co  ·  300 123 4567"
+                                value={identificador}
+                                onChange={(e) => setIdentificador(e.target.value)}
+                                autoComplete="username"
                                 className="h-11 rounded-xl"
                             />
+                            <p className="text-xs text-gray-400">
+                                Si eres productor, entra con el celular que registraste.
+                            </p>
                         </div>
 
                         {/* Password */}

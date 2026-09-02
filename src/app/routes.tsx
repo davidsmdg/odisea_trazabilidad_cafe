@@ -1,7 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { RootLayout } from './layouts/RootLayout';
 import { AuthLayout } from './layouts/AuthLayout';
-import { ProducerLayout } from './layouts/ProducerLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ExplorarOrigenes } from './pages/ExplorarOrigenes';
 import { BancoCafes } from './pages/BancoCafes';
@@ -9,13 +8,13 @@ import { TrazabilidadLote } from './pages/TrazabilidadLote';
 import { SobreNosotros } from './pages/SobreNosotros';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
-import { ProducerDashboard } from './components/producer/ProducerDashboard';
-import { MisFincas } from './components/producer/MisFincas';
-import { MisCosechas } from './components/producer/MisCosechas';
-import { NuevaCosecha } from './components/producer/NuevaCosecha';
-import { PerfilProductor } from './components/producer/PerfilProductor';
-import { ExperimentosCafe } from './components/producer/ExperimentosCafe';
-import { CostosProduccion } from './components/producer/CostosProduccion';
+import { ProducerMobileLayout } from './producer/ProducerMobileLayout';
+import { Inicio } from './producer/pages/Inicio';
+import { FincaPage } from './producer/pages/FincaPage';
+import { CuentasPage } from './producer/pages/CuentasPage';
+import { CosechasPage } from './producer/pages/CosechasPage';
+import { NuevaCosechaPage } from './producer/pages/NuevaCosechaPage';
+import { PerfilPage } from './producer/pages/PerfilPage';
 import { LiderLayout } from './layouts/LiderLayout';
 import { ValidacionesPanel } from './components/lider/ValidacionesPanel';
 import { DetalleValidacion } from './components/lider/DetalleValidacion';
@@ -40,6 +39,7 @@ import { DirectorioGeneralOdisea } from './components/odisea/DirectorioGeneralOd
 import { ControlConexionesOdisea } from './components/odisea/ControlConexionesOdisea';
 import { ExportacionesOdisea } from './components/odisea/ExportacionesOdisea';
 import { GestionUsuariosOdisea } from './components/odisea/GestionUsuariosOdisea';
+import { FinanzasProductoresOdisea } from './components/odisea/FinanzasProductoresOdisea';
 import { TostadorLayout } from './layouts/TostadorLayout';
 import { PerfilTostador } from './components/tostador/PerfilTostador';
 import { ExplorarCafes } from './components/tostador/ExplorarCafes';
@@ -94,48 +94,32 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // ── Rutas protegidas del productor ───────────────────────────────────────
+  // ── Portal del productor (móvil, offline) ────────────────────────────────
   {
     path: '/producer',
     Component: ProtectedRoute,
     children: [
       {
-        Component: ProducerLayout,
+        Component: ProducerMobileLayout,
         children: [
-          {
-            path: 'dashboard',
-            Component: ProducerDashboard,
-          },
-          // Páginas en construcción — placeholder genérico
-          {
-            path: 'fincas',
-            Component: MisFincas,
-          },
+          { index: true, element: <Navigate to="/producer/inicio" replace /> },
+          { path: 'inicio', Component: Inicio },
+          { path: 'finca', Component: FincaPage },
           {
             path: 'cosechas',
             children: [
-              {
-                index: true,
-                Component: MisCosechas,
-              },
-              {
-                path: 'nueva',
-                Component: NuevaCosecha,
-              },
+              { index: true, Component: CosechasPage },
+              { path: 'nueva', Component: NuevaCosechaPage },
             ],
           },
-          {
-            path: 'perfil',
-            Component: PerfilProductor,
-          },
-          {
-            path: 'laboratorio',
-            Component: ExperimentosCafe,
-          },
-          {
-            path: 'costos',
-            Component: CostosProduccion,
-          },
+          { path: 'cuentas', Component: CuentasPage },
+          { path: 'perfil', Component: PerfilPage },
+
+          // Redirecciones desde rutas anteriores
+          { path: 'dashboard', element: <Navigate to="/producer/inicio" replace /> },
+          { path: 'fincas', element: <Navigate to="/producer/finca" replace /> },
+          { path: 'costos', element: <Navigate to="/producer/cuentas" replace /> },
+          { path: 'laboratorio', element: <Navigate to="/producer/inicio" replace /> },
         ],
       },
     ],
@@ -269,6 +253,10 @@ export const router = createBrowserRouter([
             Component: GestionUsuariosOdisea,
           },
           {
+            path: 'finanzas',
+            Component: FinanzasProductoresOdisea,
+          },
+          {
             path: 'ambiental/revisiones',
             Component: BandejaRevision,
           },
@@ -354,19 +342,4 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
-
-// Placeholder para páginas aún no implementadas
-function ComingSoon({ page }: { page: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[#5f705f]/10 flex items-center justify-center mb-4">
-        <span className="text-3xl">🚧</span>
-      </div>
-      <h2 className="text-2xl font-sans font-bold text-[#5f705f] mb-2">{page}</h2>
-      <p className="text-gray-400 text-sm max-w-xs">
-        Esta sección está en construcción. Pronto estará disponible en el portal del productor.
-      </p>
-    </div>
-  );
-}
 

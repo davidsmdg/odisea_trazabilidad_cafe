@@ -21,7 +21,7 @@ import { cn } from '../ui/utils';
 import { toast } from 'sonner';
 
 import { useEffect } from 'react';
-import type { RegistroAuditoria } from '../../types/auditoria';
+import type { RegistroAuditoria } from '../../../types/auditoria';
 import { getHistorialAprobaciones } from '../../../services/aprobacionesService';
 import { AlertTriangle } from 'lucide-react';
 

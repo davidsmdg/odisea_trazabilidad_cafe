@@ -1,0 +1,15 @@
+{
+  "name": "Odisea — Mi Finca",
+  "short_name": "Mi Finca",
+  "description": "Registra tu finca y lleva las cuentas de tu café.",
+  "lang": "es-CO",
+  "theme_color": "#5f705f",
+  "background_color": "#FDFDF8",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/producer/inicio",
+  "scope": "/",
+  "icons": [
+    { "src": "/pwa-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

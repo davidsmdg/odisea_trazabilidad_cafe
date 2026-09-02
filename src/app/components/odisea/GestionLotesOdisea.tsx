@@ -37,8 +37,8 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { toast } from 'sonner';
 
-import type { LoteUnificado, ValidationStage } from '../../types/lote';
-import type { AnomalyRecord, AnomalyConfig } from '../../types/anomaly';
+import type { LoteUnificado, ValidationStage } from '../../../types/lote';
+import type { AnomalyRecord, AnomalyConfig } from '../../../types/anomaly';
 import { getLotes, updateLote, getValidationStageForLote, updateValidationStage } from '../../../services/lotesService';
 import { getAnomalies, resolveAnomaly, getAnomalyConfig, updateAnomalyConfig } from '../../../services/anomaliesService';
 
@@ -203,7 +203,7 @@ export function GestionLotesOdisea() {
 
         // Agregar a aprobados
         const aprobadosStr = localStorage.getItem('comentarios_publicos_aprobados');
-        let aprobadosList = [];
+        let aprobadosList: any[] = [];
         if (aprobadosStr) {
             try {
                 aprobadosList = JSON.parse(aprobadosStr);
@@ -668,13 +668,13 @@ export function GestionLotesOdisea() {
                                     </div>
                                     <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                                         <Button
-                                            onClick={() => handleRechazarValoracion(comment.id)}
+                                            onClick={() => handleReject(comment.id)}
                                             className="h-9 px-4 rounded-xl bg-rose-50 text-rose-800 hover:bg-rose-100 border-none font-bold text-[10px] uppercase tracking-wider cursor-pointer"
                                         >
                                             Descartar
                                         </Button>
                                         <Button
-                                            onClick={() => handleAprobarValoracion(comment)}
+                                            onClick={() => handleApprove(comment.id)}
                                             className="h-9 px-4 rounded-xl bg-slate-900 hover:bg-black text-white border-none font-black text-[10px] uppercase tracking-widest cursor-pointer"
                                         >
                                             Aprobar y Mostrar

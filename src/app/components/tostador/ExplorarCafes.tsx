@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getLotes } from '../../../services/lotesService';
-import type { LoteUnificado } from '../../types/lote';
+import type { LoteUnificado } from '../../../types/lote';
 import { isLotePublicado } from '../../../services/lotesService';
 import {
     Compass,

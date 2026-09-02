@@ -12,6 +12,20 @@ dist
 dist-ssr
 *.local
 
+# Env
+.env
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Figma Make runtime (no debe versionarse)
+node_runtime
+
+# Herramientas locales
+.claude
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

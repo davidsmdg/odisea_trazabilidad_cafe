@@ -19,7 +19,8 @@ import {
     UserCheck,
     Leaf,
     History,
-    Users
+    Users,
+    Wallet
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
@@ -36,6 +37,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
     { label: 'Dashboard Logístico', path: '/odisea/dashboard', icon: BarChart3 },
     { label: 'Directorio General', path: '/odisea/productores', icon: Contact },
+    { label: 'Finanzas de Productores', path: '/odisea/finanzas', icon: Wallet },
     { label: 'Gestión de Lotes', path: '/odisea/lotes', icon: PackageOpen },
     { label: 'Control de Enlaces', path: '/odisea/conexiones', icon: UserCheck },
     { label: 'Gestión de Usuarios', path: '/odisea/usuarios', icon: Users },

@@ -15,6 +15,7 @@ import {
     ClipboardCheck,
     Coffee,
     Calendar,
+    AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { Input } from '../ui/input';
@@ -53,7 +54,7 @@ const MUESTRAS_MOCK = [
 ];
 
 import { getLotes } from '../../../services/lotesService';
-import type { LoteUnificado } from '../../types/lote';
+import type { LoteUnificado } from '../../../types/lote';
 
 export function MuestrasPendientes() {
     const navigate = useNavigate();

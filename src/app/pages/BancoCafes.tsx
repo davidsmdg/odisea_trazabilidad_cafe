@@ -10,7 +10,7 @@ import { QuickViewDrawer } from '../components/QuickViewDrawer';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { LOTES_MARKET_DEFAULT } from '../data/lotes.mock';
+import { LOTES_MARKET_DEFAULT } from '../../data/lotes.mock';
 import { getLotesMarket } from '../../services/lotesService';
 
 // Generar estructura agrupada dinámica

@@ -10,14 +10,16 @@ import {
     TrendingUp,
     CheckCircle2,
     Medal,
-    Search
+    Search,
+    AlertTriangle
 } from 'lucide-react';
+import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import { Badge } from '../ui/badge';
 import { SensorRadar } from '../SensorRadar';
 
 import { getLotes } from '../../../services/lotesService';
-import type { LoteUnificado } from '../../types/lote';
+import type { LoteUnificado } from '../../../types/lote';
 import { HISTORIAL_MOCK } from '../../../data/historialCatas.mock';
 
 export function HistorialCatas() {

@@ -37,7 +37,7 @@ import {
 import { cn } from '../ui/utils';
 import { toast } from 'sonner';
 
-import type { LoteUnificado, MovimientoHistorial } from '../../types/lote';
+import type { LoteUnificado, MovimientoHistorial } from '../../../types/lote';
 import { getLotePorId, updateLote } from '../../../services/lotesService';
 import { useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';

@@ -26,7 +26,7 @@ import { Label } from '../ui/label';
 import { toast } from 'sonner';
 import { cn } from '../ui/utils';
 
-import type { UserRecord } from '../../types/usuario';
+import type { UserRecord } from '../../../types/usuario';
 import { getDefaultUsers, saveDefaultUsers } from '../../../services/usuariosService';
 import { AlertTriangle } from 'lucide-react';
 

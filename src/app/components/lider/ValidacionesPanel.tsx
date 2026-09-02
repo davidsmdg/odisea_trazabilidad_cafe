@@ -24,8 +24,8 @@ import { cn } from '../ui/utils';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
 import { useMemo } from 'react';
-import type { LoteUnificado } from '../../types/lote';
-import type { ValidacionItem } from '../../types/validation';
+import type { LoteUnificado } from '../../../types/lote';
+import type { ValidacionItem } from '../../../types/validation';
 import { getLotes, updateLote } from '../../../services/lotesService';
 
 const VALIDACIONES_MOCK: ValidacionItem[] = [

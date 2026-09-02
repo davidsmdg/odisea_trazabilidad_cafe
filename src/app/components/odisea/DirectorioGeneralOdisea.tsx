@@ -26,7 +26,7 @@ import { cn } from '../ui/utils';
 
 type ActiveTab = 'PRODUCTOR' | 'LIDER' | 'CATADOR' | 'TOSTADOR';
 
-import type { DirectorioUsuario } from '../../types/directorio';
+import type { DirectorioUsuario } from '../../../types/directorio';
 import { getProductores, getLideres, getCatadores, getTostadores } from '../../../services/directorioService';
 import { AlertTriangle } from 'lucide-react';
 

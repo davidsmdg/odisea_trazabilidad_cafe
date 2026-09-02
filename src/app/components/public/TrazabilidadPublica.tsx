@@ -199,7 +199,7 @@ export function TrazabilidadPublica() {
             };
 
             const current = localStorage.getItem('comentarios_publicos_pendientes');
-            let list = [];
+            let list: any[] = [];
             if (current) {
                 try {
                     list = JSON.parse(current);

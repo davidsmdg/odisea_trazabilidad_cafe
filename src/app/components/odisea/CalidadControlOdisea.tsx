@@ -30,7 +30,7 @@ import { Label } from '../ui/label';
 import { toast } from 'sonner';
 import { SensorRadar } from '../SensorRadar';
 import { cn } from '../ui/utils';
-import type { LoteUnificado } from '../../types/lote';
+import type { LoteUnificado } from '../../../types/lote';
 import { getLotes, updateLote } from '../../../services/lotesService';
 import { AlertTriangle } from 'lucide-react';
 
@@ -433,7 +433,7 @@ export function CalidadControlOdisea() {
                             <div className="flex items-center gap-4 bg-white p-4 rounded-[32px] border border-slate-200/60 shadow-md">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block ml-2">Cambiar Lote:</Label>
                                 <select
-                                    value={selectedLoteId}
+                                    value={selectedLoteId ?? ""}
                                     onChange={(e) => setSelectedLoteId(e.target.value)}
                                     className="h-10 px-4 rounded-xl border border-slate-200 bg-slate-50 font-black text-xs text-slate-700 outline-none cursor-pointer"
                                 >
