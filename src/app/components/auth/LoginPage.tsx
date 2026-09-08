@@ -30,7 +30,23 @@ export function LoginPage() {
         setIsLoading(true);
         try {
             await login(identificador, password);
-            navigate(from, { replace: true });
+            if ((location.state as any)?.from?.pathname) {
+                navigate(from, { replace: true });
+            } else {
+                // Redirección inteligente por rol
+                const id = identificador.trim().toLowerCase();
+                if (id.includes('admin') || id.includes('carlos@beneficio.co')) {
+                    navigate('/odisea/dashboard', { replace: true });
+                } else if (id.includes('calidad') || id.includes('taster')) {
+                    navigate('/catador/muestras', { replace: true });
+                } else if (id.includes('lider')) {
+                    navigate('/lider/validaciones', { replace: true });
+                } else if (id.includes('tostador') || id.includes('roaster')) {
+                    navigate('/tostador/explorar', { replace: true });
+                } else {
+                    navigate('/producer/inicio', { replace: true });
+                }
+            }
         } catch {
             setError('Credenciales inválidas. Intenta de nuevo.');
         } finally {
