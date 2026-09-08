@@ -1,0 +1,75 @@
+import {
+    Users,
+    Sprout,
+    Bug,
+    Truck,
+    Wrench,
+    Droplets,
+    Coffee,
+    Wallet,
+    ShoppingBasket,
+    Zap,
+    GraduationCap,
+    HeartPulse,
+    Bus,
+    Shirt,
+    CreditCard,
+    Home,
+    HardHat,
+    Store,
+    HandCoins,
+    PiggyBank,
+    type LucideIcon,
+} from 'lucide-react';
+
+/** Íconos disponibles para categorías financieras (clave -> componente). */
+export const ICONOS_FINANZAS: Record<string, LucideIcon> = {
+    jornales: Users,
+    abonos: Sprout,
+    control: Bug,
+    transporte: Truck,
+    herramientas: Wrench,
+    beneficio: Droplets,
+    cafe: Coffee,
+    mercado: ShoppingBasket,
+    servicios: Zap,
+    educacion: GraduationCap,
+    salud: HeartPulse,
+    transporteFam: Bus,
+    ropa: Shirt,
+    deudas: CreditCard,
+    casa: Home,
+    jornal: HardHat,
+    negocio: Store,
+    remesa: HandCoins,
+    ahorro: PiggyBank,
+    otro: Wallet,
+};
+
+export function iconoDe(clave: string): LucideIcon {
+    return ICONOS_FINANZAS[clave] || Wallet;
+}
+
+/** Íconos que puede elegir la productora al crear una categoría. */
+export const ICONOS_ELEGIBLES = [
+    'jornales',
+    'abonos',
+    'control',
+    'transporte',
+    'herramientas',
+    'beneficio',
+    'cafe',
+    'mercado',
+    'servicios',
+    'educacion',
+    'salud',
+    'transporteFam',
+    'ropa',
+    'deudas',
+    'casa',
+    'jornal',
+    'negocio',
+    'remesa',
+    'ahorro',
+    'otro',
+];

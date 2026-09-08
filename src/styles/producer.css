@@ -1,0 +1,66 @@
+/* ============================================================================
+   Portal del Productor — tokens y utilidades
+   Cara de app financiera: letra grande, targets grandes, mobile-first.
+   Todo va scoped a .producer-shell para no tocar el resto de la plataforma.
+   ========================================================================== */
+
+.producer-shell {
+  /* Escala tipográfica más grande que el resto de la app */
+  font-size: 17px;
+  -webkit-tap-highlight-color: transparent;
+  --pr-green: #5f705f;
+  --pr-green-dark: #4a584a;
+  --pr-gold: #bb8d3b;
+  --pr-cream: #FDFDF8;
+  --pr-ink: #2c362c;
+  --pr-tabbar-h: 4.5rem;
+  /* Alto de la barra inferior + zona segura del dispositivo */
+  --pr-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* El contenido nunca queda tapado por la barra inferior fija */
+.producer-shell .producer-scroll {
+  padding-bottom: calc(var(--pr-tabbar-h) + var(--pr-safe-bottom) + 1.5rem);
+}
+
+/* Números grandes de saldo / plata */
+.producer-shell .pr-amount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* Botón/target mínimo cómodo para dedos (WCAG + adultos mayores) */
+.producer-shell .pr-tap {
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Barra de pestañas inferior */
+.producer-shell .pr-tabbar {
+  height: calc(var(--pr-tabbar-h) + var(--pr-safe-bottom));
+  padding-bottom: var(--pr-safe-bottom);
+}
+
+/* Quita spinners de inputs numéricos: en móvil confunden */
+.producer-shell input[type='number']::-webkit-outer-spin-button,
+.producer-shell input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.producer-shell input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Animación de entrada suave para las tarjetas del portal */
+@keyframes pr-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.producer-shell .pr-rise {
+  animation: pr-rise 0.4s ease both;
+}
