@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sprout, Users, Leaf, Coffee, Building, PackageOpen, Check, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { Sprout, Users, Leaf, Coffee, Building, PackageOpen, Check, ArrowRight, ArrowLeft, Loader2, Key } from 'lucide-react';
 import { useAuth, type UserRole } from '../../context/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
+import { validarCodigoInvitacion, consumirCodigoInvitacion } from '../../../services/invitacionesService';
 
 interface RoleCard {
     role: UserRole;
@@ -86,6 +87,7 @@ export function RegisterPage() {
     // Form fields
     const [name, setName] = useState('');
     const [contacto, setContacto] = useState('');
+    const [codigoInvitacion, setCodigoInvitacion] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -105,8 +107,8 @@ export function RegisterPage() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !contacto || !password || !confirmPassword) {
-            setError('Por favor completa todos los campos.');
+        if (!name || !contacto || !codigoInvitacion || !password || !confirmPassword) {
+            setError('Por favor completa todos los campos, incluyendo el código de invitación.');
             return;
         }
         if (esProductor) {
@@ -126,10 +128,21 @@ export function RegisterPage() {
             setError('La contraseña debe tener al menos 6 caracteres.');
             return;
         }
+
         setError('');
         setIsLoading(true);
+
         try {
+            // Validar código de invitación
+            const resCodigo = await validarCodigoInvitacion(codigoInvitacion, selectedRole!);
+            if (!resCodigo.valido) {
+                setError(resCodigo.mensaje || 'Código de invitación no válido.');
+                setIsLoading(false);
+                return;
+            }
+
             await register(name, contacto, password, selectedRole!);
+            await consumirCodigoInvitacion(codigoInvitacion);
             // Redirige según rol
             if (selectedRole === 'AGRICULTOR') {
                 // Productor nuevo: arranca con la finca vacía y ve el onboarding guiado.
@@ -387,6 +400,30 @@ export function RegisterPage() {
                                         Con este número entrarás a la app. No necesitas correo.
                                     </p>
                                 )}
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="reg-codigo" className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                        <Key className="h-3.5 w-3.5 text-[#5f705f]" />
+                                        Código de invitación
+                                    </label>
+                                    <span className="text-xs text-[#a35c5c] font-medium bg-[#a35c5c]/10 px-2 py-0.5 rounded-full">
+                                        Requerido
+                                    </span>
+                                </div>
+                                <Input
+                                    id="reg-codigo"
+                                    type="text"
+                                    placeholder="Ej: CAFE-PILOTO"
+                                    value={codigoInvitacion}
+                                    onChange={(e) => setCodigoInvitacion(e.target.value.toUpperCase())}
+                                    autoComplete="off"
+                                    className="h-11 rounded-xl uppercase font-mono tracking-wider font-semibold border-amber-200 focus:border-[#5f705f]"
+                                />
+                                <p className="text-xs text-gray-400">
+                                    El registro es por invitación privada. Solicita tu código a Odisea Trace.
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">

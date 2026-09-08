@@ -16,6 +16,14 @@ export const MOCK_USERS: AuthUser[] = [
     role: 'CERES',
     avatarInitials: 'CM',
   },
+  {
+    id: 'u-admin',
+    name: 'Administrador Odisea',
+    email: 'admin@odisea.co',
+    celular: '3001234567',
+    role: 'CERES',
+    avatarInitials: 'AD',
+  },
 ];
 
 export const DEFAULT_USERS: UserRecord[] = [
