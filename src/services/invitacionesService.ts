@@ -1,4 +1,4 @@
-﻿import { supabase } from '../app/utils/supabaseClient';
+import { supabase } from '../app/utils/supabaseClient';
 import type { UserRole } from '../types/usuario';
 
 export interface CodigoInvitacion {

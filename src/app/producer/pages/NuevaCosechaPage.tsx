@@ -1,15 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, Target, ClipboardList, Loader2, ArrowRight, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
 import { addLote } from '../../../services/lotesService';
+import { getFincas } from '../../../services/fincasService';
+import type { Finca } from '../../../types/finca';
 import { detectAnomaly, detectHarvestDateAnomaly } from '../../../services/anomaliesService';
 
-const FINCAS = ['Finca La Esperanza', 'Finca Santa Helena'];
-const PARCELAS = ['Lote El Mirador', 'Lote Las Piedras'];
-const VARIEDADES = ['Geisha', 'Bourbon Rosado', 'Castillo', 'Caturra'];
+const VARIEDADES = [
+    'Castillo',
+    'Colombia',
+    'Cenicafé 1',
+    'Caturra',
+    'Bourbon Rosado',
+    'Bourbon Rojo',
+    'Geisha',
+    'Tabi',
+    'Típica',
+    'Maragogipe',
+    'Pacamara',
+    'Catuaí',
+    'San Bernardo',
+    'Otra',
+];
 const PROCESOS = [
     'Lavado',
     'Natural',
@@ -35,10 +50,46 @@ const selectClass =
 export function NuevaCosechaPage() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [fincasUsuario, setFincasUsuario] = useState<Finca[]>([]);
 
     const [finca, setFinca] = useState('');
     const [parcela, setParcela] = useState('');
     const [modalidad, setModalidad] = useState<'objetivo' | 'diario' | null>(null);
+
+    const paso2Ref = useRef<HTMLDivElement>(null);
+    const paso3Ref = useRef<HTMLDivElement>(null);
+
+    // Scroll automático al Paso 2 cuando finca y parcela están seleccionadas
+    useEffect(() => {
+        if (finca && parcela) {
+            const timer = setTimeout(() => {
+                paso2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [finca, parcela]);
+
+    // Scroll automático al Paso 3 cuando se selecciona modalidad
+    useEffect(() => {
+        if (modalidad) {
+            const timer = setTimeout(() => {
+                paso3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [modalidad]);
+
+    useEffect(() => {
+        getFincas().then((fs) => {
+            setFincasUsuario(fs);
+            if (fs.length === 1) {
+                setFinca(fs[0].nombre);
+                if (fs[0].lotesDeCafe && fs[0].lotesDeCafe.length === 1) {
+                    setParcela(fs[0].lotesDeCafe[0].nombre);
+                }
+            }
+        });
+    }, []);
 
     // Camino "Tengo un plan"
     const [variedad, setVariedad] = useState('');
@@ -160,7 +211,7 @@ export function NuevaCosechaPage() {
             } as any);
 
             toast.success(
-                modalidad === 'objetivo' ? '¡Plan de cosecha creado!' : `¡Registrado! ${peso} kg de cereza`
+                modalidad === 'objetivo' ? '¡Plan de cosecha creado!' : `¡Registrado! ${peso} kilos de cereza`
             );
             navigate('/producer/cosechas');
         } catch {
@@ -187,10 +238,22 @@ export function NuevaCosechaPage() {
             <div className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-4">
                 <p className="text-[15px] font-black text-gray-800">1. ¿De dónde es el café?</p>
                 <Campo label="Finca">
-                    <select value={finca} onChange={(e) => setFinca(e.target.value)} className={selectClass}>
-                        <option value="">Elige tu finca…</option>
-                        {FINCAS.map((f) => (
-                            <option key={f}>{f}</option>
+                    <select
+                        value={finca}
+                        onChange={(e) => {
+                            setFinca(e.target.value);
+                            const found = fincasUsuario.find((f) => f.nombre === e.target.value);
+                            if (found?.lotesDeCafe && found.lotesDeCafe.length === 1) {
+                                setParcela(found.lotesDeCafe[0].nombre);
+                            } else {
+                                setParcela('');
+                            }
+                        }}
+                        className={selectClass}
+                    >
+                        <option value="">{fincasUsuario.length === 0 ? 'Cargando fincas…' : 'Elige tu finca…'}</option>
+                        {fincasUsuario.map((f) => (
+                            <option key={f.id} value={f.nombre}>{f.nombre}</option>
                         ))}
                     </select>
                 </Campo>
@@ -202,9 +265,11 @@ export function NuevaCosechaPage() {
                         className={cn(selectClass, !finca && 'opacity-40')}
                     >
                         <option value="">Elige la parcela…</option>
-                        {PARCELAS.map((p) => (
-                            <option key={p}>{p}</option>
-                        ))}
+                        {fincasUsuario
+                            .find((f) => f.nombre === finca)
+                            ?.lotesDeCafe?.map((p) => (
+                                <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                            ))}
                     </select>
                 </Campo>
             </div>
@@ -213,10 +278,11 @@ export function NuevaCosechaPage() {
             <AnimatePresence>
                 {finca && parcela && (
                     <motion.div
+                        ref={paso2Ref}
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-3"
+                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-3 scroll-mt-6"
                     >
                         <p className="text-[15px] font-black text-gray-800">2. ¿Cómo lo quieres registrar?</p>
                         <button
@@ -237,7 +303,7 @@ export function NuevaCosechaPage() {
                             <span>
                                 <span className="block font-black text-gray-900">Tengo un plan</span>
                                 <span className="block text-[13px] text-gray-500 leading-tight">
-                                    Ej: "quiero sacar 100 kg de lavado". Defines la meta y vas sumando.
+                                    Ej: "quiero sacar 100 kilos de café lavado". Defines la meta y vas sumando.
                                 </span>
                             </span>
                         </button>
@@ -271,11 +337,12 @@ export function NuevaCosechaPage() {
             <AnimatePresence mode="wait">
                 {modalidad === 'objetivo' && (
                     <motion.div
+                        ref={paso3Ref}
                         key="plan"
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-4"
+                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-4 scroll-mt-6"
                     >
                         <p className="text-[15px] font-black text-gray-800">3. ¿Qué vas a procesar?</p>
                         <Campo label="Variedad">
@@ -302,15 +369,15 @@ export function NuevaCosechaPage() {
                                     value={kilosObjetivo}
                                     onChange={(e) => setKilosObjetivo(e.target.value)}
                                     placeholder="100"
-                                    className="w-full h-16 rounded-2xl bg-white border-2 border-gray-200 text-center text-3xl font-black text-[#5f705f] outline-none focus:border-[#5f705f]"
+                                    className="w-full h-16 rounded-2xl bg-white border-2 border-gray-200 text-center text-3xl font-black text-[#5f705f] outline-none focus:border-[#5f705f] pr-24"
                                 />
-                                <span className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-gray-300">Kg</span>
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
                             </div>
                         </Campo>
                         {Number(kilosObjetivo) > 0 && (
                             <div className="rounded-2xl bg-[#5f705f]/5 p-3 text-[13px] font-bold text-[#5f705f] flex justify-between">
                                 <span>Meta en cereza a recolectar</span>
-                                <span>{Math.round(Number(kilosObjetivo) * 1.5625)} kg</span>
+                                <span>{Math.round(Number(kilosObjetivo) * 1.5625)} kilos</span>
                             </div>
                         )}
                     </motion.div>
@@ -318,11 +385,12 @@ export function NuevaCosechaPage() {
 
                 {modalidad === 'diario' && (
                     <motion.div
+                        ref={paso3Ref}
                         key="diario"
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-4"
+                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-4 scroll-mt-6"
                     >
                         <p className="text-[15px] font-black text-gray-800">3. Anota la recolección</p>
                         <Campo label="Kilos de cereza recolectados hoy">
@@ -333,9 +401,9 @@ export function NuevaCosechaPage() {
                                     value={peso}
                                     onChange={(e) => setPeso(e.target.value)}
                                     placeholder="0"
-                                    className="w-full h-16 rounded-2xl bg-white border-2 border-gray-200 text-center text-3xl font-black text-[#bb8d3b] outline-none focus:border-[#bb8d3b]"
+                                    className="w-full h-16 rounded-2xl bg-white border-2 border-gray-200 text-center text-3xl font-black text-[#bb8d3b] outline-none focus:border-[#bb8d3b] pr-24"
                                 />
-                                <span className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-gray-300">Kg</span>
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-sm text-[#bb8d3b] bg-[#bb8d3b]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
                             </div>
                         </Campo>
                         <Campo label="Fecha">

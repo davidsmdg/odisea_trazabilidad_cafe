@@ -145,8 +145,11 @@ export function Inicio() {
                                     <span className="text-2xl">{fase.emoji}</span>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-black text-gray-900 truncate">{c.codigo}</p>
-                                        <p className={`text-[13px] font-bold ${fase.color}`}>
-                                            {fase.txt} · {kg} kg
+                                        <p className={`text-[13px] font-bold ${fase.color} flex items-center gap-1.5`}>
+                                            <span>{fase.txt}</span>
+                                            <span>·</span>
+                                            <span className="font-extrabold">{kg}</span>
+                                            <span className="text-xs uppercase tracking-wide bg-black/5 px-1.5 py-0.5 rounded font-black">kilos</span>
                                         </p>
                                     </div>
                                     <ChevronRight size={18} className="text-gray-300" />
@@ -161,33 +164,6 @@ export function Inicio() {
                         </Link>
                     </div>
                 )}
-            </section>
-
-            {/* ── Precio del día ── */}
-            <section className="rounded-3xl bg-white border border-gray-100 p-5 shadow-sm">
-                <p className="text-[12px] font-black uppercase tracking-widest text-gray-400">
-                    Precio de hoy · {precio.departamento}
-                </p>
-                <div className="flex items-end justify-between mt-2">
-                    <div>
-                        <p className="pr-amount text-3xl text-gray-900">{formatoPlata(precio.precioCarga)}</p>
-                        <p className="text-[12px] font-bold text-gray-400">por carga (125 kg pergamino)</p>
-                    </div>
-                    <span
-                        className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-black ${
-                            precio.variacionPct >= 0
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-red-50 text-red-600'
-                        }`}
-                    >
-                        <ArrowUpRight
-                            size={14}
-                            className={precio.variacionPct >= 0 ? '' : 'rotate-90'}
-                        />
-                        {precio.variacionPct >= 0 ? '+' : ''}
-                        {precio.variacionPct}%
-                    </span>
-                </div>
             </section>
 
             {/* ── Acceso a la finca ── */}

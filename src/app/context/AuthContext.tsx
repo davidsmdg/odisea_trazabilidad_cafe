@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { UserRole, AuthUser } from '../../types/usuario';
+import { supabase } from '../utils/supabaseClient';
 import { MOCK_USERS } from '../../data/usuarios.mock';
 
 export type { UserRole, AuthUser };
@@ -58,31 +59,116 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restaurar sesión al montar
-  useEffect(() => {
-    const stored = sessionStorage.getItem(SESSION_KEY);
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        sessionStorage.removeItem(SESSION_KEY);
-      }
+  const fetchUserProfile = async (userId: string): Promise<AuthUser | null> => {
+    const { data, error } = await supabase
+      .from('perfiles')
+      .select('id, nombre, email, celular, rol, avatar_initials')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      console.error('Error fetching user profile:', error);
+      return null;
     }
-    setIsLoading(false);
+
+    return {
+      id: data.id,
+      name: data.nombre,
+      email: data.email,
+      celular: data.celular || undefined,
+      role: data.rol as UserRole,
+      avatarInitials: data.avatar_initials || 'US',
+    };
+  };
+
+  // Restore and listen to session
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        if (profile) {
+          setUser(profile);
+          setIsLoading(false);
+          return;
+        }
+      }
+      const stored = sessionStorage.getItem(SESSION_KEY);
+      if (stored) {
+        try {
+          setUser(JSON.parse(stored));
+        } catch {
+          sessionStorage.removeItem(SESSION_KEY);
+        }
+      }
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUser(profile);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const persistUser = (u: AuthUser) => {
+  const SESSION_KEY = 'cerescrop_user';
+
+  const persistLocalUser = (u: AuthUser) => {
     setUser(u);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
   };
 
-  const login = async (identificador: string, _password: string) => {
-    // Simulamos latencia de red
-    await new Promise((r) => setTimeout(r, 800));
-
+  const login = async (identificador: string, password: string) => {
     const id = identificador.trim();
     const esCel = pareceCelular(id);
     const idDigitos = soloDigitos(id);
+
+    // Si Supabase está configurado, intentar autenticación en Supabase
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      // 1. Determinar el email con el cual autenticar en Supabase Auth
+      let emailAuth = id;
+      if (esCel) {
+        emailAuth = `${idDigitos}@celular.odisea.co`;
+        // También podemos verificar si ya existe un perfil con este celular que use otro email
+        try {
+          const { data: perfilFound } = await supabase
+            .from('perfiles')
+            .select('email, celular')
+            .eq('celular', idDigitos)
+            .maybeSingle();
+          if (perfilFound?.email) {
+            emailAuth = perfilFound.email;
+          }
+        } catch {}
+      }
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailAuth,
+          password,
+        });
+
+        if (!error && data.user) {
+          const profile = await fetchUserProfile(data.user.id);
+          if (profile) {
+            setUser(profile);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase auth failed, trying fallback:', err);
+      }
+    }
+
+    // Flujo demo / local si no hay conexión
+    await new Promise((r) => setTimeout(r, 600));
 
     const buscar = (lista: AuthUser[]) =>
       lista.find((u) =>
@@ -93,11 +179,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const found = buscar(MOCK_USERS) || buscar(getRegistrados());
     if (found) {
-      persistUser(found);
+      persistLocalUser(found);
       return;
     }
 
-    // Si no existe, creamos uno genérico para demo
     const genericUser: AuthUser = esCel
       ? {
           id: `u_${Date.now()}`,
@@ -113,26 +198,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: 'AGRICULTOR',
           avatarInitials: id.slice(0, 2).toUpperCase(),
         };
-    persistUser(genericUser);
+    persistLocalUser(genericUser);
   };
 
-  const register = async (name: string, contacto: string, _password: string, role: UserRole) => {
-    await new Promise((r) => setTimeout(r, 900));
-    const esProductor = role === 'AGRICULTOR';
+  const register = async (name: string, contacto: string, password: string, role: UserRole) => {
+    const rawContacto = contacto.trim();
+    const esEmail = rawContacto.includes('@');
+    const esCel = pareceCelular(rawContacto);
+    const celDigitos = soloDigitos(rawContacto);
+
+    // Email de autenticación en Supabase: si es celular, usamos un email único sintético
+    const emailSupabase = esEmail ? rawContacto : `${celDigitos}@celular.odisea.co`;
+
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: emailSupabase,
+          password,
+          options: {
+            data: {
+              nombre: name,
+              rol: role,
+              celular: esCel ? celDigitos : null,
+            },
+          },
+        });
+
+        if (!error && data.user) {
+          // Asegurar que el perfil quede con el celular y nombre en la tabla perfiles
+          try {
+            await supabase.from('perfiles').upsert({
+              id: data.user.id,
+              nombre: name,
+              email: emailSupabase,
+              celular: esCel ? celDigitos : null,
+              rol: role,
+              avatar_initials: inicialesDe(name),
+              estado: 'Habilitado',
+            });
+          } catch (upsertErr) {
+            console.warn('Error upserting perfil in Supabase:', upsertErr);
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          const profile = await fetchUserProfile(data.user.id);
+          if (profile) {
+            setUser(profile);
+            return;
+          }
+        } else if (error) {
+          console.warn('Supabase signUp error:', error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase signup failed, storing locally:', err);
+      }
+    }
+
+    await new Promise((r) => setTimeout(r, 600));
     const newUser: AuthUser = {
       id: `u_${Date.now()}`,
       name,
       role,
       avatarInitials: inicialesDe(name),
-      ...(esProductor ? { celular: contacto.trim() } : { email: contacto.trim() }),
+      ...(esEmail ? { email: rawContacto } : { celular: rawContacto }),
     };
     addRegistrado(newUser);
-    persistUser(newUser);
+    persistLocalUser(newUser);
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {}
     sessionStorage.removeItem(SESSION_KEY);
+    setUser(null);
   };
 
   return (
@@ -147,3 +286,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;
 }
+

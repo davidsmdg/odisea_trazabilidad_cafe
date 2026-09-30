@@ -64,3 +64,18 @@
 .producer-shell .pr-rise {
   animation: pr-rise 0.4s ease both;
 }
+
+/* Animación de marquesina para la barra de precio */
+@keyframes pr-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.producer-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: pr-ticker 55s linear infinite;
+}
+.producer-ticker-track:hover {
+  animation-play-state: paused;
+}
+

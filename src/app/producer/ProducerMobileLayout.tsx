@@ -3,6 +3,7 @@ import { Outlet, Link, useNavigate } from 'react-router';
 import { WifiOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { TabBar } from './components/TabBar';
+import { BarraPrecioTicker } from './components/BarraPrecioTicker';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ProducerOnboarding } from './ProducerOnboarding';
 import { debeVerOnboarding, marcarOnboarding } from './utils/onboardingFlag';
@@ -60,8 +61,13 @@ export function ProducerMobileLayout() {
 
     return (
         <div className="producer-shell min-h-screen bg-[#FDFDF8] text-[#2c362c] flex flex-col mx-auto w-full max-w-md">
+            {/* Barra de noticias y precio en movimiento arriba de todo */}
+            <div className="sticky top-0 z-40">
+                <BarraPrecioTicker />
+            </div>
+
             {/* Encabezado compacto */}
-            <header className="sticky top-0 z-30 bg-[#FDFDF8]/90 backdrop-blur-md px-5 pt-5 pb-3 flex items-center justify-between">
+            <header className="bg-[#FDFDF8]/90 backdrop-blur-md px-5 pt-3 pb-3 flex items-center justify-between border-b border-gray-100">
                 <div className="min-w-0">
                     <p className="text-[11px] font-black uppercase tracking-widest text-gray-400 capitalize truncate">
                         {hoy}
@@ -75,7 +81,7 @@ export function ProducerMobileLayout() {
                     className="h-12 w-12 shrink-0 rounded-2xl bg-[#5f705f] text-white flex items-center justify-center font-black text-base shadow-md"
                     aria-label="Mi perfil"
                 >
-                    {user?.avatarInitials || 'MG'}
+                    {user?.avatarInitials || (primerNombre ? primerNombre.slice(0, 2).toUpperCase() : 'PR')}
                 </Link>
             </header>
 

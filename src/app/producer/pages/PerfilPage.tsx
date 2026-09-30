@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../utils/supabaseClient';
 
 const selectClass =
     'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 font-bold text-gray-800 outline-none focus:border-[#5f705f]';
@@ -44,17 +45,17 @@ export function PerfilPage() {
     const { user, logout } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
 
-    const [nombre, setNombre] = useState(user?.name || 'María González');
-    const [genero, setGenero] = useState('Femenino');
-    const [fechaNacimiento, setFechaNacimiento] = useState('1980-05-15');
-    const [celular, setCelular] = useState(user?.celular || '312 455 9876');
-    const [aniosCafe, setAniosCafe] = useState('25');
+    const [nombre, setNombre] = useState(user?.name || '');
+    const [genero, setGenero] = useState('');
+    const [fechaNacimiento, setFechaNacimiento] = useState('');
+    const [celular, setCelular] = useState(user?.celular || '');
+    const [aniosCafe, setAniosCafe] = useState('');
 
-    const [tieneHijos, setTieneHijos] = useState('Si');
-    const [cuantosHijos, setCuantosHijos] = useState('2');
-    const [cuantosMenores, setCuantosMenores] = useState('1');
-    const [familiaresConviven, setFamiliaresConviven] = useState('3');
-    const [perteneceEtno, setPerteneceEtno] = useState('No');
+    const [tieneHijos, setTieneHijos] = useState('');
+    const [cuantosHijos, setCuantosHijos] = useState('');
+    const [cuantosMenores, setCuantosMenores] = useState('');
+    const [familiaresConviven, setFamiliaresConviven] = useState('');
+    const [perteneceEtno, setPerteneceEtno] = useState('');
 
     const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
     const [fotosFinca, setFotosFinca] = useState<string[]>([]);
@@ -65,25 +66,56 @@ export function PerfilPage() {
     const [transcribing, setTranscribing] = useState(false);
 
     useEffect(() => {
-        const saved = localStorage.getItem('perfil_productor');
-        if (!saved) return;
-        try {
-            const d = JSON.parse(saved);
-            if (d.nombre) setNombre(d.nombre);
-            if (d.genero) setGenero(d.genero);
-            if (d.fechaNacimiento) setFechaNacimiento(d.fechaNacimiento);
-            if (d.celular) setCelular(d.celular);
-            if (d.aniosCafe) setAniosCafe(d.aniosCafe);
-            if (d.tieneHijos) setTieneHijos(d.tieneHijos);
-            if (d.cuantosHijos) setCuantosHijos(d.cuantosHijos);
-            if (d.cuantosMenores) setCuantosMenores(d.cuantosMenores);
-            if (d.familiaresConviven) setFamiliaresConviven(d.familiaresConviven);
-            if (d.perteneceEtno) setPerteneceEtno(d.perteneceEtno);
-            if (d.historia) setHistoria(d.historia);
-            if (d.profilePhoto) setProfilePhoto(d.profilePhoto);
-            if (Array.isArray(d.fotosFinca)) setFotosFinca(d.fotosFinca);
-        } catch {}
-    }, []);
+        const cargarPerfil = async () => {
+            if (user?.id) {
+                try {
+                    const { data, error } = await supabase
+                        .from('perfiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .single();
+                    if (!error && data) {
+                        if (data.nombre) setNombre(data.nombre);
+                        if (data.genero) setGenero(data.genero);
+                        if (data.fecha_nacimiento) setFechaNacimiento(data.fecha_nacimiento);
+                        if (data.celular) setCelular(data.celular);
+                        if (data.anios_cafe) setAniosCafe(data.anios_cafe);
+                        if (data.tiene_hijos) setTieneHijos(data.tiene_hijos);
+                        if (data.cuantos_hijos) setCuantosHijos(data.cuantos_hijos);
+                        if (data.cuantos_menores) setCuantosMenores(data.cuantos_menores);
+                        if (data.familiares_conviven) setFamiliaresConviven(data.familiares_conviven);
+                        if (data.pertenece_etno) setPerteneceEtno(data.pertenece_etno);
+                        if (data.historia) setHistoria(data.historia);
+                        if (data.profile_photo) setProfilePhoto(data.profile_photo);
+                        if (Array.isArray(data.fotos_finca)) setFotosFinca(data.fotos_finca);
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Error cargando perfil de Supabase, usando local:', e);
+                }
+            }
+
+            const saved = localStorage.getItem('perfil_productor');
+            if (!saved) return;
+            try {
+                const d = JSON.parse(saved);
+                if (d.nombre) setNombre(d.nombre);
+                if (d.genero) setGenero(d.genero);
+                if (d.fechaNacimiento) setFechaNacimiento(d.fechaNacimiento);
+                if (d.celular) setCelular(d.celular);
+                if (d.aniosCafe) setAniosCafe(d.aniosCafe);
+                if (d.tieneHijos) setTieneHijos(d.tieneHijos);
+                if (d.cuantosHijos) setCuantosHijos(d.cuantosHijos);
+                if (d.cuantosMenores) setCuantosMenores(d.cuantosMenores);
+                if (d.familiaresConviven) setFamiliaresConviven(d.familiaresConviven);
+                if (d.perteneceEtno) setPerteneceEtno(d.perteneceEtno);
+                if (d.historia) setHistoria(d.historia);
+                if (d.profilePhoto) setProfilePhoto(d.profilePhoto);
+                if (Array.isArray(d.fotosFinca)) setFotosFinca(d.fotosFinca);
+            } catch {}
+        };
+        cargarPerfil();
+    }, [user?.id]);
 
     const dictar = () => {
         setIsRecording(true);
@@ -100,30 +132,56 @@ export function PerfilPage() {
         }, 2500);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setIsSaving(true);
-        setTimeout(() => {
-            localStorage.setItem(
-                'perfil_productor',
-                JSON.stringify({
-                    nombre,
-                    genero,
-                    fechaNacimiento,
-                    celular,
-                    aniosCafe,
-                    tieneHijos,
-                    cuantosHijos,
-                    cuantosMenores,
-                    familiaresConviven,
-                    perteneceEtno,
-                    historia,
-                    profilePhoto,
-                    fotosFinca,
-                })
-            );
-            setIsSaving(false);
-            toast.success('Perfil guardado');
-        }, 900);
+        const payload = {
+            nombre,
+            genero,
+            fechaNacimiento,
+            celular,
+            aniosCafe,
+            tieneHijos,
+            cuantosHijos,
+            cuantosMenores,
+            familiaresConviven,
+            perteneceEtno,
+            historia,
+            profilePhoto,
+            fotosFinca,
+        };
+        localStorage.setItem('perfil_productor', JSON.stringify(payload));
+
+        if (user?.id) {
+            try {
+                const { error } = await supabase
+                    .from('perfiles')
+                    .update({
+                        nombre,
+                        genero,
+                        fecha_nacimiento: fechaNacimiento || null,
+                        celular,
+                        anios_cafe: aniosCafe,
+                        tiene_hijos: tieneHijos,
+                        cuantos_hijos: cuantosHijos,
+                        cuantos_menores: cuantosMenores,
+                        familiares_conviven: familiaresConviven,
+                        pertenece_etno: perteneceEtno,
+                        historia,
+                        profile_photo: profilePhoto,
+                        fotos_finca: fotosFinca,
+                    })
+                    .eq('id', user.id);
+
+                if (error) {
+                    console.error('Error guardando en Supabase:', error);
+                }
+            } catch (err) {
+                console.error('Error en llamada a Supabase:', err);
+            }
+        }
+
+        setIsSaving(false);
+        toast.success('Perfil guardado');
     };
 
     const cerrarSesion = () => {
@@ -164,14 +222,25 @@ export function PerfilPage() {
 
             <Seccion title="Datos personales">
                 <Campo label="Número de celular">
-                    <input value={celular} onChange={(e) => setCelular(e.target.value)} className={selectClass} inputMode="tel" />
+                    <input
+                        value={celular}
+                        onChange={(e) => setCelular(e.target.value)}
+                        placeholder="Sin datos"
+                        className={selectClass}
+                        inputMode="tel"
+                    />
                 </Campo>
                 <div className="grid grid-cols-2 gap-3">
                     <Campo label="Género">
-                        <select value={genero} onChange={(e) => setGenero(e.target.value)} className={selectClass}>
-                            <option>Femenino</option>
-                            <option>Masculino</option>
-                            <option>Otro / Prefiero no decir</option>
+                        <select
+                            value={genero}
+                            onChange={(e) => setGenero(e.target.value)}
+                            className={cn(selectClass, !genero && 'text-gray-400')}
+                        >
+                            <option value="">Sin datos</option>
+                            <option value="Femenino">Femenino</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Otro / Prefiero no decir">Otro / Prefiero no decir</option>
                         </select>
                     </Campo>
                     <Campo label="Años en el café">
@@ -180,6 +249,7 @@ export function PerfilPage() {
                             inputMode="numeric"
                             value={aniosCafe}
                             onChange={(e) => setAniosCafe(e.target.value)}
+                            placeholder="Sin datos"
                             className={selectClass}
                         />
                     </Campo>
@@ -189,7 +259,7 @@ export function PerfilPage() {
                         type="date"
                         value={fechaNacimiento}
                         onChange={(e) => setFechaNacimiento(e.target.value)}
-                        className={selectClass}
+                        className={cn(selectClass, !fechaNacimiento && 'text-gray-400')}
                     />
                 </Campo>
             </Seccion>
@@ -201,10 +271,11 @@ export function PerfilPage() {
                         {['Si', 'No'].map((op) => (
                             <button
                                 key={op}
+                                type="button"
                                 onClick={() => setTieneHijos(op)}
                                 className={cn(
-                                    'h-10 w-16 rounded-xl font-black text-[14px]',
-                                    tieneHijos === op ? 'bg-[#5f705f] text-white' : 'bg-gray-100 text-gray-400'
+                                    'h-10 w-16 rounded-xl font-black text-[14px] transition-colors',
+                                    tieneHijos === op ? 'bg-[#5f705f] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                 )}
                             >
                                 {op}
@@ -226,6 +297,7 @@ export function PerfilPage() {
                                     inputMode="numeric"
                                     value={cuantosHijos}
                                     onChange={(e) => setCuantosHijos(e.target.value)}
+                                    placeholder="Sin datos"
                                     className={selectClass}
                                 />
                             </Campo>
@@ -235,6 +307,7 @@ export function PerfilPage() {
                                     inputMode="numeric"
                                     value={cuantosMenores}
                                     onChange={(e) => setCuantosMenores(e.target.value)}
+                                    placeholder="Sin datos"
                                     className={selectClass}
                                 />
                             </Campo>
@@ -247,6 +320,7 @@ export function PerfilPage() {
                         inputMode="numeric"
                         value={familiaresConviven}
                         onChange={(e) => setFamiliaresConviven(e.target.value)}
+                        placeholder="Sin datos"
                         className={selectClass}
                     />
                 </Campo>
@@ -256,10 +330,11 @@ export function PerfilPage() {
                         {['No', 'Si'].map((op) => (
                             <button
                                 key={op}
+                                type="button"
                                 onClick={() => setPerteneceEtno(op)}
                                 className={cn(
-                                    'h-10 w-16 rounded-xl font-black text-[14px]',
-                                    perteneceEtno === op ? 'bg-[#5f705f] text-white' : 'bg-gray-100 text-gray-400'
+                                    'h-10 w-16 rounded-xl font-black text-[14px] transition-colors',
+                                    perteneceEtno === op ? 'bg-[#5f705f] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                 )}
                             >
                                 {op}

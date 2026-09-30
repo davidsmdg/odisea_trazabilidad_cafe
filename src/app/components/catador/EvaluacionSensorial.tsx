@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
-import { updateLote } from '../../../services/lotesService';
+import { updateLote, getLotePorId } from '../../../services/lotesService';
+import { addCata } from '../../../services/catasService';
+import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     ChevronLeft,
@@ -58,7 +60,37 @@ const MOCK_LOTE = {
 export function EvaluacionSensorial() {
     const { loteId } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
+    const [lote, setLote] = useState<any>(null);
+
+    useEffect(() => {
+        if (!loteId) return;
+        if (user?.email === 'andres@finca.co') {
+            setLote(MOCK_LOTE);
+            return;
+        }
+
+        getLotePorId(loteId).then(loaded => {
+            if (loaded) {
+                setLote({
+                    id: loaded.id,
+                    productor: loaded.productor,
+                    municipio: loaded.municipio || 'Huila, Colombia',
+                    variedad: loaded.variedad || 'Variedad Desconocida',
+                    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
+                    descCosecha: 'Cosecha registrada en el sistema de trazabilidad de Odisea.',
+                    descBeneficio: `Proceso registrado: ${loaded.proceso || 'Tradicional'}.`,
+                    descSecado: 'Secado tradicional controlado en origen.'
+                });
+            } else {
+                setLote(MOCK_LOTE); // fallback
+            }
+        }).catch(err => {
+            console.error(err);
+            setLote(MOCK_LOTE);
+        });
+    }, [loteId, user]);
 
     const { register, control, handleSubmit, setValue } = useForm<FormCata>({
         defaultValues: {
@@ -137,6 +169,23 @@ export function EvaluacionSensorial() {
                     calificacion: parseFloat(totalScore),
                     macroperfil: macroperfilString
                 });
+
+                if (user && user.email !== 'andres@finca.co') {
+                    await addCata({
+                        lote_id: loteId,
+                        catador_id: user.id,
+                        acidez: Number(data.acidez),
+                        cuerpo: Number(data.cuerpo),
+                        dulzor: Number(data.dulzor),
+                        balance: Number(data.balance),
+                        limpieza: Number(data.limpieza),
+                        fragancia: 8.0,
+                        sabor: 8.0,
+                        puntaje_total: Number(totalScore),
+                        comentarios: data.notas || data.notas,
+                        desglose_notas: data.macroperfil || []
+                    });
+                }
             }
 
             toast.success('Cata registrada exitosamente', {
@@ -150,6 +199,14 @@ export function EvaluacionSensorial() {
             setIsSaving(false);
         }
     };
+
+    if (!lote) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-[#FDFBF9]">
+                <Coffee className="animate-spin text-[#5D4037]" size={48} />
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-[1400px] mx-auto pb-24 animate-in fade-in slide-in-from-bottom-8 duration-1000">
@@ -193,17 +250,17 @@ export function EvaluacionSensorial() {
                             <div className="relative group/avatar">
                                 <div className="absolute inset-0 bg-[#5D4037]/10 rounded-full blur-2xl group-hover:bg-[#5D4037]/20 transition-all" />
                                 <div className="h-32 w-32 rounded-full border-4 border-white shadow-2xl overflow-hidden relative mb-6">
-                                    <img src={MOCK_LOTE.avatar} alt={MOCK_LOTE.productor} className="h-full w-full object-cover" />
+                                    <img src={lote.avatar} alt={lote.productor} className="h-full w-full object-cover" />
                                 </div>
                                 <div className="absolute bottom-6 right-0 bg-[#5D4037] text-white p-2 rounded-full border-4 border-white shadow-xl">
                                     <Quote size={12} />
                                 </div>
                             </div>
-                            <h3 className="text-2xl font-sans font-black text-[#5D4037] tracking-tight">{MOCK_LOTE.productor}</h3>
-                            <p className="text-[#8D6E63] text-xs font-black uppercase tracking-[0.2em] mt-2 mb-6">{MOCK_LOTE.municipio}</p>
+                            <h3 className="text-2xl font-sans font-black text-[#5D4037] tracking-tight">{lote.productor}</h3>
+                            <p className="text-[#8D6E63] text-xs font-black uppercase tracking-[0.2em] mt-2 mb-6">{lote.municipio}</p>
 
                             <Badge className="bg-white hover:bg-white text-[#5D4037] border-2 border-[#EADDCA] rounded-full py-1.5 px-6 text-xs font-black uppercase tracking-widest shadow-sm">
-                                Variedad: {MOCK_LOTE.variedad}
+                                Variedad: {lote.variedad}
                             </Badge>
                         </div>
 
@@ -215,7 +272,7 @@ export function EvaluacionSensorial() {
                                         <div className="flex items-center gap-3"><Wheat size={16} className="text-[#8D6E63]" /> Cosecha</div>
                                     </AccordionTrigger>
                                     <AccordionContent className="text-[#5D4037]/70 text-sm leading-relaxed px-2 font-medium bg-[#FDFBF9] rounded-xl p-4 mt-2">
-                                        {MOCK_LOTE.descCosecha}
+                                        {lote.descCosecha}
                                     </AccordionContent>
                                 </AccordionItem>
                                 <AccordionItem value="beneficio" className="border border-[#D7CCC8] bg-white rounded-[24px] overflow-hidden px-4 py-2 hover:border-[#8D6E63] transition-colors">
@@ -223,7 +280,7 @@ export function EvaluacionSensorial() {
                                         <div className="flex items-center gap-3"><Droplets size={16} className="text-[#8D6E63]" /> Beneficio</div>
                                     </AccordionTrigger>
                                     <AccordionContent className="text-[#5D4037]/70 text-sm leading-relaxed px-2 font-medium bg-[#FDFBF9] rounded-xl p-4 mt-2">
-                                        {MOCK_LOTE.descBeneficio}
+                                        {lote.descBeneficio}
                                     </AccordionContent>
                                 </AccordionItem>
                                 <AccordionItem value="secado" className="border border-[#D7CCC8] bg-white rounded-[24px] overflow-hidden px-4 py-2 hover:border-[#8D6E63] transition-colors">
@@ -231,7 +288,7 @@ export function EvaluacionSensorial() {
                                         <div className="flex items-center gap-3"><Wind size={16} className="text-[#8D6E63]" /> Secado</div>
                                     </AccordionTrigger>
                                     <AccordionContent className="text-[#5D4037]/70 text-sm leading-relaxed px-2 font-medium bg-[#FDFBF9] rounded-xl p-4 mt-2">
-                                        {MOCK_LOTE.descSecado}
+                                        {lote.descSecado}
                                     </AccordionContent>
                                 </AccordionItem>
                             </Accordion>

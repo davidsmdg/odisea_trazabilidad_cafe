@@ -102,10 +102,10 @@ export function MisLotesTostador() {
                         <Button onClick={() => window.location.reload()} className="bg-[#5f705f] text-white font-black px-6 py-2 rounded-xl border-none">Reintentar</Button>
                     </div>
                 ) : lotesComprados.length === 0 ? (
-                    <div className="p-16 text-center rounded-[32px] border-2 border-dashed border-gray-200 bg-gray-50/50">
+                    <div className="p-6 md:p-16 text-center rounded-[32px] border-2 border-dashed border-gray-200 bg-gray-50/50">
                         <Coffee className="text-gray-300 mx-auto mb-4" size={48} />
                         <p className="text-gray-500 font-bold text-lg">No tiene lotes reservados en su portafolio.</p>
-                        <Button onClick={() => navigate('/tostador/explorar')} className="bg-[#5f705f] text-white font-black px-6 py-2 rounded-xl mt-4 border-none">Explorar Catálogo</Button>
+                        <Button onClick={() => navigate('/tostador/explorar')} className="bg-[#5f705f] text-white font-black px-6 py-2 rounded-xl mt-4 border-none w-full sm:w-auto flex items-center justify-center mx-auto">Explorar Catálogo</Button>
                     </div>
                 ) : (
                     <>

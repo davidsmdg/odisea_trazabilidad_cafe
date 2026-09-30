@@ -90,7 +90,7 @@ function kilosActuales(lote: any) {
 function NumeroGrande({
     value,
     onChange,
-    sufijo = 'Kg',
+    sufijo = 'kilos',
     color = 'text-[#5f705f]',
     autoFocus,
 }: {
@@ -110,13 +110,15 @@ function NumeroGrande({
                 autoFocus={autoFocus}
                 placeholder="0"
                 className={cn(
-                    'w-full h-20 rounded-2xl bg-white border-2 border-gray-200 text-center text-4xl font-black outline-none focus:border-[#5f705f]',
+                    'w-full h-20 rounded-2xl bg-white border-2 border-gray-200 text-center text-4xl font-black outline-none focus:border-[#5f705f] pr-24',
                     color
                 )}
             />
-            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg font-black text-gray-300">
-                {sufijo}
-            </span>
+            {sufijo && (
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                    {sufijo}
+                </span>
+            )}
         </div>
     );
 }
@@ -212,7 +214,7 @@ export function CosechasPage() {
                 return { ...l, pesos: { ...l.pesos, cereza: total }, fase: Math.max(1, l.fase), estado: 'Cereza (Fresco)' };
             });
             await guardar(next);
-            toast.success(`+${num} kg de cereza en ${lote.codigo}`);
+            toast.success(`+${num} kilos de cereza en ${lote.codigo}`);
             try {
                 const a = await detectAnomaly(lote.codigo, 'peso_cereza', total, lote.finca || 'Finca La Esperanza', 'María González');
                 if (a)
@@ -236,7 +238,7 @@ export function CosechasPage() {
                         : l
                 )
             );
-            toast.success(`${lote.codigo}: ${num} kg de pergamino seco`);
+            toast.success(`${lote.codigo}: ${num} kilos de pergamino seco`);
             try {
                 const a = await detectAnomaly(lote.codigo, 'peso_pergamino', num, lote.finca || 'Finca La Esperanza', 'María González');
                 if (a) toast.warning('Peso poco usual', { description: 'Se registró para revisión.' });
@@ -257,7 +259,7 @@ export function CosechasPage() {
                         : l
                 )
             );
-            toast.success(`${lote.codigo} trillado: ${num} kg de verde 🌾`);
+            toast.success(`${lote.codigo} trillado: ${num} kilos de verde 🌾`);
         } else if (tipo === 'anotar_proceso') {
             if (!selectValue) return toast.error('Elige un proceso');
             await guardar(
@@ -424,9 +426,9 @@ export function CosechasPage() {
                                             <span className="text-base">{info.emoji}</span> {info.txt}
                                         </p>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right flex items-baseline gap-1.5">
                                         <p className="pr-amount text-2xl text-gray-900">{formatoNumero(kilosActuales(lote))}</p>
-                                        <p className="text-[11px] font-bold uppercase text-gray-400">kg</p>
+                                        <span className="text-xs font-black uppercase text-[#5f705f] bg-[#5f705f]/10 px-2 py-0.5 rounded-md">kilos</span>
                                     </div>
                                 </div>
 
@@ -442,10 +444,10 @@ export function CosechasPage() {
                                 {/* Progreso de meta */}
                                 {lote.modalidad === 'objetivo' && lote.pesos.objetivo > 0 && (
                                     <div className="rounded-2xl bg-[#5f705f]/5 p-3">
-                                        <div className="flex justify-between text-[12px] font-black text-gray-600">
+                                        <div className="flex justify-between items-center text-[12px] font-black text-gray-600">
                                             <span>Recolección</span>
-                                            <span>
-                                                {formatoNumero(lote.pesos.cereza || 0)} / {formatoNumero(lote.pesos.objetivo)} kg
+                                            <span className="font-extrabold text-[#5f705f]">
+                                                {formatoNumero(lote.pesos.cereza || 0)} / {formatoNumero(lote.pesos.objetivo)} kilos
                                             </span>
                                         </div>
                                         <div className="h-2.5 bg-white rounded-full mt-2 overflow-hidden border border-gray-200">
@@ -574,7 +576,7 @@ export function CosechasPage() {
                     Puntaje SCA que le dio el catador al lote{' '}
                     <span className="font-black text-gray-800">{modal?.lote.codigo}</span>.
                 </p>
-                <NumeroGrande value={inputValue} onChange={setInputValue} sufijo="pts" color="text-gray-900" autoFocus />
+                <NumeroGrande value={inputValue} onChange={setInputValue} sufijo="puntos" color="text-gray-900" autoFocus />
                 <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5">
                     Guardar puntaje
                 </button>
@@ -811,15 +813,15 @@ function HistoriaMermas({ lote }: { lote: any }) {
             <div className="rounded-2xl bg-white border border-gray-100 px-4">
                 <div className={rowStyle}>
                     <span className="text-[14px] font-bold text-gray-500">🍒 Cereza recolectada</span>
-                    <span className="font-black text-gray-900">{formatoNumero(cereza)} kg</span>
+                    <span className="font-black text-gray-900">{formatoNumero(cereza)} kilos</span>
                 </div>
                 <div className={rowStyle}>
                     <span className="text-[14px] font-bold text-gray-500">☀️ Pergamino seco</span>
-                    <span className="font-black text-gray-900">{pergamino > 0 ? `${formatoNumero(pergamino)} kg` : 'Pendiente'}</span>
+                    <span className="font-black text-gray-900">{pergamino > 0 ? `${formatoNumero(pergamino)} kilos` : 'Pendiente'}</span>
                 </div>
                 <div className={rowStyle}>
                     <span className="text-[14px] font-bold text-gray-500">🌾 Café verde</span>
-                    <span className="font-black text-[#5f705f]">{verde > 0 ? `${formatoNumero(verde)} kg` : 'Pendiente'}</span>
+                    <span className="font-black text-[#5f705f]">{verde > 0 ? `${formatoNumero(verde)} kilos` : 'Pendiente'}</span>
                 </div>
             </div>
             {cereza > 0 && pergamino > 0 && (

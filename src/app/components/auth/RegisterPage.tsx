@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sprout, Users, Leaf, Coffee, Building, PackageOpen, Check, ArrowRight, ArrowLeft, Loader2, Key } from 'lucide-react';
+import { Sprout, Users, Leaf, Coffee, Building, PackageOpen, Check, ArrowRight, ArrowLeft, Loader2, KeyRound } from 'lucide-react';
 import { useAuth, type UserRole } from '../../context/AuthContext';
+import { validarCodigoInvitacion, consumirCodigoInvitacion } from '../../../services/invitacionesService';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
-import { validarCodigoInvitacion, consumirCodigoInvitacion } from '../../../services/invitacionesService';
 
 interface RoleCard {
     role: UserRole;
@@ -16,6 +16,7 @@ interface RoleCard {
     color: string;
     bgColor: string;
     borderColor: string;
+    disabled?: boolean;
 }
 
 const ROLES: RoleCard[] = [
@@ -38,15 +39,6 @@ const ROLES: RoleCard[] = [
         borderColor: 'border-[#5a8f5b]',
     },
     {
-        role: 'ENV_VERIFIER',
-        icon: Leaf,
-        title: 'Verificador ambiental',
-        description: 'Reviso cumplimiento EUDR y linderos.',
-        color: 'text-[#3f7d3f]',
-        bgColor: 'bg-[#3f7d3f]',
-        borderColor: 'border-[#3f7d3f]',
-    },
-    {
         role: 'TASTER',
         icon: Coffee,
         title: 'Catador',
@@ -56,15 +48,6 @@ const ROLES: RoleCard[] = [
         borderColor: 'border-[#a35c5c]',
     },
     {
-        role: 'CERES',
-        icon: Building,
-        title: 'Odisea Trace',
-        description: 'Gestiono almacenamiento, exportación y auditoría ambiental.',
-        color: 'text-[#4A5568]',
-        bgColor: 'bg-[#4A5568]',
-        borderColor: 'border-[#4A5568]',
-    },
-    {
         role: 'ROASTER',
         icon: PackageOpen,
         title: 'Tostador / Cliente',
@@ -72,6 +55,26 @@ const ROLES: RoleCard[] = [
         color: 'text-[#D97706]',
         bgColor: 'bg-[#D97706]',
         borderColor: 'border-[#D97706]',
+    },
+    {
+        role: 'CERES',
+        icon: Building,
+        title: 'Odisea Trace',
+        description: 'Gestiono almacenamiento, exportación y auditoría ambiental.',
+        color: 'text-[#4A5568]',
+        bgColor: 'bg-[#4A5568]',
+        borderColor: 'border-[#4A5568]',
+        disabled: true,
+    },
+    {
+        role: 'ENV_VERIFIER',
+        icon: Leaf,
+        title: 'Verificador ambiental',
+        description: 'Reviso cumplimiento EUDR y linderos.',
+        color: 'text-[#3f7d3f]',
+        bgColor: 'bg-[#3f7d3f]',
+        borderColor: 'border-[#3f7d3f]',
+        disabled: true,
     },
 ];
 
@@ -94,7 +97,6 @@ export function RegisterPage() {
     const [error, setError] = useState('');
 
     const selectedRoleData = ROLES.find((r) => r.role === selectedRole);
-    const esProductor = selectedRole === 'AGRICULTOR';
 
     const handleRoleSelect = (role: UserRole) => {
         setSelectedRole(role);
@@ -107,19 +109,20 @@ export function RegisterPage() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !contacto || !codigoInvitacion || !password || !confirmPassword) {
+        if (!name.trim() || !contacto.trim() || !password || !confirmPassword || !codigoInvitacion.trim()) {
             setError('Por favor completa todos los campos, incluyendo el código de invitación.');
             return;
         }
-        if (esProductor) {
-            if (contacto.replace(/\D/g, '').length < 10) {
-                setError('Escribe un número de celular válido (10 dígitos).');
-                return;
-            }
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contacto)) {
-            setError('Escribe un correo electrónico válido.');
+
+        const rawContacto = contacto.trim();
+        const esEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawContacto);
+        const esCelular = rawContacto.replace(/\D/g, '').length >= 10;
+
+        if (!esEmail && !esCelular) {
+            setError('Ingresa un correo electrónico válido o un número de celular de al menos 10 dígitos.');
             return;
         }
+
         if (password !== confirmPassword) {
             setError('Las contraseñas no coinciden.');
             return;
@@ -136,13 +139,14 @@ export function RegisterPage() {
             // Validar código de invitación
             const resCodigo = await validarCodigoInvitacion(codigoInvitacion, selectedRole!);
             if (!resCodigo.valido) {
-                setError(resCodigo.mensaje || 'Código de invitación no válido.');
+                setError(resCodigo.mensaje || 'El código de invitación no es válido.');
                 setIsLoading(false);
                 return;
             }
 
-            await register(name, contacto, password, selectedRole!);
+            await register(name.trim(), rawContacto, password, selectedRole!);
             await consumirCodigoInvitacion(codigoInvitacion);
+
             // Redirige según rol
             if (selectedRole === 'AGRICULTOR') {
                 // Productor nuevo: arranca con la finca vacía y ve el onboarding guiado.
@@ -178,7 +182,7 @@ export function RegisterPage() {
     };
 
     return (
-        <div className={cn("mx-auto w-full px-4 sm:px-0 transition-all duration-500", step === 'role-select' ? "max-w-6xl" : "max-w-md")}>
+        <div className={cn("mx-auto w-full px-6 sm:px-0 transition-all duration-500 flex flex-col flex-1 h-full sm:h-auto", step === 'role-select' ? "max-w-6xl" : "max-w-md")}>
             <AnimatePresence mode="wait">
                 {step === 'role-select' && (
                     <motion.div
@@ -187,136 +191,173 @@ export function RegisterPage() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -24 }}
                         transition={{ duration: 0.3 }}
+                        className="flex flex-col h-[calc(100vh-85px)] sm:h-auto"
                     >
-                        {/* Header */}
-                        <div className="text-center sm:text-left mb-8 relative">
-                            {/* Option to return to Home */}
-                            <Link
-                                to="/"
-                                className="sm:absolute left-0 top-0 inline-flex items-center text-sm font-semibold text-[#5f705f] hover:text-[#bb8d3b] mb-6 group transition-colors"
-                            >
-                                <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                                Volver al Inicio
-                            </Link>
+                        {/* Scrollable middle container (Header + Cards) */}
+                        <div className="flex-1 overflow-y-auto pr-1 mb-4 space-y-6 sm:overflow-visible">
+                            {/* Header */}
+                            <div className="text-left relative space-y-4">
+                                {/* Option to return to Home */}
+                                <div>
+                                    <Link
+                                        to="/"
+                                        className="inline-flex items-center text-sm font-semibold text-[#5f705f] hover:text-[#bb8d3b] group transition-colors"
+                                    >
+                                        <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                                        Volver al Inicio
+                                    </Link>
+                                </div>
 
-                            <div className="mt-12 sm:mt-8">
-                                <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-4">
-                                    Paso 1 de 2
-                                </span>
-                                <h1 className="text-3xl sm:text-4xl font-sans text-[#5f705f] font-bold leading-tight">
-                                    ¿Cuál es tu rol en la cadena de valor?
-                                </h1>
-                                <p className="mt-3 text-gray-500 text-sm">
-                                    Elige el que mejor describe tu actividad principal.
-                                </p>
+                                <div>
+                                    <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-1">
+                                        Paso 1 de 2
+                                    </span>
+                                    <h1 className="text-3xl sm:text-4xl font-sans text-[#5f705f] font-bold leading-tight">
+                                        ¿Cuál es tu rol en la cadena de valor?
+                                    </h1>
+                                    <p className="mt-1 text-gray-500 text-sm">
+                                        Elige el que mejor describe tu actividad principal.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Role Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
+                                {ROLES.map((roleCard) => {
+                                    const Icon = roleCard.icon;
+                                    const isSelected = selectedRole === roleCard.role;
+                                    const isDisabled = !!roleCard.disabled;
+
+                                    return (
+                                        <div key={roleCard.role} className="flex flex-col gap-2">
+                                            <motion.button
+                                                type="button"
+                                                disabled={isDisabled}
+                                                onClick={() => !isDisabled && handleRoleSelect(roleCard.role)}
+                                                whileHover={isDisabled ? {} : { scale: 1.02 }}
+                                                whileTap={isDisabled ? {} : { scale: 0.98 }}
+                                                className={cn(
+                                                    'relative w-full flex-1 flex flex-col text-left p-6 rounded-2xl border-2 transition-all bg-white',
+                                                    isDisabled
+                                                        ? 'opacity-60 bg-gray-50 border-gray-200 cursor-not-allowed filter grayscale'
+                                                        : isSelected
+                                                        ? `${roleCard.borderColor} shadow-lg cursor-pointer`
+                                                        : 'border-gray-200 hover:border-gray-300 hover:shadow-md cursor-pointer'
+                                                )}
+                                            >
+                                                {/* Badge si está deshabilitado */}
+                                                {isDisabled && (
+                                                    <span className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-wider bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+                                                        Próximamente
+                                                    </span>
+                                                )}
+
+                                                {/* Check badge */}
+                                                <AnimatePresence>
+                                                    {isSelected && !isDisabled && (
+                                                        <motion.div
+                                                            initial={{ scale: 0, opacity: 0 }}
+                                                            animate={{ scale: 1, opacity: 1 }}
+                                                            exit={{ scale: 0, opacity: 0 }}
+                                                            className={cn(
+                                                                'absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center',
+                                                                roleCard.bgColor
+                                                            )}
+                                                        >
+                                                            <Check className="h-3.5 w-3.5 text-white" />
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+
+                                                {/* Icon */}
+                                                <div
+                                                    className={cn(
+                                                        'w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors',
+                                                        isDisabled
+                                                            ? 'bg-gray-200 text-gray-400'
+                                                            : isSelected
+                                                            ? roleCard.bgColor
+                                                            : 'bg-gray-100'
+                                                    )}
+                                                >
+                                                    <Icon
+                                                        className={cn(
+                                                            'h-6 w-6 transition-colors',
+                                                            isDisabled
+                                                                ? 'text-gray-400'
+                                                                : isSelected
+                                                                ? 'text-white'
+                                                                : 'text-gray-400'
+                                                        )}
+                                                    />
+                                                </div>
+
+                                                {/* Text */}
+                                                <h3
+                                                    className={cn(
+                                                        'font-bold text-base mb-1 transition-colors',
+                                                        isDisabled
+                                                            ? 'text-gray-500'
+                                                            : isSelected
+                                                            ? roleCard.color
+                                                            : 'text-gray-800'
+                                                    )}
+                                                >
+                                                    {roleCard.title}
+                                                </h3>
+                                                <p className="text-sm text-gray-500 leading-relaxed">
+                                                    {roleCard.description}
+                                                </p>
+                                            </motion.button>
+
+                                            {/* Warning notice directly below this card if selected and not Agricultor */}
+                                            <AnimatePresence>
+                                                {isSelected && !isDisabled && roleCard.role !== 'AGRICULTOR' && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                                                            🚧 El portal para <strong>{roleCard.title}</strong> está en construcción.
+                                                            Podrás completar el registro pero el acceso avanzado llegará pronto.
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {/* Role Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                            {ROLES.map((roleCard) => {
-                                const Icon = roleCard.icon;
-                                const isSelected = selectedRole === roleCard.role;
-                                return (
-                                    <motion.button
-                                        key={roleCard.role}
-                                        onClick={() => handleRoleSelect(roleCard.role)}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        className={cn(
-                                            'relative w-full flex flex-col text-left p-6 rounded-2xl border-2 transition-all cursor-pointer bg-white',
-                                            isSelected
-                                                ? `${roleCard.borderColor} shadow-lg`
-                                                : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                                        )}
-                                    >
-                                        {/* Check badge */}
-                                        <AnimatePresence>
-                                            {isSelected && (
-                                                <motion.div
-                                                    initial={{ scale: 0, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    exit={{ scale: 0, opacity: 0 }}
-                                                    className={cn(
-                                                        'absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center',
-                                                        roleCard.bgColor
-                                                    )}
-                                                >
-                                                    <Check className="h-3.5 w-3.5 text-white" />
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-
-                                        {/* Icon */}
-                                        <div
-                                            className={cn(
-                                                'w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors',
-                                                isSelected ? roleCard.bgColor : 'bg-gray-100'
-                                            )}
-                                        >
-                                            <Icon
-                                                className={cn(
-                                                    'h-6 w-6 transition-colors',
-                                                    isSelected ? 'text-white' : 'text-gray-400'
-                                                )}
-                                            />
-                                        </div>
-
-                                        {/* Text */}
-                                        <h3
-                                            className={cn(
-                                                'font-bold text-base mb-1 transition-colors',
-                                                isSelected ? roleCard.color : 'text-gray-800'
-                                            )}
-                                        >
-                                            {roleCard.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-500 leading-relaxed">
-                                            {roleCard.description}
-                                        </p>
-                                    </motion.button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Non-producer notice */}
-                        <AnimatePresence>
-                            {selectedRole && selectedRole !== 'AGRICULTOR' && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -8 }}
-                                    className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700"
+                        {/* Fixed actions at the bottom (never scrolls) */}
+                        <div className="shrink-0 -mx-6 px-6 pt-5 pb-8 bg-[#e8efe8] border-t border-[#ccdccd] rounded-t-[28px] mt-auto shadow-[0_-8px_24px_rgba(95,112,95,0.08)]">
+                            <div className="flex flex-col sm:flex-row items-center gap-4">
+                                <Button
+                                    onClick={handleContinue}
+                                    disabled={!selectedRole}
+                                    className={cn(
+                                        'w-full sm:flex-1 h-12 rounded-xl font-bold gap-2 text-sm transition-all cursor-pointer',
+                                        selectedRole
+                                            ? 'bg-[#5f705f] hover:bg-[#234d24] text-white shadow-md'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    )}
                                 >
-                                    🚧 El portal para <strong>{selectedRoleData?.title}</strong> está en construcción.
-                                    Podrás completar el registro pero el acceso avanzado llegará pronto.
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                    Continuar con{' '}
+                                    {selectedRoleData ? selectedRoleData.title : 'selección'}
+                                    <ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </div>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
-                            <Button
-                                onClick={handleContinue}
-                                disabled={!selectedRole}
-                                className={cn(
-                                    'w-full sm:flex-1 h-12 rounded-xl font-bold gap-2 text-sm transition-all',
-                                    selectedRole
-                                        ? 'bg-[#5f705f] hover:bg-[#234d24] text-white'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                )}
-                            >
-                                Continuar con{' '}
-                                {selectedRoleData ? selectedRoleData.title : 'selección'}
-                                <ArrowRight className="h-4 w-4" />
-                            </Button>
+                            <p className="mt-4 text-center text-sm text-[#415341] font-semibold">
+                                ¿Ya tienes cuenta?{' '}
+                                <Link to="/auth/login" className="text-[#2a562a] font-bold hover:underline">
+                                    Iniciar sesión
+                                </Link>
+                            </p>
                         </div>
-
-                        <p className="mt-6 text-center text-sm text-gray-500">
-                            ¿Ya tienes cuenta?{' '}
-                            <Link to="/auth/login" className="text-[#5f705f] font-semibold hover:underline">
-                                Iniciar sesión
-                            </Link>
-                        </p>
                     </motion.div>
                 )}
 
@@ -330,42 +371,43 @@ export function RegisterPage() {
                         className="max-w-md mx-auto"
                     >
                         {/* Header */}
-                        <div className="mb-8">
+                        <div className="mb-6">
                             <button
                                 onClick={() => setStep('role-select')}
-                                className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#5f705f] transition-colors mb-6 cursor-pointer"
+                                className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#5f705f] transition-colors mb-4 cursor-pointer font-medium"
                             >
                                 <ArrowLeft className="h-4 w-4" />
                                 Cambiar rol
                             </button>
 
-                            {/* Role badge */}
-                            {selectedRoleData && (
-                                <div
-                                    className={cn(
-                                        'inline-flex items-center gap-2 rounded-full px-4 py-2 mb-4',
-                                        `${selectedRoleData.bgColor}/10`
-                                    )}
-                                >
-                                    <selectedRoleData.icon className={cn('h-4 w-4', selectedRoleData.color)} />
-                                    <span className={cn('text-sm font-bold', selectedRoleData.color)}>
-                                        {selectedRoleData.title}
-                                    </span>
-                                </div>
-                            )}
+                            <div className="flex items-center justify-between gap-3 mb-3">
+                                {selectedRoleData && (
+                                    <div
+                                        className={cn(
+                                            'inline-flex items-center gap-2 rounded-full px-3.5 py-1.5',
+                                            `${selectedRoleData.bgColor}/10`
+                                        )}
+                                    >
+                                        <selectedRoleData.icon className={cn('h-4 w-4', selectedRoleData.color)} />
+                                        <span className={cn('text-xs font-bold uppercase tracking-wider', selectedRoleData.color)}>
+                                            {selectedRoleData.title}
+                                        </span>
+                                    </div>
+                                )}
+                                <span className="text-xs font-bold tracking-widest uppercase text-[#a35c5c]">
+                                    Paso 2 de 2
+                                </span>
+                            </div>
 
-                            <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-2 block">
-                                Paso 2 de 2
-                            </span>
-                            <h1 className="text-3xl font-sans text-[#5f705f] font-bold">
+                            <h1 className="text-2xl sm:text-3xl font-sans text-[#5f705f] font-bold">
                                 Crea tu cuenta
                             </h1>
-                            <p className="text-gray-500 text-sm mt-2">
-                                Solo necesitamos unos datos básicos para comenzar.
+                            <p className="text-gray-500 text-sm mt-1.5">
+                                Solo necesitamos unos datos básicos y tu código de acceso para comenzar.
                             </p>
                         </div>
 
-                        <form onSubmit={handleRegister} className="space-y-5 bg-white p-8 rounded-2xl shadow-xl border border-black/5">
+                        <form onSubmit={handleRegister} className="space-y-4 bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-black/5">
                             <div className="space-y-1.5">
                                 <label htmlFor="reg-name" className="text-sm font-semibold text-gray-700">
                                     Nombre completo
@@ -383,46 +425,40 @@ export function RegisterPage() {
 
                             <div className="space-y-1.5">
                                 <label htmlFor="reg-contacto" className="text-sm font-semibold text-gray-700">
-                                    {esProductor ? 'Número de celular' : 'Correo electrónico'}
+                                    Correo o número de celular
                                 </label>
                                 <Input
                                     id="reg-contacto"
-                                    type={esProductor ? 'tel' : 'email'}
-                                    inputMode={esProductor ? 'numeric' : 'email'}
-                                    placeholder={esProductor ? '300 123 4567' : 'tu@correo.co'}
+                                    type="text"
+                                    placeholder="300 123 4567 o correo@ejemplo.com"
                                     value={contacto}
                                     onChange={(e) => setContacto(e.target.value)}
-                                    autoComplete={esProductor ? 'tel' : 'email'}
+                                    autoComplete="username"
                                     className="h-11 rounded-xl"
                                 />
-                                {esProductor && (
-                                    <p className="text-xs text-gray-400">
-                                        Con este número entrarás a la app. No necesitas correo.
-                                    </p>
-                                )}
+                                <p className="text-xs text-gray-400">
+                                    Puedes registrarte con tu correo electrónico o tu número de celular.
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                    <label htmlFor="reg-codigo" className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                        <Key className="h-3.5 w-3.5 text-[#5f705f]" />
-                                        Código de invitación
-                                    </label>
-                                    <span className="text-xs text-[#a35c5c] font-medium bg-[#a35c5c]/10 px-2 py-0.5 rounded-full">
-                                        Requerido
-                                    </span>
+                                <label htmlFor="reg-codigo" className="text-sm font-semibold text-gray-700 flex items-center justify-between">
+                                    <span>Código de invitación</span>
+                                    <span className="text-xs font-normal text-gray-400">Requerido</span>
+                                </label>
+                                <div className="relative">
+                                    <Input
+                                        id="reg-codigo"
+                                        type="text"
+                                        placeholder="Ej: CAFE-PILOTO o ODISEA-VIP"
+                                        value={codigoInvitacion}
+                                        onChange={(e) => setCodigoInvitacion(e.target.value.toUpperCase())}
+                                        className="h-11 rounded-xl font-mono uppercase tracking-wider pl-10"
+                                    />
+                                    <KeyRound className="h-4 w-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                 </div>
-                                <Input
-                                    id="reg-codigo"
-                                    type="text"
-                                    placeholder="Ej: CAFE-PILOTO"
-                                    value={codigoInvitacion}
-                                    onChange={(e) => setCodigoInvitacion(e.target.value.toUpperCase())}
-                                    autoComplete="off"
-                                    className="h-11 rounded-xl uppercase font-mono tracking-wider font-semibold border-amber-200 focus:border-[#5f705f]"
-                                />
                                 <p className="text-xs text-gray-400">
-                                    El registro es por invitación privada. Solicita tu código a Odisea Trace.
+                                    Ingresa el código proporcionado por el administrador de Odisea.
                                 </p>
                             </div>
 

@@ -13,6 +13,7 @@ import {
     FileText,
     Trees,
     X,
+    AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
@@ -72,8 +73,12 @@ export function FincaPage() {
 
     const guardarFinca = (data: Partial<Finca>) => {
         if (fincaSheet === 'nueva') {
+            const nuevaId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                const r = (Math.random() * 16) | 0;
+                return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+            });
             const nueva: Finca = {
-                id: Date.now().toString(),
+                id: nuevaId,
                 nombre: data.nombre!,
                 departamento: data.departamento!,
                 municipio: data.municipio!,
@@ -151,78 +156,114 @@ export function FincaPage() {
                 </div>
             ) : (
                 fincas.map((finca) => (
-                    <div key={finca.id} className="space-y-4">
-                        {/* Cabecera de la finca */}
-                        <div className="rounded-3xl bg-[#5f705f] text-white shadow-lg shadow-[#5f705f]/20 p-5">
+                    <div
+                        key={finca.id}
+                        className="rounded-3xl bg-white border-2 border-[#5f705f]/20 shadow-md overflow-hidden"
+                    >
+                        {/* Cabecera principal de la FINCA */}
+                        <div className="bg-gradient-to-br from-[#2f4332] to-[#405c45] text-white p-5">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
-                                    <p className="text-[11px] font-black uppercase tracking-widest text-white/60">
-                                        {finca.municipio}, {finca.departamento}
+                                    <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-2 text-white">
+                                        <Sprout size={12} className="text-[#a4d4ab]" />
+                                        <span>Tu Finca Cafetera</span>
+                                    </div>
+                                    <h3 className="text-2xl font-black tracking-tight leading-tight">{finca.nombre}</h3>
+                                    <p className="text-[13px] font-bold text-white/80 mt-1 flex items-center gap-1.5">
+                                        <span>{finca.municipio}, {finca.departamento}</span>
+                                        {finca.areaAproximada && (
+                                            <>
+                                                <span>•</span>
+                                                <span className="bg-black/25 px-2 py-0.5 rounded-lg text-xs font-black">
+                                                    {finca.areaAproximada} hectáreas totales
+                                                </span>
+                                            </>
+                                        )}
                                     </p>
-                                    <h3 className="text-2xl font-black mt-1">{finca.nombre}</h3>
-                                    {finca.areaAproximada && (
-                                        <p className="text-[13px] font-bold text-white/70 mt-1">
-                                            {finca.areaAproximada} ha aprox.
-                                        </p>
-                                    )}
                                 </div>
                                 <button
                                     onClick={() => setFincaSheet(finca)}
-                                    className="h-10 w-10 shrink-0 rounded-xl bg-white/15 flex items-center justify-center"
-                                    aria-label="Editar finca"
+                                    className="h-10 w-10 shrink-0 rounded-2xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
+                                    aria-label="Editar datos de la finca"
+                                    title="Editar datos de la finca"
                                 >
-                                    <Pencil size={16} />
+                                    <Pencil size={17} />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Parcelas */}
-                        <div className="space-y-3">
+                        {/* Subsección: Parcelas que pertenecen a esta finca */}
+                        <div className="p-4 sm:p-5 bg-[#FDFDF8]/70 space-y-3">
                             <div className="flex items-center justify-between px-1">
-                                <p className="text-[13px] font-black uppercase tracking-widest text-gray-400">
-                                    Parcelas ({finca.lotesDeCafe.length})
-                                </p>
+                                <div className="flex items-center gap-2">
+                                    <div className="h-6 w-1 rounded-full bg-[#5f705f]" />
+                                    <div>
+                                        <p className="text-[12px] font-black uppercase tracking-wider text-gray-500">
+                                            Parcelas de {finca.nombre}
+                                        </p>
+                                        <p className="text-[11px] text-gray-400 font-bold">
+                                            Lotes o tablones sembrados dentro de esta finca
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="bg-[#5f705f]/15 text-[#3b553e] font-black text-xs px-2.5 py-1 rounded-xl">
+                                    {finca.lotesDeCafe.length} {finca.lotesDeCafe.length === 1 ? 'parcela' : 'parcelas'}
+                                </span>
                             </div>
 
-                            {finca.lotesDeCafe.map((parcela) => (
-                                <button
-                                    key={parcela.id}
-                                    onClick={() => setParcelaSheet({ fincaId: finca.id, parcela })}
-                                    className="w-full flex items-center gap-3 rounded-3xl bg-white border border-gray-100 p-4 shadow-sm text-left"
-                                >
-                                    <span className="h-11 w-11 shrink-0 rounded-2xl bg-[#5f705f]/10 flex items-center justify-center text-[#5f705f]">
-                                        <MapPin size={20} />
-                                    </span>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-black text-gray-900 truncate">{parcela.nombre}</p>
-                                        <p className="text-[13px] font-bold text-gray-400 truncate">
-                                            {parcela.area || '—'} ha
-                                            {parcela.variedades.length > 0 && ` · ${parcela.variedades.join(', ')}`}
-                                        </p>
-                                        {(() => {
-                                            const tiene = parcela.ubicacion || parcela.coordenadaCentral;
-                                            return (
-                                                <span
-                                                    className={cn(
-                                                        'inline-flex items-center gap-1 text-[11px] font-black uppercase mt-1',
-                                                        tiene ? 'text-emerald-600' : 'text-gray-400'
-                                                    )}
-                                                >
-                                                    <MapPin size={11} />
-                                                    {tiene ? 'Ubicada' : 'Sin ubicar'}
+                            {/* Lista de parcelas */}
+                            {finca.lotesDeCafe.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-4 text-center">
+                                    <p className="text-sm font-bold text-gray-600">Aún no has agregado parcelas a esta finca.</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Agrega tu primer lote o lote de café sembrado.</p>
+                                </div>
+                            ) : (
+                                finca.lotesDeCafe.map((parcela, idx) => (
+                                    <button
+                                        key={parcela.id}
+                                        onClick={() => setParcelaSheet({ fincaId: finca.id, parcela })}
+                                        className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-200/90 p-3.5 shadow-sm text-left hover:border-[#5f705f] transition-all duration-150"
+                                    >
+                                        <span className="h-10 w-10 shrink-0 rounded-xl bg-[#5f705f]/10 text-[#3b553e] flex items-center justify-center font-black text-sm">
+                                            {idx + 1}
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-black text-gray-900 text-[15px] truncate">{parcela.nombre}</p>
+                                                <span className="text-[10px] font-extrabold text-[#3b553e] bg-[#eef5ef] px-2 py-0.5 rounded-md">
+                                                    Parcela
                                                 </span>
-                                            );
-                                        })()}
-                                    </div>
-                                    <ChevronDown size={18} className="text-gray-300 -rotate-90 shrink-0" />
-                                </button>
-                            ))}
+                                            </div>
+                                            <p className="text-[13px] font-bold text-gray-600 truncate flex items-center gap-1.5 mt-0.5">
+                                                <span>{parcela.area || '—'}</span>
+                                                <span className="text-[#3b553e] font-extrabold bg-[#5f705f]/10 px-2 py-0.2 rounded-md text-xs">hectáreas</span>
+                                                {parcela.variedades.length > 0 && <span className="text-gray-400">· {parcela.variedades.join(', ')}</span>}
+                                            </p>
+                                            {(() => {
+                                                const tiene = parcela.ubicacion || parcela.coordenadaCentral;
+                                                return (
+                                                    <span
+                                                        className={cn(
+                                                            'inline-flex items-center gap-1 text-[11px] font-black uppercase mt-1',
+                                                            tiene ? 'text-emerald-700' : 'text-gray-400'
+                                                        )}
+                                                    >
+                                                        <MapPin size={11} />
+                                                        {tiene ? 'Coordenadas GPS listas' : 'Sin ubicar por GPS'}
+                                                    </span>
+                                                );
+                                            })()}
+                                        </div>
+                                        <ChevronDown size={18} className="text-gray-400 -rotate-90 shrink-0" />
+                                    </button>
+                                ))
+                            )}
 
                             <button
                                 onClick={() => setParcelaSheet({ fincaId: finca.id, parcela: 'nueva' })}
-                                className="pr-tap w-full rounded-3xl border-2 border-[#5f705f]/20 text-[#5f705f] font-black gap-2 bg-white"
+                                className="pr-tap w-full rounded-2xl border-2 border-dashed border-[#5f705f]/30 hover:border-[#5f705f] text-[#3b553e] font-black gap-2 bg-white transition-colors"
                             >
-                                <Plus size={20} /> Agregar parcela
+                                <Plus size={18} /> Añadir otra parcela a {finca.nombre}
                             </button>
                         </div>
 
@@ -258,6 +299,16 @@ export function FincaPage() {
                         </div>
                     </div>
                 ))
+            )}
+
+            {fincas.length > 0 && (
+                <button
+                    type="button"
+                    onClick={() => setFincaSheet('nueva')}
+                    className="pr-tap w-full rounded-3xl bg-white border-2 border-[#5f705f]/40 hover:border-[#5f705f] text-[#2c3d2e] font-black text-[15px] gap-2 shadow-sm py-4 transition-all duration-150 active:scale-[0.99] cursor-pointer"
+                >
+                    <Plus size={20} className="text-[#3b553e]" /> Registrar otra finca
+                </button>
             )}
 
             {!online && (
@@ -362,9 +413,9 @@ function FincaForm({ finca, onSave }: { finca: Finca | null; onSave: (d: Partial
                         value={area}
                         onChange={(e) => setArea(e.target.value)}
                         placeholder="Ej: 3"
-                        className={selectClass}
+                        className={cn(selectClass, 'pr-28')}
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-gray-300">ha</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg">hectáreas</span>
                 </div>
             </Campo>
             <button onClick={submit} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg gap-2">
@@ -373,6 +424,20 @@ function FincaForm({ finca, onSave }: { finca: Finca | null; onSave: (d: Partial
         </div>
     );
 }
+
+const VARIEDADES_COMUNES = [
+    'Castillo',
+    'Colombia',
+    'Cenicafé 1',
+    'Caturra',
+    'Bourbon Rosado',
+    'Bourbon Rojo',
+    'Geisha',
+    'Tabi',
+    'Típica',
+    'Maragogipe',
+    'Pacamara',
+];
 
 /* ───────── Formulario de parcela ───────── */
 function ParcelaForm({
@@ -390,6 +455,7 @@ function ParcelaForm({
     const [area, setArea] = useState(parcela?.area || '');
     const [variedades, setVariedades] = useState<string[]>(parcela?.variedades || []);
     const [nuevaVar, setNuevaVar] = useState('');
+    const [mostrarOtro, setMostrarOtro] = useState(false);
     const [masDatos, setMasDatos] = useState(false);
     const [arboles, setArboles] = useState(parcela?.numeroArboles?.toString() || '');
     const [edad, setEdad] = useState(parcela?.edadCultivoAnios?.toString() || '');
@@ -401,10 +467,19 @@ function ParcelaForm({
         ? { ...geo.posicion, metodo: 'GPS' as const }
         : parcela?.ubicacion;
 
+    const toggleVariedad = (v: string) => {
+        if (variedades.includes(v)) {
+            setVariedades(variedades.filter((item) => item !== v));
+        } else {
+            setVariedades([...variedades, v]);
+        }
+    };
+
     const addVar = () => {
         const v = nuevaVar.trim();
         if (v && !variedades.includes(v)) setVariedades([...variedades, v]);
         setNuevaVar('');
+        setMostrarOtro(false);
     };
 
     const submit = () => {
@@ -447,48 +522,108 @@ function ParcelaForm({
                         value={area}
                         onChange={(e) => setArea(e.target.value)}
                         placeholder="Ej: 1.5"
-                        className={selectClass}
+                        className={cn(selectClass, 'pr-28')}
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-gray-300">ha</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg">hectáreas</span>
                 </div>
             </Campo>
 
-            <Campo label="Variedades sembradas">
-                <div className="flex gap-2">
-                    <input
-                        value={nuevaVar}
-                        onChange={(e) => setNuevaVar(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addVar())}
-                        placeholder="Ej: Caturra"
-                        className={cn(selectClass, 'flex-1')}
-                    />
-                    <button
-                        onClick={addVar}
-                        className="h-14 w-14 shrink-0 rounded-2xl bg-[#5f705f] text-white flex items-center justify-center"
-                        aria-label="Agregar variedad"
-                    >
-                        <Plus size={20} />
-                    </button>
-                </div>
-                {variedades.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                        {variedades.map((v) => (
-                            <span
-                                key={v}
-                                className="flex items-center gap-1.5 bg-[#5f705f]/10 text-[#5f705f] text-[13px] font-bold px-3 py-1.5 rounded-xl"
-                            >
-                                {v}
-                                <button onClick={() => setVariedades(variedades.filter((x) => x !== v))} aria-label="Quitar">
-                                    <X size={14} />
+            <div>
+                <Campo label="Variedades sembradas" hint="Toca las variedades que tengas en esta parcela:">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {VARIEDADES_COMUNES.map((v) => {
+                            const seleccionada = variedades.includes(v);
+                            return (
+                                <button
+                                    type="button"
+                                    key={v}
+                                    onClick={() => toggleVariedad(v)}
+                                    className={cn(
+                                        'px-3.5 py-2 rounded-xl text-[14px] font-bold transition-all border flex items-center gap-1.5 cursor-pointer',
+                                        seleccionada
+                                            ? 'bg-[#5f705f] text-white border-[#5f705f] shadow-sm scale-[1.02]'
+                                            : 'bg-white text-gray-700 border-gray-200 hover:border-[#5f705f]/40'
+                                    )}
+                                >
+                                    {seleccionada && <Check size={14} className="stroke-[3]" />}
+                                    {v}
                                 </button>
-                            </span>
-                        ))}
+                            );
+                        })}
                     </div>
-                )}
-            </Campo>
+
+                    {/* Variedades añadidas que no están en la lista común */}
+                    {variedades.filter((v) => !VARIEDADES_COMUNES.includes(v)).length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3 pt-1 border-t border-gray-100">
+                            {variedades
+                                .filter((v) => !VARIEDADES_COMUNES.includes(v))
+                                .map((v) => (
+                                    <span
+                                        key={v}
+                                        className="flex items-center gap-1.5 bg-[#5f705f] text-white text-[13px] font-bold px-3 py-1.5 rounded-xl shadow-sm"
+                                    >
+                                        <Check size={14} className="stroke-[3]" />
+                                        {v}
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleVariedad(v)}
+                                            className="ml-1 hover:opacity-80"
+                                            aria-label={`Quitar ${v}`}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </span>
+                                ))}
+                        </div>
+                    )}
+
+                    {/* Botón o input para otra variedad */}
+                    {!mostrarOtro ? (
+                        <button
+                            type="button"
+                            onClick={() => setMostrarOtro(true)}
+                            className="inline-flex items-center gap-2 text-sm font-bold text-[#5f705f] bg-[#5f705f]/10 hover:bg-[#5f705f]/20 px-4 py-2.5 rounded-xl transition-colors cursor-pointer mt-1"
+                        >
+                            <Plus size={18} /> Añadir otra variedad
+                        </button>
+                    ) : (
+                        <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+                            <span className="block text-xs font-bold text-gray-600">Nombre de la otra variedad:</span>
+                            <div className="flex gap-2">
+                                <input
+                                    value={nuevaVar}
+                                    onChange={(e) => setNuevaVar(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addVar())}
+                                    placeholder="Ej: San Bernardo, Borbón Amarillo…"
+                                    autoFocus
+                                    className={cn(selectClass, 'h-12 text-sm flex-1')}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={addVar}
+                                    className="px-4 h-12 shrink-0 rounded-xl bg-[#5f705f] text-white font-bold text-sm flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <Plus size={16} /> Añadir
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setMostrarOtro(false);
+                                        setNuevaVar('');
+                                    }}
+                                    className="h-12 w-12 shrink-0 rounded-xl bg-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-300"
+                                    aria-label="Cancelar"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </Campo>
+            </div>
 
             {/* Ubicación GPS */}
-            <div className="rounded-2xl border-2 border-gray-200 p-4 space-y-3">
+            <div className="rounded-2xl border-2 border-gray-200 p-4 space-y-3 bg-white">
                 <p className="text-[12px] font-black uppercase tracking-wide text-gray-400">Ubicación de la parcela</p>
                 {ubic ? (
                     <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
@@ -507,10 +642,23 @@ function ParcelaForm({
                     </div>
                 ) : (
                     <p className="text-[13px] text-gray-500">
-                        Párate en el centro de la parcela y toca el botón. Funciona sin señal.
+                        Párate en el centro de la parcela y toca el botón. Funciona sin señal de internet.
                     </p>
                 )}
-                {geo.error && <p className="text-[13px] text-rose-600">{geo.error}</p>}
+
+                {geo.error && (
+                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-1.5">
+                        <div className="flex items-start gap-2 text-amber-900">
+                            <AlertCircle size={16} className="shrink-0 text-amber-600 mt-0.5" />
+                            <div>
+                                <p className="text-xs font-bold">{geo.error}</p>
+                                <p className="text-[11px] text-amber-700 mt-1">
+                                    Para activarlo: Abre la barra de notificaciones o Ajustes de tu teléfono, enciende la <strong>Ubicación / GPS</strong> y dale permiso al navegador.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <button
                     onClick={geo.capturar}
                     disabled={geo.capturando}

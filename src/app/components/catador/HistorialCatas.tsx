@@ -21,40 +21,69 @@ import { SensorRadar } from '../SensorRadar';
 import { getLotes } from '../../../services/lotesService';
 import type { LoteUnificado } from '../../../types/lote';
 import { HISTORIAL_MOCK } from '../../../data/historialCatas.mock';
+import { useAuth } from '../../context/AuthContext';
+import { getHistorialCatas } from '../../../services/catasService';
 
 export function HistorialCatas() {
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const [historial, setHistorial] = useState<any[]>([]);
     const [filtroProductor, setFiltroProductor] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const [nombreCatador, setNombreCatador] = useState('');
+    const [nivelCatador, setNivelCatador] = useState('');
+    const [fotoCatador, setFotoCatador] = useState('');
+
     useEffect(() => {
+        if (!user) return;
         setIsLoading(true);
-        getLotes()
-            .then((loaded) => {
-                // lotes catados
-                const realizadas = loaded.filter(l => l.calificacion && l.calificacion > 0);
-                const items = realizadas.map(l => {
-                    const det = {
-                        acidez: 8.0,
-                        cuerpo: 7.5,
-                        dulzor: 8.0,
-                        balance: 8.0,
-                        limpieza: 8.5
-                    };
+
+        if (user.email === 'andres@finca.co') {
+            setHistorial(HISTORIAL_MOCK);
+            setNombreCatador('Andrés Valbuena');
+            setNivelCatador('Analista Sensorial Certificado SCA');
+            setFotoCatador('https://images.unsplash.com/photo-1594834749740-74b3f696ce73?auto=format&fit=crop&q=80&w=250');
+            setIsLoading(false);
+            return;
+        }
+
+        // Cargar datos del perfil de localStorage (o default)
+        const saved = localStorage.getItem(`perfil_catador_${user.email}`);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setNombreCatador(parsed.nombre || user.name);
+                setNivelCatador(parsed.nivelFormacion || 'Analista Sensorial');
+            } catch (e) {
+                setNombreCatador(user.name);
+                setNivelCatador('Analista Sensorial');
+            }
+        } else {
+            setNombreCatador(user.name);
+            setNivelCatador('Analista Sensorial');
+        }
+        setFotoCatador('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250');
+
+        getHistorialCatas(user.id)
+            .then(async (data) => {
+                const lotes = await getLotes();
+                const items = data.map(c => {
+                    const foundLote = lotes.find(l => l.id === c.lote_id);
                     return {
-                        id: l.id,
-                        productor: l.productor,
+                        id: c.lote_id,
+                        productor: foundLote?.productor || 'Productor Desconocido',
                         bache: 'Bache #1',
-                        fecha: l.fecha || 'Reciente',
-                        puntaje: l.calificacion,
-                        nivel: l.calificacion && l.calificacion >= 85 ? 'Especialidad' : 'Premium',
+                        fecha: new Date(c.fecha_cata).toLocaleDateString('es-ES', { dateStyle: 'short' }),
+                        puntaje: Number(c.puntaje_total),
+                        nivel: Number(c.puntaje_total) >= 85 ? 'Especialidad' : 'Premium',
                         perfil: [
-                            { attribute: 'Acidez', value: det.acidez },
-                            { attribute: 'Cuerpo', value: det.cuerpo },
-                            { attribute: 'Dulzor', value: det.dulzor },
-                            { attribute: 'Balance', value: det.balance },
-                            { attribute: 'Limpieza', value: det.limpieza }
+                            { attribute: 'Acidez', value: Number(c.acidez) },
+                            { attribute: 'Cuerpo', value: Number(c.cuerpo) },
+                            { attribute: 'Dulzor', value: Number(c.dulzor) },
+                            { attribute: 'Balance', value: Number(c.balance) },
+                            { attribute: 'Limpieza', value: Number(c.limpieza) }
                         ]
                     };
                 });
@@ -62,10 +91,11 @@ export function HistorialCatas() {
                 setIsLoading(false);
             })
             .catch((err) => {
+                console.error(err);
                 setError('Error al cargar historial de catas');
                 setIsLoading(false);
             });
-    }, []);
+    }, [user]);
 
     const historialFiltrado = historial.filter(cata => 
         cata.productor.toLowerCase().includes(filtroProductor.toLowerCase())
@@ -88,17 +118,17 @@ export function HistorialCatas() {
                     <div className="flex items-center gap-8 flex-col md:flex-row text-center md:text-left">
                         <div className="relative">
                             <div className="w-32 h-32 rounded-full border-4 border-[#EADDCA] shadow-[0_0_30px_rgba(234,221,202,0.3)] overflow-hidden">
-                                <img src="https://images.unsplash.com/photo-1594834749740-74b3f696ce73?auto=format&fit=crop&q=80&w=250" alt="Catador" className="w-full h-full object-cover" />
+                                <img src={fotoCatador} alt="Catador" className="w-full h-full object-cover" />
                             </div>
                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-amber-500 text-amber-950 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border-2 border-[#5D4037] flex items-center gap-1 shadow-xl">
-                                <Star size={12} className="fill-amber-950" /> Q-Grader Plata
+                                <Star size={12} className="fill-amber-950" /> {user?.email === 'andres@finca.co' ? 'Q-Grader Plata' : 'Catador Registrado'}
                             </div>
                         </div>
-
+ 
                         <div>
-                            <h1 className="text-4xl md:text-5xl font-sans font-black tracking-tight mb-2">Andrés Valbuena</h1>
+                            <h1 className="text-4xl md:text-5xl font-sans font-black tracking-tight mb-2">{nombreCatador}</h1>
                             <p className="text-[#D7CCC8] text-sm font-black uppercase tracking-[0.2em] flex items-center justify-center md:justify-start gap-2">
-                                <ShieldCheck size={16} className="text-emerald-400" /> Analista Sensorial Certificado SCA
+                                <ShieldCheck size={16} className="text-emerald-400" /> {nivelCatador}
                             </p>
 
                             <div className="flex gap-4 mt-6 justify-center md:justify-start">
@@ -174,9 +204,10 @@ export function HistorialCatas() {
                         <Button onClick={() => window.location.reload()} className="bg-[#5D4037] hover:bg-[#3E2723] text-white font-black px-6 py-2 rounded-xl">Reintentar</Button>
                     </div>
                 ) : historialFiltrado.length === 0 ? (
-                    <div className="col-span-full p-16 text-center rounded-[40px] border border-dashed border-[#EADDCA] bg-[#FDFBF9]/50">
-                        <Coffee className="text-[#8D6E63]/40 mx-auto mb-4" size={48} />
-                        <p className="text-gray-500 font-bold text-lg">No hay historial de catas registradas aún.</p>
+                    <div className="col-span-full p-6 md:p-16 text-center rounded-[40px] border border-dashed border-[#EADDCA] bg-[#FDFBF9]/50 flex flex-col items-center justify-center">
+                        <Coffee className="text-[#8D6E63]/40 mx-auto mb-4 animate-bounce" size={48} />
+                        <p className="text-gray-500 font-bold text-lg mb-4">No hay historial de catas registradas aún.</p>
+                        <Button onClick={() => navigate('/catador/muestras')} className="bg-[#5D4037] hover:bg-[#3E2723] text-white font-black px-6 py-2 rounded-xl">Ver Muestras Pendientes</Button>
                     </div>
                 ) : (
                     <>

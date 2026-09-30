@@ -10,6 +10,8 @@ import {
     Plus,
     X,
     PartyPopper,
+    AlertCircle,
+    HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../components/ui/utils';
@@ -26,8 +28,22 @@ const inputBase =
     'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 font-bold text-gray-800 outline-none focus:border-[#5f705f]';
 
 function Label({ children }: { children: React.ReactNode }) {
-    return <span className="block text-[12px] font-black uppercase tracking-wide text-gray-400 mb-1.5">{children}</span>;
+    return <span className="block text-[14px] font-black uppercase tracking-wide text-gray-700 mb-2">{children}</span>;
 }
+
+const VARIEDADES_COMUNES = [
+    'Castillo',
+    'Colombia',
+    'Cenicafé 1',
+    'Caturra',
+    'Bourbon Rosado',
+    'Bourbon Rojo',
+    'Geisha',
+    'Tabi',
+    'Típica',
+    'Maragogipe',
+    'Pacamara',
+];
 
 export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
     const { user } = useAuth();
@@ -46,27 +62,44 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
     const [pArea, setPArea] = useState('');
     const [variedades, setVariedades] = useState<string[]>([]);
     const [nuevaVar, setNuevaVar] = useState('');
+    const [mostrarOtro, setMostrarOtro] = useState(false);
 
     // Cuentas
     const [gc, setGc] = useState('');
     const [ic, setIc] = useState('');
     const [gh, setGh] = useState('');
 
+    const toggleVariedad = (v: string) => {
+        if (variedades.includes(v)) {
+            setVariedades(variedades.filter((x) => x !== v));
+        } else {
+            setVariedades([...variedades, v]);
+        }
+    };
+
     const addVar = () => {
         const v = nuevaVar.trim();
         if (v && !variedades.includes(v)) setVariedades([...variedades, v]);
         setNuevaVar('');
+        setMostrarOtro(false);
     };
 
     const finalizar = async () => {
         setGuardando(true);
         try {
-            const fincaId = Date.now().toString();
+            const fincaId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                const r = (Math.random() * 16) | 0;
+                return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+            });
             const parcelas: LoteCafe[] = [];
             if (pNombre.trim()) {
+                const parcelaId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                    const r = (Math.random() * 16) | 0;
+                    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+                });
                 const ubic = geo.posicion ? { ...geo.posicion, metodo: 'GPS' as const } : undefined;
                 parcelas.push({
-                    id: `${fincaId}-p1`,
+                    id: parcelaId,
                     nombre: pNombre.trim(),
                     area: pArea || '',
                     variedades,
@@ -113,16 +146,16 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
 
     const money = (label: string, v: string, set: (x: string) => void) => (
         <label className="block">
-            <span className="block text-[13px] font-bold text-gray-600 mb-1.5">{label}</span>
+            <span className="block text-[15px] font-bold text-gray-800 mb-2">{label}</span>
             <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-gray-300">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl text-gray-400">$</span>
                 <input
                     type="text"
                     inputMode="numeric"
                     value={v ? formatoNumero(Number(v)) : ''}
                     onChange={(e) => set(e.target.value.replace(/\D/g, ''))}
                     placeholder="0"
-                    className={cn(inputBase, 'pl-9 text-lg font-black')}
+                    className={cn(inputBase, 'pl-10 text-xl font-black text-gray-900')}
                 />
             </div>
         </label>
@@ -152,7 +185,7 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                             />
                         ))}
                     </div>
-                    <span className="text-[12px] font-black text-gray-400 w-9 text-right">{paso + 1}/3</span>
+                    <span className="text-[15px] font-black text-gray-600 w-10 text-right">{paso + 1}/3</span>
                 </div>
             )}
 
@@ -165,8 +198,8 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                                 <span className="inline-flex h-16 w-16 rounded-3xl bg-[#5f705f]/10 items-center justify-center text-[#5f705f] mb-3">
                                     <Sprout size={30} />
                                 </span>
-                                <h1 className="text-2xl font-black text-gray-900">Bienvenida a Odisea</h1>
-                                <p className="text-[15px] text-gray-500 mt-1">
+                                <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Bienvenida a Odisea</h1>
+                                <p className="text-[16px] text-gray-600 mt-2 leading-relaxed">
                                     Empecemos por registrar tu finca. Toma menos de un minuto.
                                 </p>
                             </div>
@@ -207,8 +240,8 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                             <label className="block">
                                 <Label>Área total aproximada</Label>
                                 <div className="relative">
-                                    <input type="number" inputMode="decimal" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Ej: 3" className={inputBase} />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-gray-300">ha</span>
+                                    <input type="number" inputMode="decimal" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Ej: 3" className={cn(inputBase, 'pr-28')} />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg">hectáreas</span>
                                 </div>
                             </label>
                         </div>
@@ -221,8 +254,8 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                                 <span className="inline-flex h-16 w-16 rounded-3xl bg-[#5f705f]/10 items-center justify-center text-[#5f705f] mb-3">
                                     <MapPin size={30} />
                                 </span>
-                                <h1 className="text-2xl font-black text-gray-900">Tu primera parcela</h1>
-                                <p className="text-[15px] text-gray-500 mt-1">
+                                <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Tu primera parcela</h1>
+                                <p className="text-[16px] text-gray-600 mt-2 leading-relaxed">
                                     Un pedazo de tierra donde tienes café. Puedes agregar más después.
                                 </p>
                             </div>
@@ -233,51 +266,140 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                             <label className="block">
                                 <Label>Área</Label>
                                 <div className="relative">
-                                    <input type="number" inputMode="decimal" value={pArea} onChange={(e) => setPArea(e.target.value)} placeholder="Ej: 1.5" className={inputBase} />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-gray-300">ha</span>
+                                    <input type="number" inputMode="decimal" value={pArea} onChange={(e) => setPArea(e.target.value)} placeholder="Ej: 1.5" className={cn(inputBase, 'pr-28')} />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg">hectáreas</span>
                                 </div>
                             </label>
-                            <label className="block">
-                                <Label>Variedades</Label>
-                                <div className="flex gap-2">
-                                    <input
-                                        value={nuevaVar}
-                                        onChange={(e) => setNuevaVar(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addVar())}
-                                        placeholder="Ej: Caturra"
-                                        className={cn(inputBase, 'flex-1')}
-                                    />
-                                    <button onClick={addVar} className="h-14 w-14 shrink-0 rounded-2xl bg-[#5f705f] text-white flex items-center justify-center">
-                                        <Plus size={20} />
-                                    </button>
-                                </div>
-                                {variedades.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {variedades.map((v) => (
-                                            <span key={v} className="flex items-center gap-1.5 bg-[#5f705f]/10 text-[#5f705f] text-[13px] font-bold px-3 py-1.5 rounded-xl">
+                            <div>
+                                <Label>Variedades de café sembradas</Label>
+                                <p className="text-[13px] text-gray-500 mb-2.5">
+                                    Toca las variedades que tengas en esta parcela:
+                                </p>
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {VARIEDADES_COMUNES.map((v) => {
+                                        const seleccionada = variedades.includes(v);
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={v}
+                                                onClick={() => toggleVariedad(v)}
+                                                className={cn(
+                                                    'px-3.5 py-2 rounded-xl text-[14px] font-bold transition-all border flex items-center gap-1.5 cursor-pointer',
+                                                    seleccionada
+                                                        ? 'bg-[#5f705f] text-white border-[#5f705f] shadow-sm scale-[1.02]'
+                                                        : 'bg-white text-gray-700 border-gray-200 hover:border-[#5f705f]/40'
+                                                )}
+                                            >
+                                                {seleccionada && <Check size={14} className="stroke-[3]" />}
                                                 {v}
-                                                <button onClick={() => setVariedades(variedades.filter((x) => x !== v))}>
-                                                    <X size={14} />
-                                                </button>
-                                            </span>
-                                        ))}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Variedades añadidas que no están en la lista común */}
+                                {variedades.filter((v) => !VARIEDADES_COMUNES.includes(v)).length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-3 pt-1 border-t border-gray-100">
+                                        {variedades
+                                            .filter((v) => !VARIEDADES_COMUNES.includes(v))
+                                            .map((v) => (
+                                                <span
+                                                    key={v}
+                                                    className="flex items-center gap-1.5 bg-[#5f705f] text-white text-[13px] font-bold px-3 py-1.5 rounded-xl shadow-sm"
+                                                >
+                                                    <Check size={14} className="stroke-[3]" />
+                                                    {v}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleVariedad(v)}
+                                                        className="ml-1 hover:opacity-80"
+                                                        aria-label={`Quitar ${v}`}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </span>
+                                            ))}
                                     </div>
                                 )}
-                            </label>
-                            <div className="rounded-2xl border-2 border-gray-200 p-4 space-y-3">
+
+                                {/* Botón o input para otra variedad */}
+                                {!mostrarOtro ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setMostrarOtro(true)}
+                                        className="inline-flex items-center gap-2 text-sm font-bold text-[#5f705f] bg-[#5f705f]/10 hover:bg-[#5f705f]/20 px-4 py-2.5 rounded-xl transition-colors cursor-pointer mt-1"
+                                    >
+                                        <Plus size={18} /> Añadir otra variedad
+                                    </button>
+                                ) : (
+                                    <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+                                        <span className="block text-xs font-bold text-gray-600">Nombre de la otra variedad:</span>
+                                        <div className="flex gap-2">
+                                            <input
+                                                value={nuevaVar}
+                                                onChange={(e) => setNuevaVar(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addVar())}
+                                                placeholder="Ej: San Bernardo, Borbón Amarillo…"
+                                                autoFocus
+                                                className={cn(inputBase, 'h-12 text-sm flex-1')}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={addVar}
+                                                className="px-4 h-12 shrink-0 rounded-xl bg-[#5f705f] text-white font-bold text-sm flex items-center gap-1.5 cursor-pointer"
+                                            >
+                                                <Plus size={16} /> Añadir
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setMostrarOtro(false);
+                                                    setNuevaVar('');
+                                                }}
+                                                className="h-12 w-12 shrink-0 rounded-xl bg-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-300"
+                                                aria-label="Cancelar"
+                                            >
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-2xl border-2 border-gray-200 p-4 space-y-3 bg-white">
                                 <Label>Ubicación (opcional)</Label>
                                 {geo.posicion ? (
-                                    <p className="text-[13px] font-black text-emerald-700 flex items-center gap-1.5">
-                                        <Check size={15} /> {geo.posicion.lat}, {geo.posicion.lng}
-                                    </p>
+                                    <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                                        <p className="text-[13px] font-black text-emerald-800 flex items-center gap-1.5">
+                                            <Check size={16} className="text-emerald-600 stroke-[3]" /> Coordenadas guardadas
+                                        </p>
+                                        <p className="text-xs text-emerald-700 font-mono mt-0.5">
+                                            Lat: {geo.posicion.lat} · Long: {geo.posicion.lng} (precisión: ±{geo.posicion.precisionMetros}m)
+                                        </p>
+                                    </div>
                                 ) : (
-                                    <p className="text-[13px] text-gray-500">Párate en la parcela y toca el botón. Funciona sin señal.</p>
+                                    <p className="text-[13px] text-gray-500">Párate en la parcela y toca el botón. Funciona sin señal de internet.</p>
                                 )}
-                                {geo.error && <p className="text-[13px] text-rose-600">{geo.error}</p>}
+
+                                {geo.error && (
+                                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-1.5">
+                                        <div className="flex items-start gap-2 text-amber-900">
+                                            <AlertCircle size={16} className="shrink-0 text-amber-600 mt-0.5" />
+                                            <div>
+                                                <p className="text-xs font-bold">{geo.error}</p>
+                                                <p className="text-[11px] text-amber-700 mt-1">
+                                                    Para activarlo: Abre la barra de notificaciones o Ajustes de tu teléfono, enciende la <strong>Ubicación / GPS</strong> y dale permiso al navegador.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <button
+                                    type="button"
                                     onClick={geo.capturar}
                                     disabled={geo.capturando}
-                                    className="pr-tap w-full rounded-xl bg-[#5f705f] text-white font-black text-[15px] gap-2"
+                                    className="pr-tap w-full rounded-xl bg-[#5f705f] hover:bg-[#4d5c4d] text-white font-black text-[15px] gap-2 py-3.5 transition-colors cursor-pointer"
                                 >
                                     {geo.capturando ? <Loader2 className="animate-spin" size={18} /> : <Navigation size={18} />}
                                     {geo.posicion ? 'Capturar de nuevo' : 'Capturar mi ubicación'}
@@ -291,16 +413,17 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                         <div className="space-y-5">
                             <div className="text-center pt-4">
                                 <span className="inline-flex h-16 w-16 rounded-3xl bg-[#5f705f]/10 items-center justify-center text-[#5f705f] mb-3">
-                                    <Wallet size={30} />
+                                    <Wallet size={32} />
                                 </span>
-                                <h1 className="text-2xl font-black text-gray-900">Tus cuentas de la cosecha</h1>
-                                <p className="text-[15px] text-gray-500 mt-1">
-                                    ¿Más o menos cuánto llevas esta cosecha? Un aproximado sirve para arrancar con la realidad.
+                                <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Tus cuentas del año</h1>
+                                <p className="text-[16px] text-gray-600 mt-2 leading-relaxed">
+                                    ¿Más o menos cuánto llevas este año? Un estimado sirve para que tus finanzas arranquen al día.
                                 </p>
                             </div>
-                            {money('He gastado en el café', gc, setGc)}
-                            {money('He recibido por el café', ic, setIc)}
-                            {money('He gastado en la casa', gh, setGh)}
+
+                            {money('He gastado en el café este año', gc, setGc)}
+                            {money('He recibido por ventas de café este año', ic, setIc)}
+                            {money('He gastado en los gastos de la casa este año', gh, setGh)}
                         </div>
                     )}
 
@@ -347,7 +470,7 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                                 setVariedades([]);
                                 setPaso(2);
                             }}
-                            className="pr-tap w-full text-[14px] font-black text-gray-400"
+                            className="pr-tap w-full text-[16px] font-bold text-gray-500 hover:text-gray-700 py-2.5 transition-colors cursor-pointer"
                         >
                             Saltar por ahora
                         </button>
@@ -358,9 +481,9 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                         <button
                             onClick={finalizar}
                             disabled={guardando}
-                            className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg gap-2 disabled:opacity-60"
+                            className="pr-tap w-full rounded-2xl bg-[#5f705f] hover:bg-[#4d5c4d] text-white font-black text-xl py-4 gap-2 disabled:opacity-60 transition-colors shadow-md cursor-pointer"
                         >
-                            {guardando ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />} Terminar
+                            {guardando ? <Loader2 className="animate-spin" size={22} /> : <Check size={22} />} Terminar
                         </button>
                         <button
                             onClick={() => {
@@ -370,7 +493,7 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                                 finalizar();
                             }}
                             disabled={guardando}
-                            className="pr-tap w-full text-[14px] font-black text-gray-400"
+                            className="pr-tap w-full text-[16px] font-bold text-gray-500 hover:text-gray-700 py-2.5 transition-colors cursor-pointer"
                         >
                             Saltar por ahora
                         </button>

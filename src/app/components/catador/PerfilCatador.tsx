@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../utils/supabaseClient';
 
 interface PerfilCatadorForm {
     nombre: string;
@@ -28,6 +30,7 @@ interface PerfilCatadorForm {
 
 export function PerfilCatador() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
 
     const { register, handleSubmit, reset } = useForm<PerfilCatadorForm>({
@@ -36,32 +39,85 @@ export function PerfilCatador() {
             email: '',
             celular: '',
             ubicacion: '',
-            experienciaAnios: 2,
+            experienciaAnios: 0,
             nivelFormacion: 'Experimental / Empírico',
             descripcionCata: ''
         }
     });
 
     useEffect(() => {
-        const savedData = localStorage.getItem('perfil_catador');
-        if (savedData) {
-            try {
-                reset(JSON.parse(savedData));
-            } catch (e) {}
-        }
-    }, [reset]);
+        if (!user) return;
 
-    const onSubmit = (data: PerfilCatadorForm) => {
+        if (user.email === 'andres@finca.co') {
+            reset({
+                nombre: 'Andrés Valbuena',
+                email: 'andres@finca.co',
+                celular: '3201234567',
+                ubicacion: 'Pitalito, Huila',
+                experienciaAnios: 8,
+                nivelFormacion: 'Q-Grader Plata & SCA Certified',
+                descripcionCata: 'Especialista en perfiles sensoriales de cafés lavados y exóticos del sur de Colombia.'
+            });
+            return;
+        }
+
+        // Cargar desde Supabase perfiles
+        supabase
+            .from('perfiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
+            .then(({ data, error }) => {
+                if (data && !error) {
+                    const meta = data.metadata || {};
+                    reset({
+                        nombre: data.nombre || '',
+                        email: data.email || user.email || '',
+                        celular: meta.celular || '',
+                        ubicacion: meta.ubicacion || '',
+                        experienciaAnios: meta.experienciaAnios || 0,
+                        nivelFormacion: meta.nivelFormacion || 'Experimental / Empírico',
+                        descripcionCata: meta.descripcionCata || ''
+                    });
+                }
+            });
+    }, [user, reset]);
+
+    const onSubmit = async (data: PerfilCatadorForm) => {
+        if (!user) return;
         setIsSaving(true);
-        setTimeout(() => {
-            localStorage.setItem('perfil_catador', JSON.stringify(data));
-            setIsSaving(false);
+        try {
+            // Guardar localmente para sincronización rápida
+            localStorage.setItem(`perfil_catador_${user.email}`, JSON.stringify(data));
+
+            // Guardar en la tabla perfiles de Supabase
+            const { error } = await supabase
+                .from('perfiles')
+                .update({
+                    nombre: data.nombre,
+                    metadata: {
+                        celular: data.celular,
+                        ubicacion: data.ubicacion,
+                        experienciaAnios: Number(data.experienciaAnios),
+                        nivelFormacion: data.nivelFormacion,
+                        descripcionCata: data.descripcionCata
+                    }
+                })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
             toast.success('Perfil actualizado con éxito', {
                 description: 'Tus credenciales y datos de catador han sido actualizados en Odisea Coffee Trace.',
                 style: { borderRadius: '24px', background: '#FDFBF9', border: '1px solid #D7CCC8', color: '#5D4037' }
             });
             navigate('/catador/muestras');
-        }, 1000);
+        } catch (err) {
+            console.error(err);
+            toast.error('Error al guardar el perfil');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
