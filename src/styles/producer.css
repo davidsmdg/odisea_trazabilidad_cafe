@@ -18,9 +18,15 @@
   --pr-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* El contenido nunca queda tapado por la barra inferior fija */
+/* El contenido nunca queda tapado por la barra inferior fija en móvil */
 .producer-shell .producer-scroll {
   padding-bottom: calc(var(--pr-tabbar-h) + var(--pr-safe-bottom) + 1.5rem);
+}
+
+@media (min-width: 768px) {
+  .producer-shell .producer-scroll {
+    padding-bottom: 2.5rem;
+  }
 }
 
 /* Números grandes de saldo / plata */
@@ -73,7 +79,7 @@
 .producer-ticker-track {
   display: flex;
   width: max-content;
-  animation: pr-ticker 55s linear infinite;
+  animation: pr-ticker 95s linear infinite;
 }
 .producer-ticker-track:hover {
   animation-play-state: paused;

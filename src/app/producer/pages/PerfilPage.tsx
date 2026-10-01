@@ -190,7 +190,7 @@ export function PerfilPage() {
     };
 
     return (
-        <div className="space-y-5 pb-4">
+        <div className="space-y-5 pb-6">
             {/* Foto + nombre */}
             <div className="flex flex-col items-center gap-3 pt-2">
                 <div className="relative">
@@ -207,7 +207,7 @@ export function PerfilPage() {
                                 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200'
                             )
                         }
-                        className="absolute -bottom-1 -right-1 h-10 w-10 rounded-2xl bg-[#5f705f] text-white border-4 border-[#FDFDF8] flex items-center justify-center"
+                        className="absolute -bottom-1 -right-1 h-10 w-10 rounded-2xl bg-[#5f705f] text-white border-4 border-[#FDFDF8] flex items-center justify-center shadow"
                         aria-label="Cambiar foto"
                     >
                         <Camera size={16} />
@@ -216,236 +216,224 @@ export function PerfilPage() {
                 <input
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
-                    className="text-center text-xl font-black text-gray-900 bg-transparent outline-none border-b-2 border-transparent focus:border-gray-200 pb-1"
+                    className="text-center text-xl md:text-2xl font-black text-gray-900 bg-transparent outline-none border-b-2 border-transparent focus:border-gray-200 pb-1"
                 />
             </div>
 
-            <Seccion title="Datos personales">
-                <Campo label="Número de celular">
-                    <input
-                        value={celular}
-                        onChange={(e) => setCelular(e.target.value)}
-                        placeholder="Sin datos"
-                        className={selectClass}
-                        inputMode="tel"
-                    />
-                </Campo>
-                <div className="grid grid-cols-2 gap-3">
-                    <Campo label="Género">
-                        <select
-                            value={genero}
-                            onChange={(e) => setGenero(e.target.value)}
-                            className={cn(selectClass, !genero && 'text-gray-400')}
-                        >
-                            <option value="">Sin datos</option>
-                            <option value="Femenino">Femenino</option>
-                            <option value="Masculino">Masculino</option>
-                            <option value="Otro / Prefiero no decir">Otro / Prefiero no decir</option>
-                        </select>
-                    </Campo>
-                    <Campo label="Años en el café">
-                        <input
-                            type="number"
-                            inputMode="numeric"
-                            value={aniosCafe}
-                            onChange={(e) => setAniosCafe(e.target.value)}
-                            placeholder="Sin datos"
-                            className={selectClass}
-                        />
-                    </Campo>
-                </div>
-                <Campo label="Fecha de nacimiento">
-                    <input
-                        type="date"
-                        value={fechaNacimiento}
-                        onChange={(e) => setFechaNacimiento(e.target.value)}
-                        className={cn(selectClass, !fechaNacimiento && 'text-gray-400')}
-                    />
-                </Campo>
-            </Seccion>
-
-            <Seccion title="Mi familia">
-                <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-700 text-[15px]">¿Tienes hijos?</span>
-                    <div className="flex gap-2">
-                        {['Si', 'No'].map((op) => (
-                            <button
-                                key={op}
-                                type="button"
-                                onClick={() => setTieneHijos(op)}
-                                className={cn(
-                                    'h-10 w-16 rounded-xl font-black text-[14px] transition-colors',
-                                    tieneHijos === op ? 'bg-[#5f705f] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                )}
-                            >
-                                {op}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <AnimatePresence>
-                    {tieneHijos === 'Si' && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="grid grid-cols-2 gap-3 overflow-hidden"
-                        >
-                            <Campo label="Cuántos hijos">
+            {/* Grid responsivo de secciones: 1 columna en móvil, 2 columnas en PC */}
+            <div className="space-y-5 md:space-y-0 md:grid md:grid-cols-2 md:gap-6 items-start">
+                {/* ── COLUMNA IZQUIERDA (Datos personales y Mi historia) ── */}
+                <div className="space-y-5">
+                    <Seccion title="Datos personales">
+                        <Campo label="Número de celular">
+                            <input
+                                value={celular}
+                                onChange={(e) => setCelular(e.target.value)}
+                                placeholder="Sin datos"
+                                className={selectClass}
+                                inputMode="tel"
+                            />
+                        </Campo>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Campo label="Género">
+                                <select
+                                    value={genero}
+                                    onChange={(e) => setGenero(e.target.value)}
+                                    className={cn(selectClass, !genero && 'text-gray-400')}
+                                >
+                                    <option value="">Sin datos</option>
+                                    <option value="Femenino">Femenino</option>
+                                    <option value="Masculino">Masculino</option>
+                                    <option value="Otro / Prefiero no decir">Otro / Prefiero no decir</option>
+                                </select>
+                            </Campo>
+                            <Campo label="Años en el café">
                                 <input
                                     type="number"
                                     inputMode="numeric"
-                                    value={cuantosHijos}
-                                    onChange={(e) => setCuantosHijos(e.target.value)}
-                                    placeholder="Sin datos"
+                                    value={aniosCafe}
+                                    onChange={(e) => setAniosCafe(e.target.value)}
+                                    placeholder="0"
                                     className={selectClass}
                                 />
                             </Campo>
-                            <Campo label="Menores de edad">
-                                <input
-                                    type="number"
-                                    inputMode="numeric"
-                                    value={cuantosMenores}
-                                    onChange={(e) => setCuantosMenores(e.target.value)}
-                                    placeholder="Sin datos"
-                                    className={selectClass}
-                                />
-                            </Campo>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-                <Campo label="Personas que viven contigo">
-                    <input
-                        type="number"
-                        inputMode="numeric"
-                        value={familiaresConviven}
-                        onChange={(e) => setFamiliaresConviven(e.target.value)}
-                        placeholder="Sin datos"
-                        className={selectClass}
-                    />
-                </Campo>
-                <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-700 text-[15px] pr-3">¿Perteneces a una comunidad étnica o indígena?</span>
-                    <div className="flex gap-2 shrink-0">
-                        {['No', 'Si'].map((op) => (
+                        </div>
+                        <Campo label="Fecha de nacimiento">
+                            <input
+                                type="date"
+                                value={fechaNacimiento}
+                                onChange={(e) => setFechaNacimiento(e.target.value)}
+                                className={cn(selectClass, !fechaNacimiento && 'text-gray-400')}
+                            />
+                        </Campo>
+                    </Seccion>
+
+                    <Seccion title="Mi historia como caficultor">
+                        <div className="flex gap-2">
                             <button
-                                key={op}
-                                type="button"
-                                onClick={() => setPerteneceEtno(op)}
+                                onClick={dictar}
+                                disabled={isRecording || transcribing}
                                 className={cn(
-                                    'h-10 w-16 rounded-xl font-black text-[14px] transition-colors',
-                                    perteneceEtno === op ? 'bg-[#5f705f] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                    'pr-tap flex-1 rounded-2xl font-black text-[13px] gap-2 transition-all',
+                                    isRecording
+                                        ? 'bg-rose-500 text-white animate-pulse'
+                                        : transcribing
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-[#5f705f]/10 text-[#5f705f]'
                                 )}
                             >
-                                {op}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </Seccion>
-
-            <Seccion title="Mi historia">
-                <p className="text-[13px] text-gray-500 -mt-1">
-                    Aparece en el portal público cuando alguien escanea el QR de tu café.
-                </p>
-                <textarea
-                    value={historia}
-                    onChange={(e) => setHistoria(e.target.value)}
-                    placeholder="Escribe tu historia o tócala por voz…"
-                    className="w-full min-h-[120px] rounded-2xl bg-white border-2 border-gray-200 p-4 font-medium text-gray-700 leading-relaxed outline-none focus:border-[#5f705f] resize-none"
-                />
-                <button
-                    onClick={dictar}
-                    disabled={isRecording || transcribing}
-                    className={cn(
-                        'pr-tap w-full rounded-2xl font-black text-[15px] gap-2',
-                        isRecording
-                            ? 'bg-red-500 text-white animate-pulse'
-                            : 'bg-[#5f705f]/10 text-[#5f705f]'
-                    )}
-                >
-                    {isRecording ? (
-                        <>Grabando…</>
-                    ) : transcribing ? (
-                        <>
-                            <Type size={18} className="animate-bounce" /> Transcribiendo…
-                        </>
-                    ) : (
-                        <>
-                            <Mic size={18} /> Contar por voz
-                        </>
-                    )}
-                </button>
-            </Seccion>
-
-            <Seccion title="Fotos de mi finca">
-                <div className="grid grid-cols-3 gap-2.5">
-                    {fotosFinca.map((foto, i) => (
-                        <div
-                            key={i}
-                            className={cn(
-                                'relative aspect-square rounded-2xl overflow-hidden border-2',
-                                portadaIndex === i ? 'border-[#5f705f]' : 'border-white'
-                            )}
-                        >
-                            <img src={foto} className="w-full h-full object-cover" alt="" />
-                            <button
-                                onClick={() => setPortadaIndex(i)}
-                                className={cn(
-                                    'absolute top-1 left-1 h-6 w-6 rounded-lg flex items-center justify-center',
-                                    portadaIndex === i ? 'bg-[#5f705f] text-white' : 'bg-black/40 text-white'
-                                )}
-                                aria-label="Elegir como portada"
-                            >
-                                <Star size={12} className={portadaIndex === i ? 'fill-current' : ''} />
-                            </button>
-                            <button
-                                onClick={() => setFotosFinca(fotosFinca.filter((_, x) => x !== i))}
-                                className="absolute top-1 right-1 h-6 w-6 rounded-lg bg-black/40 text-white flex items-center justify-center"
-                                aria-label="Quitar foto"
-                            >
-                                <X size={12} />
+                                <Mic size={18} />
+                                {isRecording ? 'Escuchando...' : transcribing ? 'Transcribiendo...' : 'Grabar audio'}
                             </button>
                         </div>
-                    ))}
-                    {fotosFinca.length < 6 && (
-                        <button
-                            onClick={() =>
-                                setFotosFinca([
-                                    ...fotosFinca,
-                                    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&q=80&w=400',
-                                ])
-                            }
-                            className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300"
-                        >
-                            <Plus size={24} />
-                            <span className="text-[11px] font-black">Foto</span>
-                        </button>
-                    )}
+                        <textarea
+                            value={historia}
+                            onChange={(e) => setHistoria(e.target.value)}
+                            rows={4}
+                            placeholder="Cuenta tu historia, cómo empezó tu finca y tu pasión por el café..."
+                            className="w-full rounded-2xl bg-white border-2 border-gray-200 p-4 font-bold text-gray-800 outline-none focus:border-[#5f705f] text-sm resize-none"
+                        />
+                    </Seccion>
                 </div>
-            </Seccion>
 
-            <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="pr-tap w-full rounded-3xl bg-[#5f705f] text-white font-black text-lg gap-2 shadow-lg shadow-[#5f705f]/25 active:scale-[0.98] transition-transform disabled:opacity-60"
-            >
-                {isSaving ? <Loader2 className="animate-spin" size={22} /> : <><Save size={20} /> Guardar perfil</>}
-            </button>
+                {/* ── COLUMNA DERECHA (Composición familiar, Fotos de Finca y Acciones) ── */}
+                <div className="space-y-5">
+                    <Seccion title="Mi hogar y familia">
+                        <Campo label="¿Tienes hijos?">
+                            <select
+                                value={tieneHijos}
+                                onChange={(e) => setTieneHijos(e.target.value)}
+                                className={cn(selectClass, !tieneHijos && 'text-gray-400')}
+                            >
+                                <option value="">Sin datos</option>
+                                <option value="Sí">Sí</option>
+                                <option value="No">No</option>
+                            </select>
+                        </Campo>
+                        {tieneHijos === 'Sí' && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <Campo label="¿Cuántos hijos?">
+                                    <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        value={cuantosHijos}
+                                        onChange={(e) => setCuantosHijos(e.target.value)}
+                                        placeholder="0"
+                                        className={selectClass}
+                                    />
+                                </Campo>
+                                <Campo label="¿Menores de edad?">
+                                    <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        value={cuantosMenores}
+                                        onChange={(e) => setCuantosMenores(e.target.value)}
+                                        placeholder="0"
+                                        className={selectClass}
+                                    />
+                                </Campo>
+                            </div>
+                        )}
+                        <Campo label="Familiares que conviven en la finca">
+                            <input
+                                type="number"
+                                inputMode="numeric"
+                                value={familiaresConviven}
+                                onChange={(e) => setFamiliaresConviven(e.target.value)}
+                                placeholder="0"
+                                className={selectClass}
+                            />
+                        </Campo>
+                        <Campo label="¿Perteneces a una comunidad étnica?">
+                            <select
+                                value={perteneceEtno}
+                                onChange={(e) => setPerteneceEtno(e.target.value)}
+                                className={cn(selectClass, !perteneceEtno && 'text-gray-400')}
+                            >
+                                <option value="">Sin datos</option>
+                                <option value="Indígena">Indígena</option>
+                                <option value="Afrodescendiente / Palenquero / Raizal">
+                                    Afrodescendiente / Palenquero / Raizal
+                                </option>
+                                <option value="Rrom (Gitano)">Rrom (Gitano)</option>
+                                <option value="Ninguna">Ninguna</option>
+                            </select>
+                        </Campo>
+                    </Seccion>
 
-            <div className="space-y-2 pt-2">
-                <Link
-                    to="/"
-                    className="pr-tap w-full rounded-2xl bg-white border border-gray-200 text-gray-600 font-bold text-[15px] gap-2"
-                >
-                    <Home size={18} /> Ver el sitio público
-                </Link>
+                    <Seccion title="Fotos de mi finca">
+                        <div className="grid grid-cols-3 gap-2.5">
+                            {fotosFinca.map((foto, i) => (
+                                <div
+                                    key={i}
+                                    className={cn(
+                                        'relative aspect-square rounded-2xl overflow-hidden border-2',
+                                        portadaIndex === i ? 'border-[#5f705f]' : 'border-white'
+                                    )}
+                                >
+                                    <img src={foto} className="w-full h-full object-cover" alt="" />
+                                    <button
+                                        onClick={() => setPortadaIndex(i)}
+                                        className={cn(
+                                            'absolute top-1 left-1 h-6 w-6 rounded-lg flex items-center justify-center',
+                                            portadaIndex === i ? 'bg-[#5f705f] text-white' : 'bg-black/40 text-white'
+                                        )}
+                                        aria-label="Elegir como portada"
+                                    >
+                                        <Star size={12} className={portadaIndex === i ? 'fill-current' : ''} />
+                                    </button>
+                                    <button
+                                        onClick={() => setFotosFinca(fotosFinca.filter((_, x) => x !== i))}
+                                        className="absolute top-1 right-1 h-6 w-6 rounded-lg bg-black/40 text-white flex items-center justify-center"
+                                        aria-label="Quitar foto"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                            {fotosFinca.length < 6 && (
+                                <button
+                                    onClick={() =>
+                                        setFotosFinca([
+                                            ...fotosFinca,
+                                            'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&q=80&w=400',
+                                        ])
+                                    }
+                                    className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300 hover:border-[#5f705f] transition-colors"
+                                >
+                                    <Plus size={24} />
+                                    <span className="text-[11px] font-black">Foto</span>
+                                </button>
+                            )}
+                        </div>
+                    </Seccion>
+                </div>
+            </div>
+
+            {/* Acciones principales */}
+            <div className="pt-2 max-w-xl mx-auto space-y-3">
                 <button
-                    onClick={cerrarSesion}
-                    className="pr-tap w-full rounded-2xl bg-white border border-rose-100 text-rose-600 font-bold text-[15px] gap-2"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="pr-tap w-full rounded-3xl bg-[#5f705f] hover:bg-[#4a584a] text-white font-black text-lg gap-2 shadow-lg shadow-[#5f705f]/25 active:scale-[0.98] transition-all disabled:opacity-60"
                 >
-                    <LogOut size={18} /> Cerrar sesión
+                    {isSaving ? <Loader2 className="animate-spin" size={22} /> : <><Save size={20} /> Guardar perfil</>}
                 </button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <Link
+                        to="/"
+                        className="pr-tap w-full rounded-2xl bg-white border border-gray-200 text-gray-600 font-bold text-[15px] gap-2 hover:bg-gray-50 transition-colors"
+                    >
+                        <Home size={18} /> Ver el sitio público
+                    </Link>
+                    <button
+                        onClick={cerrarSesion}
+                        className="pr-tap w-full rounded-2xl bg-white border border-rose-100 text-rose-600 font-bold text-[15px] gap-2 hover:bg-rose-50 transition-colors"
+                    >
+                        <LogOut size={18} /> Cerrar sesión
+                    </button>
+                </div>
             </div>
         </div>
     );

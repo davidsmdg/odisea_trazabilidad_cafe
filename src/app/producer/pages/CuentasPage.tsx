@@ -36,6 +36,7 @@ import {
     sembrarSaldoInicial,
 } from '../../../services/finanzasService';
 import { getCosechas } from '../../../services/cosechasService';
+import { getFincas } from '../../../services/fincasService';
 
 type Tab = Libro | 'todo';
 
@@ -51,6 +52,7 @@ export function CuentasPage() {
     const [cats, setCats] = useState<CategoriaFinanciera[]>([]);
     const [periodo, setPeriodo] = useState<PeriodoCosecha | null>(null);
     const [cosechas, setCosechas] = useState<{ codigo: string }[]>([]);
+    const [parcelas, setParcelas] = useState<string[]>([]);
     const [cargando, setCargando] = useState(true);
 
     const [tab, setTab] = useState<Tab>('cafe');
@@ -65,12 +67,25 @@ export function CuentasPage() {
     const [semilla, setSemilla] = useState(false);
 
     useEffect(() => {
-        Promise.all([getMovimientos(), getCategorias(), getPeriodoActivo(), getCosechas()])
-            .then(([m, c, p, cos]) => {
+        Promise.all([getMovimientos(), getCategorias(), getPeriodoActivo(), getCosechas(), getFincas()])
+            .then(([m, c, p, cos, fincas]) => {
                 setMovs(m);
                 setCats(c);
                 setPeriodo(p);
                 setCosechas(cos.map((x: any) => ({ codigo: x.codigo })));
+                
+                // Extraer los nombres de las parcelas de las fincas del productor
+                const listaParcelas: string[] = [];
+                for (const f of fincas) {
+                    if (f.lotesDeCafe && Array.isArray(f.lotesDeCafe)) {
+                        for (const lote of f.lotesDeCafe) {
+                            if (lote.nombre && !listaParcelas.includes(lote.nombre)) {
+                                listaParcelas.push(lote.nombre);
+                            }
+                        }
+                    }
+                }
+                setParcelas(listaParcelas);
             })
             .catch(() => toast.error('No pudimos cargar tus cuentas'))
             .finally(() => setCargando(false));
@@ -125,6 +140,8 @@ export function CuentasPage() {
         nota: string;
         fechaISO: string;
         cosechaCodigo?: string;
+        asociacionTipo?: 'finca' | 'parcela' | 'cosecha';
+        asociacionValor?: string;
     }) => {
         if (editar) {
             await updateMovimiento(editar.id, {
@@ -135,6 +152,8 @@ export function CuentasPage() {
                 nota: data.nota || undefined,
                 fechaISO: data.fechaISO,
                 cosechaCodigo: data.cosechaCodigo,
+                asociacionTipo: data.asociacionTipo,
+                asociacionValor: data.asociacionValor,
             });
             toast.success('Movimiento actualizado');
         } else if (anotar) {
@@ -148,6 +167,8 @@ export function CuentasPage() {
                 nota: data.nota || undefined,
                 fechaISO: data.fechaISO,
                 cosechaCodigo: data.cosechaCodigo,
+                asociacionTipo: data.asociacionTipo,
+                asociacionValor: data.asociacionValor,
                 periodoId: periodo?.id || 'sin-periodo',
                 productorNombre: user?.name,
                 origen: 'manual',
@@ -189,197 +210,264 @@ export function CuentasPage() {
     }
 
     return (
-        <div className="space-y-4">
-            <h2 className="text-xl font-black text-gray-900 px-1">Mis cuentas</h2>
-
-            {/* Selector de vista */}
-            <div className="flex items-center gap-2">
-                <div className="grid grid-cols-2 flex-1 gap-1 rounded-2xl bg-gray-100 p-1">
-                    {(['cosecha', 'mes'] as const).map((v) => (
-                        <button
-                            key={v}
-                            onClick={() => setVista(v)}
-                            className={cn(
-                                'rounded-xl py-2 text-[13px] font-black',
-                                vista === v ? 'bg-white text-[#5f705f] shadow-sm' : 'text-gray-400'
-                            )}
-                        >
-                            {v === 'cosecha' ? 'Por cosecha' : 'Por mes'}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {vista === 'cosecha' ? (
-                <p className="text-[13px] font-black text-gray-500 px-1">{periodo?.nombre}</p>
-            ) : (
-                <div className="flex items-center justify-between px-1">
-                    <button
-                        onClick={() => setMesRef(new Date(mesRef.getFullYear(), mesRef.getMonth() - 1, 1))}
-                        className="h-8 w-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500"
-                    >
-                        <ChevronLeft size={16} />
-                    </button>
-                    <span className="text-[14px] font-black text-gray-700 capitalize">{mesLabel(mesRef)}</span>
-                    <button
-                        onClick={() => setMesRef(new Date(mesRef.getFullYear(), mesRef.getMonth() + 1, 1))}
-                        className="h-8 w-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500"
-                    >
-                        <ChevronRight size={16} />
-                    </button>
-                </div>
-            )}
-
-            {/* Pestañas de libro */}
-            <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-gray-100 p-1.5">
-                {tabs.map(({ id, label, Icon }) => (
-                    <button
-                        key={id}
-                        onClick={() => setTab(id)}
-                        className={cn(
-                            'flex flex-col items-center gap-1 rounded-xl py-2.5 text-[12px] font-black transition-all',
-                            tab === id ? 'bg-white text-[#5f705f] shadow-sm' : 'text-gray-400'
-                        )}
-                    >
-                        <Icon size={18} />
-                        {label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Tarjeta de saldo */}
-            <div
-                className={cn(
-                    'rounded-3xl p-5 text-white shadow-lg relative overflow-hidden',
-                    tab === 'hogar' ? 'bg-[#bb8d3b]' : 'bg-[#5f705f]'
-                )}
-            >
-                <PiggyBank className="absolute -right-4 -top-4 h-24 w-24 text-white/10" />
-                <p className="text-[12px] font-black uppercase tracking-widest text-white/70 relative">
-                    {tab === 'cafe'
-                        ? 'Ganancia del café'
-                        : tab === 'hogar'
-                        ? 'Movimiento de la casa'
-                        : 'Lo que te queda'}
-                </p>
-                <p className="pr-amount text-4xl mt-2 relative">{formatoPlata(r.saldo)}</p>
-                <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/15 relative">
-                    <div>
-                        <p className="text-[11px] font-bold uppercase text-white/60 flex items-center gap-1">
-                            <TrendingUp size={13} /> Entró
-                        </p>
-                        <p className="text-lg font-black">{formatoPlata(r.ingresos)}</p>
-                    </div>
-                    <div>
-                        <p className="text-[11px] font-bold uppercase text-white/60 flex items-center gap-1">
-                            <TrendingDown size={13} /> Salió
-                        </p>
-                        <p className="text-lg font-black">{formatoPlata(r.gastos)}</p>
-                    </div>
-                </div>
-                {tab === 'todo' && (
-                    <div className="grid grid-cols-2 gap-2 mt-3 relative">
-                        <div className="rounded-xl bg-white/10 p-2.5">
-                            <p className="text-[10px] font-black uppercase text-white/60">Café</p>
-                            <p className="font-black">{formatoPlata(rCafe.saldo)}</p>
-                        </div>
-                        <div className="rounded-xl bg-white/10 p-2.5">
-                            <p className="text-[10px] font-black uppercase text-white/60">Casa</p>
-                            <p className="font-black">{formatoPlata(rHogar.saldo)}</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Botones anotar */}
-            {tab !== 'todo' && (
-                <div className="grid grid-cols-2 gap-3">
-                    <button
-                        onClick={() => setAnotar({ libro: tab, tipo: 'ingreso' })}
-                        className="pr-tap flex-col gap-1 rounded-3xl bg-emerald-100 text-emerald-800 font-black"
-                    >
-                        <Plus size={22} /> {tab === 'cafe' ? 'Anotar venta' : 'Anotar ingreso'}
-                    </button>
-                    <button
-                        onClick={() => setAnotar({ libro: tab, tipo: 'gasto' })}
-                        className="pr-tap flex-col gap-1 rounded-3xl bg-rose-100 text-rose-700 font-black"
-                    >
-                        <Plus size={22} /> Anotar gasto
-                    </button>
-                </div>
-            )}
-
-            {/* Semilla de saldo inicial */}
-            {vista === 'cosecha' && !hayManuales && (
-                <button
-                    onClick={() => setSemilla(true)}
-                    className="w-full rounded-3xl border-2 border-dashed border-[#5f705f]/25 bg-white p-4 text-left flex gap-3"
-                >
-                    <Sparkles size={20} className="text-[#5f705f] shrink-0 mt-0.5" />
-                    <span>
-                        <span className="block font-black text-gray-800">¿Ya llevas gastos de esta cosecha?</span>
-                        <span className="block text-[13px] text-gray-500">
-                            Pon un aproximado de lo que llevas gastado y recibido para arrancar con datos reales.
-                        </span>
-                    </span>
-                </button>
-            )}
-
-            {/* Lista de movimientos */}
-            {movsLibro.length === 0 ? (
-                <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-white py-10 text-center">
-                    <p className="font-black text-gray-700">Nada anotado todavía</p>
-                    <p className="text-[13px] text-gray-400 mt-1">
-                        {tab === 'todo' ? 'Anota desde las pestañas Café o Casa.' : 'Usa los botones de arriba.'}
+        <div className="space-y-4 md:space-y-6">
+            {/* Encabezado en PC */}
+            <div className="hidden md:flex items-center justify-between pb-2 border-b border-gray-200">
+                <div>
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tight">Finanzas & Cuentas</h1>
+                    <p className="text-sm font-medium text-gray-500">
+                        {vista === 'cosecha' ? `Libro contable de ${periodo?.nombre || 'la cosecha'}` : `Movimientos del mes de ${mesLabel(mesRef)}`}
                     </p>
                 </div>
-            ) : (
-                <div className="space-y-4">
-                    {grupos.map(([dia, items]) => (
-                        <div key={dia}>
-                            <p className="text-[12px] font-black uppercase tracking-wide text-gray-400 mb-2 capitalize px-1">
-                                {dia}
-                            </p>
-                            <div className="space-y-2">
-                                {items.map((m) => {
-                                    const Icon = iconoDe(m.icono);
-                                    const esIngreso = m.tipo === 'ingreso';
-                                    return (
-                                        <button
-                                            key={m.id}
-                                            onClick={() => m.origen === 'manual' && setEditar(m)}
-                                            className={cn(
-                                                'w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 p-3.5 shadow-sm text-left',
-                                                m.origen !== 'manual' && 'opacity-80'
-                                            )}
-                                        >
-                                            <span
-                                                className={cn(
-                                                    'h-11 w-11 shrink-0 rounded-2xl flex items-center justify-center',
-                                                    esIngreso ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
-                                                )}
-                                            >
-                                                <Icon size={19} />
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-black text-gray-900 truncate">{m.categoriaLabel}</p>
-                                                <p className="text-[13px] text-gray-400 truncate">
-                                                    {tab === 'todo' && (m.libro === 'cafe' ? '☕ ' : '🏠 ')}
-                                                    {m.nota || (m.cosechaCodigo ? m.cosechaCodigo : m.origen === 'saldo-inicial' ? 'Aproximado inicial' : 'Sin detalle')}
-                                                </p>
-                                            </div>
-                                            <span className={cn('font-black shrink-0', esIngreso ? 'text-emerald-600' : 'text-gray-900')}>
-                                                {esIngreso ? '+' : '−'}
-                                                {formatoPlata(m.monto)}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
+                {tab !== 'todo' && (
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setAnotar({ libro: tab, tipo: 'ingreso' })}
+                            className="px-4 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm flex items-center gap-2 shadow-sm transition-colors"
+                        >
+                            <Plus size={18} /> {tab === 'cafe' ? 'Anotar venta' : 'Anotar ingreso'}
+                        </button>
+                        <button
+                            onClick={() => setAnotar({ libro: tab, tipo: 'gasto' })}
+                            className="px-4 py-2.5 rounded-2xl bg-rose-700 hover:bg-rose-800 text-white font-black text-sm flex items-center gap-2 shadow-sm transition-colors"
+                        >
+                            <Plus size={18} /> Anotar gasto
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            <div className="md:hidden">
+                <h2 className="text-xl font-black text-gray-900 px-1">Mis cuentas</h2>
+            </div>
+
+            {/* Layout responsivo: 1 columna en móvil, 12 columnas en PC */}
+            <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-12 md:gap-6 items-start">
+                {/* ── PANEL IZQUIERDO (Control de Filtros, Tarjeta de Saldo y Acciones) ── */}
+                <div className="space-y-4 md:col-span-5 lg:col-span-5">
+                    {/* Selector de vista */}
+                    <div className="flex items-center gap-2">
+                        <div className="grid grid-cols-2 flex-1 gap-1 rounded-2xl bg-gray-100 p-1">
+                            {(['cosecha', 'mes'] as const).map((v) => (
+                                <button
+                                    key={v}
+                                    onClick={() => setVista(v)}
+                                    className={cn(
+                                        'rounded-xl py-2 text-[13px] font-black transition-all',
+                                        vista === v ? 'bg-white text-[#5f705f] shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                                    )}
+                                >
+                                    {v === 'cosecha' ? 'Por cosecha' : 'Por mes'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {vista === 'cosecha' ? (
+                        <p className="text-[13px] font-black text-gray-500 px-1">{periodo?.nombre}</p>
+                    ) : (
+                        <div className="flex items-center justify-between px-1">
+                            <button
+                                onClick={() => setMesRef(new Date(mesRef.getFullYear(), mesRef.getMonth() - 1, 1))}
+                                className="h-8 w-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="text-[14px] font-black text-gray-700 capitalize">{mesLabel(mesRef)}</span>
+                            <button
+                                onClick={() => setMesRef(new Date(mesRef.getFullYear(), mesRef.getMonth() + 1, 1))}
+                                className="h-8 w-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Pestañas de libro */}
+                    <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-gray-100 p-1.5">
+                        {tabs.map(({ id, label, Icon }) => (
+                            <button
+                                key={id}
+                                onClick={() => setTab(id)}
+                                className={cn(
+                                    'flex flex-col items-center gap-1 rounded-xl py-2.5 text-[12px] font-black transition-all',
+                                    tab === id ? 'bg-white text-[#5f705f] shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                                )}
+                            >
+                                <Icon size={18} />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Tarjeta de saldo */}
+                    <div
+                        className={cn(
+                            'rounded-3xl p-5 text-white shadow-lg relative overflow-hidden transition-all',
+                            tab === 'hogar' ? 'bg-[#bb8d3b]' : 'bg-[#5f705f]'
+                        )}
+                    >
+                        <PiggyBank className="absolute -right-4 -top-4 h-24 w-24 text-white/10" />
+                        <p className="text-[12px] font-black uppercase tracking-widest text-white/70 relative">
+                            {tab === 'cafe'
+                                ? 'Ganancia del café'
+                                : tab === 'hogar'
+                                ? 'Movimiento de la casa'
+                                : 'Lo que te queda'}
+                        </p>
+                        <p className="pr-amount text-4xl mt-2 relative">{formatoPlata(r.saldo)}</p>
+                        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/15 relative">
+                            <div>
+                                <p className="text-[11px] font-bold uppercase text-white/60 flex items-center gap-1">
+                                    <TrendingUp size={13} /> Entró
+                                </p>
+                                <p className="text-lg font-black">{formatoPlata(r.ingresos)}</p>
+                            </div>
+                            <div>
+                                <p className="text-[11px] font-bold uppercase text-white/60 flex items-center gap-1">
+                                    <TrendingDown size={13} /> Salió
+                                </p>
+                                <p className="text-lg font-black">{formatoPlata(r.gastos)}</p>
                             </div>
                         </div>
-                    ))}
+                        {tab === 'todo' && (
+                            <div className="grid grid-cols-2 gap-2 mt-3 relative">
+                                <div className="rounded-xl bg-white/10 p-2.5">
+                                    <p className="text-[10px] font-black uppercase text-white/60">Café</p>
+                                    <p className="font-black">{formatoPlata(rCafe.saldo)}</p>
+                                </div>
+                                <div className="rounded-xl bg-white/10 p-2.5">
+                                    <p className="text-[10px] font-black uppercase text-white/60">Casa</p>
+                                    <p className="font-black">{formatoPlata(rHogar.saldo)}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Botones anotar (en móvil siempre visibles, en desktop como atajo) */}
+                    {tab !== 'todo' && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => setAnotar({ libro: tab, tipo: 'ingreso' })}
+                                className="pr-tap flex-col gap-1 rounded-3xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-black transition-colors"
+                            >
+                                <Plus size={22} /> {tab === 'cafe' ? 'Anotar venta' : 'Anotar ingreso'}
+                            </button>
+                            <button
+                                onClick={() => setAnotar({ libro: tab, tipo: 'gasto' })}
+                                className="pr-tap flex-col gap-1 rounded-3xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-black transition-colors"
+                            >
+                                <Plus size={22} /> Anotar gasto
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Semilla de saldo inicial */}
+                    {vista === 'cosecha' && !hayManuales && (
+                        <button
+                            onClick={() => setSemilla(true)}
+                            className="w-full rounded-3xl border-2 border-dashed border-[#5f705f]/25 bg-white p-4 text-left flex gap-3 hover:border-[#5f705f] transition-colors"
+                        >
+                            <Sparkles size={20} className="text-[#5f705f] shrink-0 mt-0.5" />
+                            <span>
+                                <span className="block font-black text-gray-800">¿Ya llevas gastos de esta cosecha?</span>
+                                <span className="block text-[13px] text-gray-500">
+                                    Pon un aproximado de lo que llevas gastado y recibido para arrancar con datos reales.
+                                </span>
+                            </span>
+                        </button>
+                    )}
                 </div>
-            )}
+
+                {/* ── PANEL DERECHO (Lista Cronológica de Movimientos) ── */}
+                <div className="space-y-4 md:col-span-7 lg:col-span-7">
+                    <div className="flex items-center justify-between px-1">
+                        <h3 className="text-base font-black text-gray-900">Historial de movimientos</h3>
+                        <span className="text-xs font-bold text-gray-400">{movsLibro.length} registros</span>
+                    </div>
+
+                    {movsLibro.length === 0 ? (
+                        <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-white py-12 text-center">
+                            <p className="font-black text-gray-700 text-base">Nada anotado todavía</p>
+                            <p className="text-[13px] text-gray-400 mt-1 max-w-xs mx-auto">
+                                {tab === 'todo' ? 'Anota desde las pestañas Café o Casa.' : 'Usa los botones de anotar para registrar entradas o salidas.'}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {grupos.map(([dia, items]) => (
+                                <div key={dia} className="space-y-2">
+                                    <p className="text-[12px] font-black uppercase tracking-wide text-gray-400 capitalize px-1">
+                                        {dia}
+                                    </p>
+                                    <div className="space-y-2">
+                                        {items.map((m) => {
+                                            const Icon = iconoDe(m.icono);
+                                            const esIngreso = m.tipo === 'ingreso';
+                                            const esSaldoInicial = m.origen === 'saldo-inicial';
+                                            return (
+                                                <button
+                                                    key={m.id}
+                                                    onClick={() => setEditar(m)}
+                                                    className={cn(
+                                                        'w-full flex items-center gap-3.5 rounded-2xl border p-3.5 shadow-sm text-left transition-all',
+                                                        esSaldoInicial
+                                                            ? 'bg-amber-50/40 hover:bg-amber-50/70 border-amber-200/70'
+                                                            : 'bg-white hover:bg-gray-50/80 border-gray-100'
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            'h-11 w-11 shrink-0 rounded-2xl flex items-center justify-center shadow-sm',
+                                                            esSaldoInicial
+                                                                ? 'bg-amber-100/80 text-amber-800'
+                                                                : esIngreso
+                                                                ? 'bg-emerald-50 text-emerald-600'
+                                                                : 'bg-rose-50 text-rose-500'
+                                                        )}
+                                                    >
+                                                        <Icon size={19} />
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <p className="font-black text-gray-900 truncate text-[14px]">{m.categoriaLabel}</p>
+                                                            {esSaldoInicial && (
+                                                                <span className="inline-flex items-center text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-200/70 text-amber-900">
+                                                                    Saldo Inicial
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[13px] text-gray-400 truncate mt-0.5">
+                                                            {tab === 'todo' && (m.libro === 'cafe' ? '☕ ' : '🏠 ')}
+                                                            {m.nota || (
+                                                                m.asociacionTipo === 'parcela' && m.asociacionValor
+                                                                    ? `Parcela: ${m.asociacionValor}`
+                                                                    : m.asociacionTipo === 'cosecha' && m.asociacionValor
+                                                                    ? `Cosecha: ${m.asociacionValor}`
+                                                                    : m.asociacionTipo === 'finca'
+                                                                    ? 'Toda la finca'
+                                                                    : m.cosechaCodigo
+                                                                    ? m.cosechaCodigo
+                                                                    : esSaldoInicial
+                                                                    ? 'Estimado al iniciar'
+                                                                    : 'Sin detalle'
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    <span className={cn('font-black text-base shrink-0', esIngreso ? 'text-emerald-600' : 'text-gray-900')}>
+                                                        {esIngreso ? '+' : '−'}
+                                                        {formatoPlata(m.monto)}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* ── Hojas ── */}
             <HojaMovimiento
@@ -393,6 +481,7 @@ export function CuentasPage() {
                 movimiento={editar}
                 categorias={cats}
                 cosechas={cosechas}
+                parcelas={parcelas}
                 onGuardar={guardarMovimiento}
                 onEliminar={eliminarMovimiento}
                 onCrearCategoria={crearCategoria}

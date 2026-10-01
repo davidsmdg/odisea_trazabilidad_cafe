@@ -12,7 +12,7 @@ const TABS = [
 
 export function TabBar() {
     return (
-        <nav className="pr-tabbar fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t-2 border-gray-100 flex items-stretch justify-around shadow-[0_-6px_25px_rgba(0,0,0,0.08)] py-1.5">
+        <nav className="pr-tabbar md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t-2 border-gray-100 flex items-stretch justify-around shadow-[0_-6px_25px_rgba(0,0,0,0.08)] py-1.5">
             {TABS.map(({ to, label, Icon }) => (
                 <NavLink
                     key={to}

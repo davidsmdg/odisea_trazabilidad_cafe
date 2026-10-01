@@ -16,12 +16,15 @@ interface Props {
     movimiento?: MovimientoFinanciero | null;
     categorias: CategoriaFinanciera[];
     cosechas: { codigo: string }[];
+    parcelas?: string[];
     onGuardar: (data: {
         categoria: CategoriaFinanciera;
         monto: number;
         nota: string;
         fechaISO: string;
         cosechaCodigo?: string;
+        asociacionTipo?: 'finca' | 'parcela' | 'cosecha';
+        asociacionValor?: string;
     }) => void;
     onCrearCategoria: (label: string, icono: string) => CategoriaFinanciera | Promise<CategoriaFinanciera>;
     onEliminar?: () => void;
@@ -38,6 +41,7 @@ export function HojaMovimiento({
     movimiento,
     categorias,
     cosechas,
+    parcelas = [],
     onGuardar,
     onCrearCategoria,
     onEliminar,
@@ -49,7 +53,8 @@ export function HojaMovimiento({
     const [catId, setCatId] = useState('');
     const [nota, setNota] = useState('');
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
-    const [cosecha, setCosecha] = useState('');
+    const [asociacionTipo, setAsociacionTipo] = useState<'finca' | 'parcela' | 'cosecha'>('finca');
+    const [asociacionValor, setAsociacionValor] = useState('');
     const [creando, setCreando] = useState(false);
     const [nuevaCat, setNuevaCat] = useState('');
     const [nuevoIcono, setNuevoIcono] = useState('otro');
@@ -60,7 +65,18 @@ export function HojaMovimiento({
         setCatId(movimiento?.categoriaId || '');
         setNota(movimiento?.nota || '');
         setFecha((movimiento?.fechaISO || new Date().toISOString()).split('T')[0]);
-        setCosecha(movimiento?.cosechaCodigo || '');
+
+        if (movimiento?.asociacionTipo) {
+            setAsociacionTipo(movimiento.asociacionTipo);
+            setAsociacionValor(movimiento.asociacionValor || '');
+        } else if (movimiento?.cosechaCodigo) {
+            setAsociacionTipo('cosecha');
+            setAsociacionValor(movimiento.cosechaCodigo);
+        } else {
+            setAsociacionTipo('finca');
+            setAsociacionValor('');
+        }
+
         setCreando(false);
         setNuevaCat('');
         setNuevoIcono('otro');
@@ -71,14 +87,28 @@ export function HojaMovimiento({
     const guardar = () => {
         const n = Number(monto);
         if (!n || n <= 0) return toast.error('Escribe cuánta plata fue');
-        const cat = opciones.find((c) => c.id === catId);
+        let cat = opciones.find((c) => c.id === catId);
+        if (!cat && movimiento) {
+            cat = {
+                id: movimiento.categoriaId,
+                label: movimiento.categoriaLabel,
+                icono: movimiento.icono,
+                libro,
+                tipo,
+            };
+        }
         if (!cat) return toast.error('Elige en qué fue');
+
+        const cosechaCod = asociacionTipo === 'cosecha' && asociacionValor ? asociacionValor : undefined;
+
         onGuardar({
             categoria: cat,
             monto: n,
             nota: nota.trim(),
             fechaISO: new Date(fecha + 'T12:00:00').toISOString(),
-            cosechaCodigo: libro === 'cafe' && cosecha ? cosecha : undefined,
+            cosechaCodigo: cosechaCod,
+            asociacionTipo,
+            asociacionValor: asociacionTipo !== 'finca' ? asociacionValor : undefined,
         });
     };
 
@@ -203,21 +233,122 @@ export function HojaMovimiento({
                     )}
                 </div>
 
-                {/* Cosecha asociada (solo café) */}
-                {libro === 'cafe' && cosechas.length > 0 && (
-                    <label className="block">
-                        <span className="block text-[12px] font-black uppercase tracking-wide text-gray-400 mb-1.5">
-                            Cosecha (opcional)
+                {/* Asignación del movimiento: Finca total, Por Parcela o Por Cosecha */}
+                {libro === 'cafe' && (
+                    <div className="space-y-2">
+                        <span className="block text-[12px] font-black uppercase tracking-wide text-gray-400">
+                            ¿A qué corresponde este movimiento?
                         </span>
-                        <select value={cosecha} onChange={(e) => setCosecha(e.target.value)} className={inputBase}>
-                            <option value="">Sin cosecha específica</option>
-                            {cosechas.map((c) => (
-                                <option key={c.codigo} value={c.codigo}>
-                                    {c.codigo}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                        <div className="grid grid-cols-3 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAsociacionTipo('finca');
+                                    setAsociacionValor('');
+                                }}
+                                className={cn(
+                                    'py-2.5 px-2 rounded-xl text-[13px] font-black border-2 transition-all text-center',
+                                    asociacionTipo === 'finca'
+                                        ? 'bg-[#5f705f] text-white border-[#5f705f] shadow-sm'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                                )}
+                            >
+                                Toda la finca
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAsociacionTipo('parcela');
+                                    if (!asociacionValor && parcelas.length > 0) {
+                                        setAsociacionValor(parcelas[0]);
+                                    }
+                                }}
+                                className={cn(
+                                    'py-2.5 px-2 rounded-xl text-[13px] font-black border-2 transition-all text-center',
+                                    asociacionTipo === 'parcela'
+                                        ? 'bg-[#5f705f] text-white border-[#5f705f] shadow-sm'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                                )}
+                            >
+                                Por parcela
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAsociacionTipo('cosecha');
+                                    if (!asociacionValor && cosechas.length > 0) {
+                                        setAsociacionValor(cosechas[0].codigo);
+                                    }
+                                }}
+                                className={cn(
+                                    'py-2.5 px-2 rounded-xl text-[13px] font-black border-2 transition-all text-center',
+                                    asociacionTipo === 'cosecha'
+                                        ? 'bg-[#5f705f] text-white border-[#5f705f] shadow-sm'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                                )}
+                            >
+                                Por cosecha
+                            </button>
+                        </div>
+
+                        {/* Opciones desplegadas si es por Parcela */}
+                        {asociacionTipo === 'parcela' && (
+                            <div className="pt-1 animate-in fade-in duration-200">
+                                <label className="block">
+                                    <span className="block text-[11px] font-black uppercase tracking-wide text-gray-400 mb-1">
+                                        Selecciona la parcela
+                                    </span>
+                                    {parcelas.length > 0 ? (
+                                        <select
+                                            value={asociacionValor}
+                                            onChange={(e) => setAsociacionValor(e.target.value)}
+                                            className={inputBase}
+                                        >
+                                            <option value="">Selecciona una parcela...</option>
+                                            {parcelas.map((p) => (
+                                                <option key={p} value={p}>
+                                                    Parcela: {p}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="p-3 bg-gray-50 rounded-xl text-[13px] text-gray-500 font-medium border border-gray-200">
+                                            No tienes parcelas registradas aún. Se asignará a la finca general.
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
+                        )}
+
+                        {/* Opciones desplegadas si es por Cosecha */}
+                        {asociacionTipo === 'cosecha' && (
+                            <div className="pt-1 animate-in fade-in duration-200">
+                                <label className="block">
+                                    <span className="block text-[11px] font-black uppercase tracking-wide text-gray-400 mb-1">
+                                        Selecciona la cosecha o lote
+                                    </span>
+                                    {cosechas.length > 0 ? (
+                                        <select
+                                            value={asociacionValor}
+                                            onChange={(e) => setAsociacionValor(e.target.value)}
+                                            className={inputBase}
+                                        >
+                                            <option value="">Selecciona una cosecha...</option>
+                                            {cosechas.map((c) => (
+                                                <option key={c.codigo} value={c.codigo}>
+                                                    Lote / Cosecha {c.codigo}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="p-3 bg-gray-50 rounded-xl text-[13px] text-gray-500 font-medium border border-gray-200">
+                                            No tienes cosechas registradas aún.
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {/* Nota */}

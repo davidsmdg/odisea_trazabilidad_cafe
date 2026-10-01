@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Newspaper,
     ChevronDown,
     ChevronUp,
-    ArrowUpRight,
     TrendingUp,
     Sun,
     Calendar,
@@ -12,9 +11,6 @@ import {
     Sparkles,
     X,
 } from 'lucide-react';
-import { getPrecioReferencia, PRECIOS_REFERENCIA } from '../data/preciosReferencia';
-import { formatoPlata } from '../utils/formato';
-import { getFincas } from '../../../services/fincasService';
 
 interface NoticiaCafe {
     id: string;
@@ -66,26 +62,11 @@ const NOTICIAS_DEL_DIA: NoticiaCafe[] = [
 ];
 
 export function BarraPrecioTicker() {
-    const [departamento, setDepartamento] = useState<string>('Huila');
     const [expandido, setExpandido] = useState<boolean>(false);
-
-    useEffect(() => {
-        getFincas().then((f) => {
-            if (f[0]?.departamento) setDepartamento(f[0].departamento);
-        }).catch(() => {});
-    }, []);
-
-    const precioPrincipal = getPrecioReferencia(departamento);
-
-    // Departamentos para la marquesina
-    const items = [
-        precioPrincipal,
-        ...Object.values(PRECIOS_REFERENCIA).filter((p) => p.departamento !== departamento),
-    ];
 
     return (
         <div className="w-full bg-[#1b2b1e] border-b border-[#2d4231] select-none">
-            {/* ── Barra tocable más cómoda, espaciosa y con etiqueta "NOTICIAS" ── */}
+            {/* ── Barra tocable de titulares de noticias ── */}
             <button
                 type="button"
                 onClick={() => setExpandido(!expandido)}
@@ -98,26 +79,16 @@ export function BarraPrecioTicker() {
                     <span>NOTICIAS</span>
                 </div>
 
-                {/* Texto marquesina lento y legible */}
+                {/* Texto marquesina lento y legible con los titulares de noticias */}
                 <div className="flex-1 overflow-hidden relative mr-2">
-                    <div className="producer-ticker-track flex items-center gap-8">
-                        {[...items, ...items].map((p, idx) => (
-                            <div key={`${p.departamento}-${idx}`} className="flex items-center gap-2 whitespace-nowrap text-[13px]">
-                                <span className="text-gray-300 font-medium">{p.departamento}:</span>
-                                <span className="text-white font-black tracking-tight">{formatoPlata(p.precioCarga)}</span>
-                                <span className="text-[11px] text-gray-400 font-normal">/ carga</span>
-                                <span
-                                    className={`inline-flex items-center text-[11px] font-black px-1.5 py-0.5 rounded-md ${
-                                        p.variacionPct >= 0
-                                            ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/40'
-                                            : 'bg-rose-950/80 text-rose-400 border border-rose-800/40'
-                                    }`}
-                                >
-                                    <ArrowUpRight size={12} className={p.variacionPct >= 0 ? '' : 'rotate-90'} />
-                                    {p.variacionPct >= 0 ? '+' : ''}{p.variacionPct}%
+                    <div className="producer-ticker-track flex items-center gap-10">
+                        {[...NOTICIAS_DEL_DIA, ...NOTICIAS_DEL_DIA].map((n, idx) => (
+                            <div key={`${n.id}-${idx}`} className="flex items-center gap-2.5 whitespace-nowrap text-[13px]">
+                                <span className="text-emerald-400 font-black uppercase text-[10px] tracking-wider px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/40">
+                                    {n.categoria}
                                 </span>
-                                <span className="text-gray-600 ml-2">•</span>
-                                <span className="text-emerald-300/90 font-semibold text-[12px]">Toca para ver noticias</span>
+                                <span className="text-white font-bold tracking-tight">{n.titulo}</span>
+                                <span className="text-gray-500 font-medium text-[11px]">{n.hora}</span>
                                 <span className="text-gray-600 ml-2">•</span>
                             </div>
                         ))}
@@ -148,7 +119,7 @@ export function BarraPrecioTicker() {
                                         <Newspaper size={16} className="text-[#64d87c]" />
                                         Noticias del Café y del Campo
                                     </h3>
-                                    <p className="text-[12px] text-gray-400">Información clave y precios actualizados para productores</p>
+                                    <p className="text-[12px] text-gray-400">Información clave y novedades para productores</p>
                                 </div>
                                 <button
                                     type="button"
@@ -158,28 +129,6 @@ export function BarraPrecioTicker() {
                                 >
                                     <X size={16} />
                                 </button>
-                            </div>
-
-                            {/* Resumen del precio de hoy en tu región */}
-                            <div className="rounded-2xl bg-[#203524] border border-[#2e4c34] p-3 flex items-center justify-between">
-                                <div>
-                                    <span className="text-[11px] font-black uppercase text-gray-400">Precio de hoy · {precioPrincipal.departamento}</span>
-                                    <p className="text-2xl font-black text-white">{formatoPlata(precioPrincipal.precioCarga)}</p>
-                                    <p className="text-[11px] text-gray-300 font-medium">por carga de 125 kilos pergamino</p>
-                                </div>
-                                <div className="text-right">
-                                    <span
-                                        className={`inline-flex items-center text-[12px] font-black px-2.5 py-1 rounded-xl ${
-                                            precioPrincipal.variacionPct >= 0
-                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                                : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                        }`}
-                                    >
-                                        <ArrowUpRight size={14} className={precioPrincipal.variacionPct >= 0 ? '' : 'rotate-90'} />
-                                        {precioPrincipal.variacionPct >= 0 ? '+' : ''}{precioPrincipal.variacionPct}%
-                                    </span>
-                                    <p className="text-[10px] text-gray-400 mt-1">Rendimiento ref: {precioPrincipal.factorRendimiento}</p>
-                                </div>
                             </div>
 
                             {/* Listado de noticias */}

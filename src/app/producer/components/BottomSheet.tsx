@@ -34,20 +34,20 @@ export function BottomSheet({ open, onClose, title, tono = 'verde', children }: 
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                     />
                     <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
+                        initial={{ y: '100%', opacity: 0.8 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: '100%', opacity: 0.8 }}
                         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-                        className="relative w-full max-w-md bg-[#FDFDF8] rounded-t-[28px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                        className="relative w-full max-w-md sm:max-w-xl bg-[#FDFDF8] rounded-t-[28px] sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] z-10"
                     >
                         <div className={`flex items-center justify-between px-5 py-4 ${TONOS[tono]}`}>
                             <h2 className="text-lg font-black">{title}</h2>

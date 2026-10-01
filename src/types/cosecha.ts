@@ -1,3 +1,12 @@
+export interface EventoTrazabilidad {
+    id: string;
+    etapa: 'recoleccion' | 'fermentacion' | 'secado' | 'trilla' | 'catacion' | 'venta';
+    titulo: string;
+    descripcion: string;
+    fecha: string;
+    detalles?: string;
+}
+
 export interface Cosecha {
     id: string;
     codigo: string;
@@ -12,7 +21,7 @@ export interface Cosecha {
         verde: number;
         objetivo?: number;
     };
-    fase: number;
+    fase: number; // 0: meta, 1: cereza, 2: seco, 3: verde
     modalidad: 'diario' | 'objetivo';
     detallesObjetivo?: {
         variedad: string;
@@ -22,4 +31,11 @@ export interface Cosecha {
     macroperfil: string;
     clientes: any[];
     factorRendimiento: number | null;
+    fechasFases?: {
+        cereza?: string;
+        secadoInicio?: string;
+        pergaminoListo?: string;
+        verde?: string;
+    };
+    bitacora?: EventoTrazabilidad[];
 }

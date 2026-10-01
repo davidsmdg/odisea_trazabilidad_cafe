@@ -29,6 +29,10 @@ export interface MovimientoFinanciero {
     periodoId: string;
     /** Solo café: código de la cosecha/lote asociada, opcional. */
     cosechaCodigo?: string;
+    /** Imputación del movimiento: toda la finca, una parcela específica o una cosecha/lote */
+    asociacionTipo?: 'finca' | 'parcela' | 'cosecha';
+    /** Nombre de la parcela o código de la cosecha si aplica */
+    asociacionValor?: string;
     /** Nombre del productor dueño del movimiento (para la vista de Odisea admin). */
     productorNombre?: string;
     origen: 'manual' | 'saldo-inicial';

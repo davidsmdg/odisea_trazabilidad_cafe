@@ -211,52 +211,54 @@ export function FincaPage() {
                                 </span>
                             </div>
 
-                            {/* Lista de parcelas */}
+                            {/* Lista de parcelas: En móvil apilada, en PC en cuadrícula de 2 o 3 columnas */}
                             {finca.lotesDeCafe.length === 0 ? (
-                                <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-4 text-center">
+                                <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center">
                                     <p className="text-sm font-bold text-gray-600">Aún no has agregado parcelas a esta finca.</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">Agrega tu primer lote o lote de café sembrado.</p>
+                                    <p className="text-xs text-gray-400 mt-1">Agrega tu primer lote o lote de café sembrado.</p>
                                 </div>
                             ) : (
-                                finca.lotesDeCafe.map((parcela, idx) => (
-                                    <button
-                                        key={parcela.id}
-                                        onClick={() => setParcelaSheet({ fincaId: finca.id, parcela })}
-                                        className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-200/90 p-3.5 shadow-sm text-left hover:border-[#5f705f] transition-all duration-150"
-                                    >
-                                        <span className="h-10 w-10 shrink-0 rounded-xl bg-[#5f705f]/10 text-[#3b553e] flex items-center justify-center font-black text-sm">
-                                            {idx + 1}
-                                        </span>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-black text-gray-900 text-[15px] truncate">{parcela.nombre}</p>
-                                                <span className="text-[10px] font-extrabold text-[#3b553e] bg-[#eef5ef] px-2 py-0.5 rounded-md">
-                                                    Parcela
-                                                </span>
-                                            </div>
-                                            <p className="text-[13px] font-bold text-gray-600 truncate flex items-center gap-1.5 mt-0.5">
-                                                <span>{parcela.area || '—'}</span>
-                                                <span className="text-[#3b553e] font-extrabold bg-[#5f705f]/10 px-2 py-0.2 rounded-md text-xs">hectáreas</span>
-                                                {parcela.variedades.length > 0 && <span className="text-gray-400">· {parcela.variedades.join(', ')}</span>}
-                                            </p>
-                                            {(() => {
-                                                const tiene = parcela.ubicacion || parcela.coordenadaCentral;
-                                                return (
-                                                    <span
-                                                        className={cn(
-                                                            'inline-flex items-center gap-1 text-[11px] font-black uppercase mt-1',
-                                                            tiene ? 'text-emerald-700' : 'text-gray-400'
-                                                        )}
-                                                    >
-                                                        <MapPin size={11} />
-                                                        {tiene ? 'Coordenadas GPS listas' : 'Sin ubicar por GPS'}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {finca.lotesDeCafe.map((parcela, idx) => (
+                                        <button
+                                            key={parcela.id}
+                                            onClick={() => setParcelaSheet({ fincaId: finca.id, parcela })}
+                                            className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-200/90 p-4 shadow-sm text-left hover:border-[#5f705f] hover:shadow transition-all duration-150"
+                                        >
+                                            <span className="h-10 w-10 shrink-0 rounded-xl bg-[#5f705f]/10 text-[#3b553e] flex items-center justify-center font-black text-sm">
+                                                {idx + 1}
+                                            </span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-black text-gray-900 text-[15px] truncate">{parcela.nombre}</p>
+                                                    <span className="text-[10px] font-extrabold text-[#3b553e] bg-[#eef5ef] px-2 py-0.5 rounded-md">
+                                                        Parcela
                                                     </span>
-                                                );
-                                            })()}
-                                        </div>
-                                        <ChevronDown size={18} className="text-gray-400 -rotate-90 shrink-0" />
-                                    </button>
-                                ))
+                                                </div>
+                                                <p className="text-[13px] font-bold text-gray-600 truncate flex items-center gap-1.5 mt-0.5">
+                                                    <span>{parcela.area || '—'}</span>
+                                                    <span className="text-[#3b553e] font-extrabold bg-[#5f705f]/10 px-2 py-0.2 rounded-md text-xs">hectáreas</span>
+                                                    {parcela.variedades.length > 0 && <span className="text-gray-400 truncate">· {parcela.variedades.join(', ')}</span>}
+                                                </p>
+                                                {(() => {
+                                                    const tiene = parcela.ubicacion || parcela.coordenadaCentral;
+                                                    return (
+                                                        <span
+                                                            className={cn(
+                                                                'inline-flex items-center gap-1 text-[11px] font-black uppercase mt-1',
+                                                                tiene ? 'text-emerald-700' : 'text-gray-400'
+                                                            )}
+                                                        >
+                                                            <MapPin size={11} />
+                                                            {tiene ? 'Coordenadas GPS listas' : 'Sin ubicar por GPS'}
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </div>
+                                            <ChevronDown size={18} className="text-gray-400 -rotate-90 shrink-0" />
+                                        </button>
+                                    ))}
+                                </div>
                             )}
 
                             <button

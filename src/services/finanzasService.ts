@@ -217,11 +217,9 @@ export async function deleteMovimiento(id: string): Promise<void> {
 }
 
 export async function sembrarSaldoInicial(periodoId: string, semilla: SemillaSaldo, productorNombre?: string): Promise<void> {
-    storeSembrar(periodoId, semilla, productorNombre);
-    const { data: { user } } = await supabase.auth.getUser();
     const hoy = new Date().toISOString();
 
-    if (semilla.ingresoCafe) {
+    if (semilla.ingresoCafe && semilla.ingresoCafe > 0) {
         await addMovimiento({
             libro: 'cafe',
             tipo: 'ingreso',
@@ -236,7 +234,7 @@ export async function sembrarSaldoInicial(periodoId: string, semilla: SemillaSal
             origen: 'saldo-inicial',
         });
     }
-    if (semilla.gastoCafe) {
+    if (semilla.gastoCafe && semilla.gastoCafe > 0) {
         await addMovimiento({
             libro: 'cafe',
             tipo: 'gasto',
@@ -251,7 +249,7 @@ export async function sembrarSaldoInicial(periodoId: string, semilla: SemillaSal
             origen: 'saldo-inicial',
         });
     }
-    if (semilla.gastoHogar) {
+    if (semilla.gastoHogar && semilla.gastoHogar > 0) {
         await addMovimiento({
             libro: 'hogar',
             tipo: 'gasto',

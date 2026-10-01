@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
 import { BottomSheet } from '../components/BottomSheet';
+import { TimelineCosecha } from '../components/TimelineCosecha';
 import { formatoNumero } from '../utils/formato';
 import type { Cosecha } from '../../../types/cosecha';
 import { getCosechas, saveCosechas } from '../../../services/cosechasService';
@@ -362,11 +363,11 @@ export function CosechasPage() {
                 ))}
             </div>
 
-            {/* Lista */}
+            {/* Lista: En móvil apilada, en PC en cuadrícula */}
             {cargando ? (
-                <div className="space-y-3">
-                    {[1, 2].map((i) => (
-                        <div key={i} className="h-40 rounded-3xl bg-white border border-gray-100 animate-pulse" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-44 rounded-3xl bg-white border border-gray-100 animate-pulse" />
                     ))}
                 </div>
             ) : error ? (
@@ -381,12 +382,12 @@ export function CosechasPage() {
                     </button>
                 </div>
             ) : visibles.length === 0 ? (
-                <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-white py-10 text-center">
-                    <p className="font-black text-gray-700">No hay cosechas en este filtro</p>
+                <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-white py-12 text-center">
+                    <p className="font-black text-gray-700 text-base">No hay cosechas en este filtro</p>
                     <p className="text-[13px] text-gray-400 mt-1">Cambia el filtro o registra una nueva.</p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {visibles.map((lote) => {
                         const info = faseInfo(lote);
                         const stage = stages[lote.codigo]?.stage || 'Capturado';
@@ -440,6 +441,9 @@ export function CosechasPage() {
                                             : ''}
                                     </p>
                                 )}
+
+                                {/* Línea de Tiempo y Trazabilidad de la Cosecha */}
+                                <TimelineCosecha lote={lote} />
 
                                 {/* Progreso de meta */}
                                 {lote.modalidad === 'objetivo' && lote.pesos.objetivo > 0 && (

@@ -98,7 +98,7 @@ export function NuevaCosechaPage() {
 
     // Camino "Solo anotar kilos"
     const [peso, setPeso] = useState('');
-    const [madurez, setMadurez] = useState(4);
+    const [madurez, setMadurez] = useState(2);
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
 
     const handleSave = async () => {
@@ -222,7 +222,7 @@ export function NuevaCosechaPage() {
     };
 
     return (
-        <div className="space-y-5 pb-4">
+        <div className="max-w-2xl mx-auto space-y-5 pb-6">
             <div className="flex items-center gap-3">
                 <button
                     onClick={() => navigate(-1)}
@@ -414,22 +414,146 @@ export function NuevaCosechaPage() {
                                 className={selectClass}
                             />
                         </Campo>
-                        <Campo label={`Madurez del grano · ${madurez * 20}%`}>
-                            <input
-                                type="range"
-                                min={1}
-                                max={5}
-                                step={1}
-                                value={madurez}
-                                onChange={(e) => setMadurez(Number(e.target.value))}
-                                className="w-full accent-[#5f705f] h-2"
-                            />
-                            <div className="flex justify-between text-[11px] font-black uppercase text-gray-300 mt-1">
-                                <span>Verde</span>
-                                <span>Maduro</span>
-                                <span>Pasado</span>
+                        {/* Madurez del grano con cereza de café interactiva */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="block text-[12px] font-black uppercase tracking-wide text-gray-500">
+                                    Madurez del grano
+                                </span>
+                                {(() => {
+                                    const estados = {
+                                        1: { txt: 'Verde', color: 'text-emerald-700 bg-emerald-50' },
+                                        2: { txt: 'Maduro', color: 'text-red-700 bg-red-50' },
+                                        3: { txt: 'Pasado', color: 'text-[#4a101d] bg-purple-50' },
+                                    };
+                                    const estado = estados[madurez as 1 | 2 | 3] || estados[2];
+                                    return (
+                                        <span className={cn('text-[11px] font-black px-2.5 py-0.5 rounded-full', estado.color)}>
+                                            {estado.txt}
+                                        </span>
+                                    );
+                                })()}
                             </div>
-                        </Campo>
+
+                            {/* Contenedor visual con la cereza de café y el slider */}
+                            <div className="rounded-2xl border-2 border-gray-100 bg-[#FDFDF8] p-4 flex items-center gap-4 shadow-sm">
+                                {/* Cereza de café SVG dinámica */}
+                                <div className="shrink-0 flex flex-col items-center">
+                                    {(() => {
+                                        // 1: Verde | 2: Maduro | 3: Pasado
+                                        const paletas: Record<number, { c1: string; c2: string; brillo: string; navel: string }> = {
+                                            1: { c1: '#6ee7b7', c2: '#15803d', brillo: '#a7f3d0', navel: '#052e16' },
+                                            2: { c1: '#f87171', c2: '#b91c1c', brillo: '#fca5a5', navel: '#450a0a' },
+                                            3: { c1: '#9f1239', c2: '#4c0519', brillo: '#f43f5e', navel: '#1e0208' },
+                                        };
+                                        const p = paletas[madurez] || paletas[2];
+
+                                        return (
+                                            <div className="relative group">
+                                                <svg
+                                                    width="64"
+                                                    height="64"
+                                                    viewBox="0 0 64 64"
+                                                    className="transition-transform duration-300 transform group-hover:scale-105 filter drop-shadow-md"
+                                                >
+                                                    <defs>
+                                                        {/* Gradiente del cuerpo de la cereza */}
+                                                        <radialGradient id={`cerezaGrad-${madurez}`} cx="35%" cy="35%" r="65%">
+                                                            <stop offset="0%" stopColor={p.c1} />
+                                                            <stop offset="60%" stopColor={p.c2} />
+                                                            <stop offset="100%" stopColor={p.navel} />
+                                                        </radialGradient>
+                                                        {/* Gradiente de brillo especular */}
+                                                        <linearGradient id={`brilloGrad-${madurez}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                                            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.75" />
+                                                            <stop offset="100%" stopColor={p.c1} stopOpacity="0" />
+                                                        </linearGradient>
+                                                    </defs>
+
+                                                    {/* Pedúnculo / ramita verde */}
+                                                    <path
+                                                        d="M32 14 C32 8, 38 6, 44 4 C40 8, 36 10, 33 14"
+                                                        fill="none"
+                                                        stroke="#4d7c0f"
+                                                        strokeWidth="2.5"
+                                                        strokeLinecap="round"
+                                                    />
+
+                                                    {/* Cuerpo de la cereza de café */}
+                                                    <ellipse
+                                                        cx="32"
+                                                        cy="36"
+                                                        rx="21"
+                                                        ry="23"
+                                                        fill={`url(#cerezaGrad-${madurez})`}
+                                                        className="transition-colors duration-300"
+                                                    />
+
+                                                    {/* Ombligo de la cereza */}
+                                                    <ellipse
+                                                        cx="32"
+                                                        cy="56"
+                                                        rx="4"
+                                                        ry="2"
+                                                        fill={p.navel}
+                                                        opacity="0.8"
+                                                    />
+                                                    <circle
+                                                        cx="32"
+                                                        cy="56"
+                                                        r="1.5"
+                                                        fill="#000000"
+                                                        opacity="0.6"
+                                                    />
+
+                                                    {/* Reflejo / brillo de la cereza */}
+                                                    <ellipse
+                                                        cx="25"
+                                                        cy="26"
+                                                        rx="7"
+                                                        ry="4"
+                                                        transform="rotate(-28 25 26)"
+                                                        fill={`url(#brilloGrad-${madurez})`}
+                                                    />
+                                                    <ellipse
+                                                        cx="23"
+                                                        cy="32"
+                                                        rx="2.5"
+                                                        ry="1.5"
+                                                        transform="rotate(-28 23 32)"
+                                                        fill="#ffffff"
+                                                        opacity="0.5"
+                                                    />
+                                                </svg>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* Slider y marcas de escala: Verde, Maduro, Pasado */}
+                                <div className="flex-1 space-y-2">
+                                    <input
+                                        type="range"
+                                        min={1}
+                                        max={3}
+                                        step={1}
+                                        value={madurez}
+                                        onChange={(e) => setMadurez(Number(e.target.value))}
+                                        className={cn(
+                                            'w-full h-2.5 rounded-lg appearance-none cursor-pointer transition-all duration-300',
+                                            madurez === 1 && 'accent-emerald-600 bg-emerald-100',
+                                            madurez === 2 && 'accent-red-600 bg-red-100',
+                                            madurez === 3 && 'accent-[#4a101d] bg-purple-100'
+                                        )}
+                                    />
+                                    <div className="flex justify-between text-[11px] font-black uppercase text-gray-400">
+                                        <span className={cn(madurez === 1 && 'text-emerald-700 font-extrabold')}>Verde</span>
+                                        <span className={cn(madurez === 2 && 'text-red-700 font-extrabold')}>Maduro</span>
+                                        <span className={cn(madurez === 3 && 'text-[#4a101d] font-extrabold')}>Pasado</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
