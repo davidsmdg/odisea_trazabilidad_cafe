@@ -19,6 +19,7 @@ import { ProducerOnboarding } from './ProducerOnboarding';
 import { debeVerOnboarding, marcarOnboarding } from './utils/onboardingFlag';
 import { getFincas } from '../../services/fincasService';
 import { cn } from '../components/ui/utils';
+import { BrandLogo } from '../components/ui/BrandLogo';
 
 const NAV_ITEMS = [
     { to: '/producer/inicio', label: 'Inicio', icon: Home },
@@ -85,51 +86,41 @@ export function ProducerMobileLayout() {
     };
 
     return (
-        <div className="producer-shell min-h-screen bg-[#FDFDF8] text-[#2c362c] flex flex-col md:flex-row">
+        <div className="producer-shell min-h-screen bg-[#F6F2EC] text-[#2D3E33] flex flex-col md:flex-row">
             {/* ── SIDEBAR LATERAL (Solo para Tablet y PC: md en adelante) ── */}
-            <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-[#1d3d24] text-white shrink-0 sticky top-0 h-screen z-30 shadow-xl border-r border-[#2d5a37]/50">
-                {/* Logo & Marca */}
-                <div className="p-6 border-b border-white/10 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-[#bb8d3b] flex items-center justify-center text-white shadow-md font-black">
-                        <Coffee size={22} />
-                    </div>
-                    <div>
-                        <span className="text-lg font-black tracking-tight text-white block leading-none">
-                            ODISEA
-                        </span>
-                        <span className="text-[11px] font-bold uppercase tracking-widest text-[#a4d4ab]">
-                            Portal Productor
-                        </span>
-                    </div>
+            <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-[#2D3E33] text-[#F6F2EC] shrink-0 sticky top-0 h-screen z-30 shadow-xl border-r border-white/10">
+                {/* Logo & Marca Oficial */}
+                <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                    <BrandLogo to="/producer/inicio" subtitle="Mi Finca" theme="light" size="md" />
                 </div>
 
                 {/* Perfil resumido en sidebar */}
-                <div className="px-5 py-4 border-b border-white/10 flex items-center gap-3 bg-black/10">
-                    <div className="h-11 w-11 rounded-2xl bg-[#5f705f] text-white flex items-center justify-center font-black text-sm shadow">
+                <div className="px-5 py-4 border-b border-white/10 flex items-center gap-3 bg-black/15">
+                    <div className="h-11 w-11 rounded-full bg-[#BD4A1F] text-[#F6F2EC] flex items-center justify-center font-heading text-base shadow">
                         {user?.avatarInitials || (primerNombre ? primerNombre.slice(0, 2).toUpperCase() : 'PR')}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-white truncate">{user?.name || 'Productor'}</p>
-                        <p className="text-[11px] text-[#a4d4ab] font-medium capitalize truncate">{hoy}</p>
+                        <p className="text-base font-extrabold text-[#F6F2EC] truncate">{user?.name || 'Productor'}</p>
+                        <p className="text-[12px] text-[#CCD1C7] font-semibold capitalize truncate">{hoy}</p>
                     </div>
                 </div>
 
                 {/* Navegación de escritorio */}
-                <nav className="flex-1 px-4 py-5 space-y-1.5 overflow-y-auto">
+                <nav className="flex-1 px-4 py-5 space-y-2 overflow-y-auto">
                     {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
                         <NavLink
                             key={to}
                             to={to}
                             className={({ isActive }) =>
                                 cn(
-                                    'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[14px] font-black transition-all duration-150',
+                                    'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[15px] font-extrabold transition-all duration-150',
                                     isActive
-                                        ? 'bg-[#2d5a37] text-white shadow-md shadow-[#2d5a37]/40 translate-x-1'
-                                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                        ? 'bg-[#BD4A1F] text-[#F6F2EC] shadow-md shadow-[#BD4A1F]/30 translate-x-1'
+                                        : 'text-[#CCD1C7] hover:bg-white/10 hover:text-white'
                                 )
                             }
                         >
-                            <Icon size={20} className="shrink-0" />
+                            <Icon size={22} className="shrink-0" />
                             <span>{label}</span>
                         </NavLink>
                     ))}
@@ -139,7 +130,7 @@ export function ProducerMobileLayout() {
                 <div className="p-4 border-t border-white/10 space-y-2">
                     <Link
                         to="/producer/cosechas/nueva"
-                        className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-[#bb8d3b] hover:bg-[#a67b30] text-white font-black text-sm shadow-md transition-colors"
+                        className="flex items-center justify-center gap-2 w-full py-3.5 rounded-full bg-[#E5A84B] hover:bg-[#d4973a] text-[#1B263B] font-extrabold text-sm uppercase tracking-wider shadow-md transition-colors"
                     >
                         <Plus size={18} />
                         <span>Nueva Cosecha</span>
@@ -147,7 +138,7 @@ export function ProducerMobileLayout() {
 
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2.5 w-full px-4 py-2.5 rounded-xl text-white/60 hover:text-rose-300 hover:bg-white/5 text-[13px] font-bold transition-colors"
+                        className="flex items-center gap-2.5 w-full px-4 py-2.5 rounded-xl text-white/70 hover:text-rose-300 hover:bg-white/5 text-[14px] font-bold transition-colors"
                     >
                         <LogOut size={16} />
                         <span>Cerrar sesión</span>
@@ -158,27 +149,24 @@ export function ProducerMobileLayout() {
             {/* ── CONTENIDO PRINCIPAL (Responsivo: max-w-md en móvil, fluido en PC) ── */}
             <div className="flex-1 flex flex-col min-w-0 mx-auto w-full md:max-w-none">
                 {/* Barra de noticias y precio en movimiento arriba de todo */}
-                <div className="sticky top-0 z-40 bg-[#1d3d24]">
+                <div className="sticky top-0 z-40 bg-[#2D3E33]">
                     <BarraPrecioTicker />
                 </div>
 
-                {/* Encabezado compacto (solo móvil) */}
-                <header className="md:hidden bg-[#FDFDF8]/90 backdrop-blur-md px-5 pt-3 pb-3 flex items-center justify-between border-b border-gray-100">
-                    <div className="min-w-0">
-                        <p className="text-[11px] font-black uppercase tracking-widest text-gray-400 capitalize truncate">
-                            {hoy}
-                        </p>
-                        <h1 className="text-2xl font-black text-gray-900 leading-tight truncate">
-                            Hola, {primerNombre}
-                        </h1>
+                {/* Encabezado compacto (solo móvil) con BrandLogo oficial */}
+                <header className="md:hidden bg-[#F6F2EC]/95 backdrop-blur-md px-5 pt-3 pb-3 flex items-center justify-between border-b border-[#2D3E33]/10">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <BrandLogo to="/producer/inicio" subtitle="Mi Finca" theme="dark" size="sm" />
                     </div>
-                    <Link
-                        to="/producer/perfil"
-                        className="h-12 w-12 shrink-0 rounded-2xl bg-[#5f705f] text-white flex items-center justify-center font-black text-base shadow-md"
-                        aria-label="Mi perfil"
-                    >
-                        {user?.avatarInitials || (primerNombre ? primerNombre.slice(0, 2).toUpperCase() : 'PR')}
-                    </Link>
+                    <div className="flex items-center gap-2.5">
+                        <Link
+                            to="/producer/perfil"
+                            className="h-11 w-11 shrink-0 rounded-full bg-[#2D3E33] text-[#F6F2EC] flex items-center justify-center font-heading text-sm shadow-md border border-[#2D3E33]/20"
+                            aria-label="Mi perfil"
+                        >
+                            {user?.avatarInitials || (primerNombre ? primerNombre.slice(0, 2).toUpperCase() : 'PR')}
+                        </Link>
+                    </div>
                 </header>
 
                 {/* Aviso de sin conexión */}

@@ -27,6 +27,7 @@ import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { cn } from '../components/ui/utils';
 import { Button } from '../components/ui/button';
 import { OnboardingTour, OnboardingTourTrigger } from '../components/OnboardingTour';
+import { BrandLogo } from '../components/ui/BrandLogo';
 
 interface NavItem {
     label: string;
@@ -62,19 +63,14 @@ export function OdiseaLayout() {
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
     const SidebarContent = () => (
-        <div className="flex flex-col h-full bg-[#0F172A] text-white">
-            {/* Logo */}
-            <div className="flex items-center gap-3 px-6 py-8 border-b border-white/5">
-                <Building2 className="h-8 w-8 text-blue-400 shrink-0" />
-                {(!collapsed || mobileMenuOpen) && (
-                    <span className="text-sm font-sans font-black tracking-widest text-white leading-none uppercase">
-                        ODISEA <span className="text-blue-400 font-normal">COFFEE TRACE</span>
-                    </span>
-                )}
+        <div className="flex flex-col h-full bg-[#2D3E33] text-[#F6F2EC]">
+            {/* Logo Oficial */}
+            <div className="flex items-center gap-3 px-6 py-7 border-b border-white/10">
+                <BrandLogo to="/odisea/dashboard" subtitle={collapsed && !mobileMenuOpen ? '' : 'Admin'} theme="light" size="sm" />
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 py-10 px-3 space-y-2 overflow-y-auto">
+            <nav className="flex-1 py-8 px-3 space-y-2 overflow-y-auto">
                 {NAV_ITEMS.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.path);
@@ -98,16 +94,16 @@ export function OdiseaLayout() {
                             className={cn(
                                 'flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group',
                                 active
-                                    ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20'
-                                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-[#BD4A1F] text-white font-extrabold shadow-md shadow-[#BD4A1F]/30'
+                                    : 'text-[#CCD1C7] hover:bg-white/10 hover:text-white'
                             )}
                         >
-                            <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white' : 'text-slate-500 group-hover:text-white')} />
+                            <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white' : 'text-[#CCD1C7] group-hover:text-white')} />
                             {(!collapsed || mobileMenuOpen) && (
-                                <span className="text-xs font-black uppercase tracking-widest leading-none flex items-center justify-between grow">
+                                <span className="text-[13px] font-extrabold tracking-wide leading-none flex items-center justify-between grow">
                                     <span>{item.label}</span>
                                     {anomalyCount > 0 && (
-                                        <span className="bg-red-500 text-white text-[9px] font-black h-5 w-5 rounded-full flex items-center justify-center animate-pulse shrink-0">
+                                        <span className="bg-[#BD4A1F] text-white text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center animate-pulse shrink-0">
                                             {anomalyCount}
                                         </span>
                                     )}
@@ -119,13 +115,13 @@ export function OdiseaLayout() {
             </nav>
 
             {/* Role Info & Exit */}
-            <div className="p-6 border-t border-white/5 space-y-4">
+            <div className="p-6 border-t border-white/10 space-y-4">
                 {(!collapsed || mobileMenuOpen) && (
-                    <div className="p-4 rounded-2xl bg-slate-800/40 border border-white/5">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">Central Admin</p>
-                        <p className="text-sm font-sans font-black text-white">Odisea Trace Manager</p>
+                    <div className="p-4 rounded-2xl bg-black/20 border border-white/10">
+                        <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#E5A84B] mb-1">Central Admin</p>
+                        <p className="text-sm font-extrabold text-white">Odisea Trace Manager</p>
                         <div className="mt-3 flex gap-1">
-                            {[1, 2, 3].map(i => <div key={i} className="h-1 flex-1 bg-blue-500/20 rounded-full" />)}
+                            {[1, 2, 3].map(i => <div key={i} className="h-1 flex-1 bg-[#E5A84B]/40 rounded-full" />)}
                         </div>
                     </div>
                 )}
@@ -133,10 +129,10 @@ export function OdiseaLayout() {
                 <div className="space-y-2">
                     <Link
                         to="/"
-                        className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-slate-500 hover:bg-white/5 hover:text-white transition-all cursor-pointer group"
+                        className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[#CCD1C7] hover:bg-white/10 hover:text-white transition-all cursor-pointer group"
                     >
                         <Home className="h-5 w-5 shrink-0" />
-                        {(!collapsed || mobileMenuOpen) && <span className="text-[10px] font-black uppercase tracking-widest">Sitio Público</span>}
+                        {(!collapsed || mobileMenuOpen) && <span className="text-[12px] font-extrabold uppercase tracking-wider">Sitio Público</span>}
                     </Link>
                     <button
                         onClick={handleLogout}

@@ -8,6 +8,7 @@ import { addLote } from '../../../services/lotesService';
 import { getFincas } from '../../../services/fincasService';
 import type { Finca } from '../../../types/finca';
 import { detectAnomaly, detectHarvestDateAnomaly } from '../../../services/anomaliesService';
+import { Eyebrow } from '../../components/ui/Eyebrow';
 
 const VARIEDADES = [
     'Castillo',
@@ -38,14 +39,14 @@ const PROCESOS = [
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <label className="block">
-            <span className="block text-[12px] font-black uppercase tracking-wide text-gray-400 mb-1.5">{label}</span>
+            <span className="block text-[13px] font-bold uppercase tracking-wider text-[#2D3E33]/70 mb-2">{label}</span>
             {children}
         </label>
     );
 }
 
 const selectClass =
-    'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 font-bold text-gray-800 outline-none focus:border-[#5f705f]';
+    'w-full h-14 rounded-2xl bg-white border-2 border-stone-200 px-4 font-bold text-[16px] text-[#2D3E33] outline-none focus:border-[#2D3E33] transition-colors';
 
 export function NuevaCosechaPage() {
     const navigate = useNavigate();
@@ -222,21 +223,29 @@ export function NuevaCosechaPage() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto space-y-5 pb-6">
-            <div className="flex items-center gap-3">
+        <div className="max-w-2xl mx-auto space-y-6 pb-10">
+            <div className="flex items-center gap-4">
                 <button
                     onClick={() => navigate(-1)}
-                    className="h-11 w-11 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-500"
+                    className="h-12 w-12 rounded-2xl bg-white border border-[#2D3E33]/15 flex items-center justify-center text-[#2D3E33] shadow-sm hover:bg-[#F6F2EC] transition-colors"
                     aria-label="Volver"
                 >
-                    <ChevronLeft size={24} />
+                    <ChevronLeft size={26} />
                 </button>
-                <h2 className="text-xl font-black text-gray-900">Nueva cosecha</h2>
+                <div>
+                    <Eyebrow text="PLANILLAS & LOTES" variant="terracota" />
+                    <h1 className="font-['Anton'] text-2xl uppercase tracking-wide text-[#2D3E33]">
+                        NUEVA COSECHA
+                    </h1>
+                </div>
             </div>
 
             {/* 1. Origen */}
-            <div className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-4">
-                <p className="text-[15px] font-black text-gray-800">1. ¿De dónde es el café?</p>
+            <div className="rounded-3xl bg-white border border-[#2D3E33]/10 shadow-sm p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                    <span className="bg-[#2D3E33] text-[#F6F2EC] px-2.5 py-0.5 rounded-full text-xs font-mono font-bold">01</span>
+                    <p className="text-[17px] font-bold text-[#2D3E33]">¿De dónde es el café?</p>
+                </div>
                 <Campo label="Finca">
                     <select
                         value={finca}
@@ -282,27 +291,30 @@ export function NuevaCosechaPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-3 scroll-mt-6"
+                        className="rounded-3xl bg-white border border-[#2D3E33]/10 shadow-sm p-6 space-y-4 scroll-mt-6"
                     >
-                        <p className="text-[15px] font-black text-gray-800">2. ¿Cómo lo quieres registrar?</p>
+                        <div className="flex items-center gap-2">
+                            <span className="bg-[#2D3E33] text-[#F6F2EC] px-2.5 py-0.5 rounded-full text-xs font-mono font-bold">02</span>
+                            <p className="text-[17px] font-bold text-[#2D3E33]">¿Cómo lo quieres registrar?</p>
+                        </div>
                         <button
                             onClick={() => setModalidad('objetivo')}
                             className={cn(
-                                'w-full flex items-center gap-3 rounded-2xl border-2 p-4 text-left transition-all',
-                                modalidad === 'objetivo' ? 'border-[#5f705f] bg-[#5f705f]/5' : 'border-gray-200'
+                                'w-full flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all',
+                                modalidad === 'objetivo' ? 'border-[#2D3E33] bg-[#2D3E33]/5 ring-2 ring-[#2D3E33]/15' : 'border-stone-200 hover:border-stone-300'
                             )}
                         >
                             <span
                                 className={cn(
-                                    'h-12 w-12 shrink-0 rounded-xl flex items-center justify-center',
-                                    modalidad === 'objetivo' ? 'bg-[#5f705f] text-white' : 'bg-gray-100 text-gray-400'
+                                    'h-12 w-12 shrink-0 rounded-xl flex items-center justify-center font-bold',
+                                    modalidad === 'objetivo' ? 'bg-[#2D3E33] text-white' : 'bg-stone-100 text-stone-500'
                                 )}
                             >
                                 <Target size={22} />
                             </span>
                             <span>
-                                <span className="block font-black text-gray-900">Tengo un plan</span>
-                                <span className="block text-[13px] text-gray-500 leading-tight">
+                                <span className="block font-bold text-[17px] text-[#2D3E33]">Tengo un plan</span>
+                                <span className="block text-[14px] text-[#2D3E33]/70 leading-tight">
                                     Ej: "quiero sacar 100 kilos de café lavado". Defines la meta y vas sumando.
                                 </span>
                             </span>
@@ -310,21 +322,21 @@ export function NuevaCosechaPage() {
                         <button
                             onClick={() => setModalidad('diario')}
                             className={cn(
-                                'w-full flex items-center gap-3 rounded-2xl border-2 p-4 text-left transition-all',
-                                modalidad === 'diario' ? 'border-[#bb8d3b] bg-[#bb8d3b]/5' : 'border-gray-200'
+                                'w-full flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all',
+                                modalidad === 'diario' ? 'border-[#BD4A1F] bg-[#BD4A1F]/5 ring-2 ring-[#BD4A1F]/15' : 'border-stone-200 hover:border-stone-300'
                             )}
                         >
                             <span
                                 className={cn(
-                                    'h-12 w-12 shrink-0 rounded-xl flex items-center justify-center',
-                                    modalidad === 'diario' ? 'bg-[#bb8d3b] text-white' : 'bg-gray-100 text-gray-400'
+                                    'h-12 w-12 shrink-0 rounded-xl flex items-center justify-center font-bold',
+                                    modalidad === 'diario' ? 'bg-[#BD4A1F] text-white' : 'bg-stone-100 text-stone-500'
                                 )}
                             >
                                 <ClipboardList size={22} />
                             </span>
                             <span>
-                                <span className="block font-black text-gray-900">Solo anotar kilos</span>
-                                <span className="block text-[13px] text-gray-500 leading-tight">
+                                <span className="block font-bold text-[17px] text-[#2D3E33]">Solo anotar kilos</span>
+                                <span className="block text-[14px] text-[#2D3E33]/70 leading-tight">
                                     Registra la recolección de hoy. Después decides el proceso.
                                 </span>
                             </span>
@@ -342,9 +354,12 @@ export function NuevaCosechaPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-4 scroll-mt-6"
+                        className="rounded-3xl bg-white border border-[#2D3E33]/10 shadow-sm p-6 space-y-4 scroll-mt-6"
                     >
-                        <p className="text-[15px] font-black text-gray-800">3. ¿Qué vas a procesar?</p>
+                        <div className="flex items-center gap-2">
+                            <span className="bg-[#2D3E33] text-[#F6F2EC] px-2.5 py-0.5 rounded-full text-xs font-mono font-bold">03</span>
+                            <p className="text-[17px] font-bold text-[#2D3E33]">¿Qué vas a procesar?</p>
+                        </div>
                         <Campo label="Variedad">
                             <select value={variedad} onChange={(e) => setVariedad(e.target.value)} className={selectClass}>
                                 <option value="">Elige…</option>
@@ -369,15 +384,15 @@ export function NuevaCosechaPage() {
                                     value={kilosObjetivo}
                                     onChange={(e) => setKilosObjetivo(e.target.value)}
                                     placeholder="100"
-                                    className="w-full h-16 rounded-2xl bg-white border-2 border-gray-200 text-center text-3xl font-black text-[#5f705f] outline-none focus:border-[#5f705f] pr-24"
+                                    className="w-full h-16 rounded-2xl bg-[#F6F2EC]/40 border-2 border-stone-200 text-center font-['Anton'] text-3xl text-[#2D3E33] outline-none focus:border-[#2D3E33] pr-24"
                                 />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-xs text-[#2D3E33] bg-[#2D3E33]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
                             </div>
                         </Campo>
                         {Number(kilosObjetivo) > 0 && (
-                            <div className="rounded-2xl bg-[#5f705f]/5 p-3 text-[13px] font-bold text-[#5f705f] flex justify-between">
+                            <div className="rounded-2xl bg-[#2D3E33]/5 border border-[#2D3E33]/10 p-3.5 text-[14px] font-bold text-[#2D3E33] flex justify-between items-center">
                                 <span>Meta en cereza a recolectar</span>
-                                <span>{Math.round(Number(kilosObjetivo) * 1.5625)} kilos</span>
+                                <span className="font-['Anton'] text-lg">{Math.round(Number(kilosObjetivo) * 1.5625)} KG</span>
                             </div>
                         )}
                     </motion.div>
@@ -390,9 +405,12 @@ export function NuevaCosechaPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 space-y-4 scroll-mt-6"
+                        className="rounded-3xl bg-white border border-[#2D3E33]/10 shadow-sm p-6 space-y-4 scroll-mt-6"
                     >
-                        <p className="text-[15px] font-black text-gray-800">3. Anota la recolección</p>
+                        <div className="flex items-center gap-2">
+                            <span className="bg-[#2D3E33] text-[#F6F2EC] px-2.5 py-0.5 rounded-full text-xs font-mono font-bold">03</span>
+                            <p className="text-[17px] font-bold text-[#2D3E33]">Anota la recolección</p>
+                        </div>
                         <Campo label="Kilos de cereza recolectados hoy">
                             <div className="relative">
                                 <input
@@ -401,9 +419,9 @@ export function NuevaCosechaPage() {
                                     value={peso}
                                     onChange={(e) => setPeso(e.target.value)}
                                     placeholder="0"
-                                    className="w-full h-16 rounded-2xl bg-white border-2 border-gray-200 text-center text-3xl font-black text-[#bb8d3b] outline-none focus:border-[#bb8d3b] pr-24"
+                                    className="w-full h-16 rounded-2xl bg-[#F6F2EC]/40 border-2 border-stone-200 text-center font-['Anton'] text-3xl text-[#BD4A1F] outline-none focus:border-[#BD4A1F] pr-24"
                                 />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-sm text-[#bb8d3b] bg-[#bb8d3b]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-xs text-[#BD4A1F] bg-[#BD4A1F]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
                             </div>
                         </Campo>
                         <Campo label="Fecha">
@@ -562,13 +580,13 @@ export function NuevaCosechaPage() {
                 <button
                     onClick={handleSave}
                     disabled={isLoading}
-                    className="pr-tap w-full rounded-3xl bg-[#5f705f] text-white font-black text-lg gap-2 shadow-lg shadow-[#5f705f]/25 active:scale-[0.98] transition-transform disabled:opacity-60"
+                    className="w-full h-16 rounded-full bg-[#BD4A1F] hover:bg-[#a33f1a] text-white font-['Anton'] text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-lg shadow-[#BD4A1F]/30 active:scale-[0.98] transition-all disabled:opacity-60"
                 >
                     {isLoading ? (
-                        <Loader2 className="animate-spin" size={22} />
+                        <Loader2 className="animate-spin" size={24} />
                     ) : (
                         <>
-                            <Check size={22} /> Guardar cosecha
+                            <Check size={24} /> GUARDAR COSECHA
                         </>
                     )}
                 </button>

@@ -410,26 +410,42 @@ export function PerfilPage() {
                 </div>
             </div>
 
-            {/* Acciones principales */}
-            <div className="pt-2 max-w-xl mx-auto space-y-3">
+            {/* Acciones principales y WhatsApp de soporte */}
+            <div className="pt-4 max-w-xl mx-auto space-y-4">
                 <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="pr-tap w-full rounded-3xl bg-[#5f705f] hover:bg-[#4a584a] text-white font-black text-lg gap-2 shadow-lg shadow-[#5f705f]/25 active:scale-[0.98] transition-all disabled:opacity-60"
+                    className="w-full h-16 rounded-full bg-[#BD4A1F] hover:bg-[#a53e19] text-[#F6F2EC] font-extrabold text-base uppercase tracking-wider gap-3 shadow-lg shadow-[#BD4A1F]/25 active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer disabled:opacity-60"
                 >
-                    {isSaving ? <Loader2 className="animate-spin" size={22} /> : <><Save size={20} /> Guardar perfil</>}
+                    {isSaving ? <Loader2 className="animate-spin" size={24} /> : <><Save size={22} /> Guardar mi perfil</>}
                 </button>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {/* Banner de soporte directo por WhatsApp */}
+                <div className="bg-[#2D3E33]/5 rounded-2xl p-4 flex items-center justify-between gap-3 border border-[#2D3E33]/10">
+                    <div>
+                        <p className="text-xs font-extrabold text-[#2D3E33] uppercase tracking-wider">¿Dudas o necesitas ayuda?</p>
+                        <p className="text-sm font-bold text-[#BD4A1F]">+57 301 530 3014</p>
+                    </div>
+                    <a
+                        href="https://wa.me/573015303014?text=Hola,%20tengo%20una%20duda%20sobre%20mi%20perfil%20en%20Mi%20Finca%20Odisea"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-4 py-2 bg-[#2D3E33] text-white text-xs font-extrabold uppercase tracking-wider rounded-full hover:bg-[#1B263B] transition-colors"
+                    >
+                        WhatsApp
+                    </a>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <Link
                         to="/"
-                        className="pr-tap w-full rounded-2xl bg-white border border-gray-200 text-gray-600 font-bold text-[15px] gap-2 hover:bg-gray-50 transition-colors"
+                        className="w-full h-12 rounded-full bg-white border-2 border-[#DAD6CF]/60 text-[#2D3E33] font-extrabold text-sm uppercase tracking-wider gap-2 hover:bg-gray-50 transition-colors flex items-center justify-center shadow-sm"
                     >
-                        <Home size={18} /> Ver el sitio público
+                        <Home size={18} /> Sitio público
                     </Link>
                     <button
                         onClick={cerrarSesion}
-                        className="pr-tap w-full rounded-2xl bg-white border border-rose-100 text-rose-600 font-bold text-[15px] gap-2 hover:bg-rose-50 transition-colors"
+                        className="w-full h-12 rounded-full bg-white border-2 border-rose-200 text-rose-600 font-extrabold text-sm uppercase tracking-wider gap-2 hover:bg-rose-50 transition-colors flex items-center justify-center shadow-sm cursor-pointer"
                     >
                         <LogOut size={18} /> Cerrar sesión
                     </button>

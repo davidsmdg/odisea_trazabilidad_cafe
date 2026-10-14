@@ -1,24 +1,15 @@
-import { Outlet } from 'react-router';
-import { useNavigate } from 'react-router';
-import { Coffee } from 'lucide-react';
+import { Outlet, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
+import { BrandLogo } from '../components/ui/BrandLogo';
 
 export function AuthLayout() {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-[#FDFDF8] flex flex-col overflow-x-hidden w-full max-w-full">
-            {/* Header mínimo */}
-            <header className="w-full px-8 py-6">
-                <button
-                    onClick={() => navigate('/')}
-                    className="flex items-center gap-2 hover:opacity-75 transition-opacity cursor-pointer"
-                >
-                    <Coffee className="h-6 w-6 text-[#5f705f]" />
-                    <span className="text-xl font-sans font-bold text-[#5f705f] tracking-tight">
-                        Odisea Trace
-                    </span>
-                </button>
+        <div className="min-h-screen bg-[#F6F2EC] flex flex-col overflow-x-hidden w-full max-w-full">
+            {/* Header mínimo con logotipo oficial */}
+            <header className="w-full px-6 sm:px-10 py-6">
+                <BrandLogo to="/" subtitle="Mi Finca" theme="dark" size="md" />
             </header>
 
             {/* Contenido centrado */}

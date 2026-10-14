@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import { useAuth } from '../context/AuthContext';
+import { BrandLogo } from './ui/BrandLogo';
 
 interface TopBarProps {
   activeItem?: string;
@@ -46,16 +47,8 @@ export function TopBar({ activeItem }: TopBarProps) {
     >
       <div className="max-w-[1400px] mx-auto px-8 h-full">
         <div className="flex items-center justify-between h-full">
-          {/* Logo */}
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-          >
-            <Coffee className="h-7 w-7 text-[#5f705f]" />
-            <span className="text-2xl font-sans font-bold text-[#5f705f] tracking-tight">
-              Odisea Trace
-            </span>
-          </button>
+          {/* Logo Oficial */}
+          <BrandLogo to="/" subtitle="Trace" theme="dark" size="md" />
 
           {/* Navegación Central */}
           <nav className="hidden lg:flex items-center gap-10">

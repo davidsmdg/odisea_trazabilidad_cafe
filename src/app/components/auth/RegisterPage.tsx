@@ -7,6 +7,7 @@ import { validarCodigoInvitacion, consumirCodigoInvitacion } from '../../../serv
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
+import { Eyebrow } from '../ui/Eyebrow';
 
 interface RoleCard {
     role: UserRole;
@@ -195,13 +196,12 @@ export function RegisterPage() {
                     >
                         {/* Scrollable middle container (Header + Cards) */}
                         <div className="flex-1 overflow-y-auto pr-1 mb-4 space-y-6 sm:overflow-visible">
-                            {/* Header */}
-                            <div className="text-left relative space-y-4">
-                                {/* Option to return to Home */}
+                            {/* Header con estilo Landing */}
+                            <div className="text-left relative space-y-3">
                                 <div>
                                     <Link
                                         to="/"
-                                        className="inline-flex items-center text-sm font-semibold text-[#5f705f] hover:text-[#bb8d3b] group transition-colors"
+                                        className="inline-flex items-center text-sm font-bold text-[#2D3E33] hover:text-[#BD4A1F] group transition-colors"
                                     >
                                         <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
                                         Volver al Inicio
@@ -209,14 +209,12 @@ export function RegisterPage() {
                                 </div>
 
                                 <div>
-                                    <span className="inline-block text-xs font-bold tracking-widest uppercase text-[#a35c5c] mb-1">
-                                        Paso 1 de 2
-                                    </span>
-                                    <h1 className="text-3xl sm:text-4xl font-sans text-[#5f705f] font-bold leading-tight">
-                                        ¿Cuál es tu rol en la cadena de valor?
+                                    <Eyebrow theme="dark">Paso 1 de 2 · Tu actividad</Eyebrow>
+                                    <h1 className="text-3xl sm:text-4xl font-heading text-[#2D3E33] uppercase tracking-tight leading-tight">
+                                        ¿Cuál es tu rol en la cadena de café?
                                     </h1>
-                                    <p className="mt-1 text-gray-500 text-sm">
-                                        Elige el que mejor describe tu actividad principal.
+                                    <p className="mt-1.5 text-[#4A2E3D]/80 text-base font-medium">
+                                        Selecciona la actividad principal que desempeñas.
                                     </p>
                                 </div>
                             </div>
@@ -384,60 +382,58 @@ export function RegisterPage() {
                                 {selectedRoleData && (
                                     <div
                                         className={cn(
-                                            'inline-flex items-center gap-2 rounded-full px-3.5 py-1.5',
-                                            `${selectedRoleData.bgColor}/10`
+                                            'inline-flex items-center gap-2 rounded-full px-4 py-1.5',
+                                            `${selectedRoleData.bgColor}/15`
                                         )}
                                     >
-                                        <selectedRoleData.icon className={cn('h-4 w-4', selectedRoleData.color)} />
-                                        <span className={cn('text-xs font-bold uppercase tracking-wider', selectedRoleData.color)}>
+                                        <selectedRoleData.icon className={cn('h-5 w-5', selectedRoleData.color)} />
+                                        <span className={cn('text-xs font-extrabold uppercase tracking-wider', selectedRoleData.color)}>
                                             {selectedRoleData.title}
                                         </span>
                                     </div>
                                 )}
-                                <span className="text-xs font-bold tracking-widest uppercase text-[#a35c5c]">
-                                    Paso 2 de 2
-                                </span>
+                                <Eyebrow theme="dark">Paso 2 de 2</Eyebrow>
                             </div>
 
-                            <h1 className="text-2xl sm:text-3xl font-sans text-[#5f705f] font-bold">
+                            <h1 className="text-3xl sm:text-4xl font-heading text-[#2D3E33] uppercase tracking-tight">
                                 Crea tu cuenta
                             </h1>
-                            <p className="text-gray-500 text-sm mt-1.5">
-                                Solo necesitamos unos datos básicos y tu código de acceso para comenzar.
+                            <p className="text-[#4A2E3D]/80 text-base font-medium mt-1.5">
+                                Ingresa tus datos básicos y tu código de invitación para comenzar.
                             </p>
                         </div>
 
-                        <form onSubmit={handleRegister} className="space-y-4 bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-black/5">
-                            <div className="space-y-1.5">
-                                <label htmlFor="reg-name" className="text-sm font-semibold text-gray-700">
-                                    Nombre completo
+                        <form onSubmit={handleRegister} className="space-y-5 bg-white p-6 sm:p-10 rounded-[2rem] shadow-xl border border-[#2D3E33]/10">
+                            <div className="space-y-2">
+                                <label htmlFor="reg-name" className="block text-sm sm:text-base font-extrabold text-[#2D3E33]">
+                                    Tu nombre completo
                                 </label>
                                 <Input
                                     id="reg-name"
                                     type="text"
-                                    placeholder="María González"
+                                    placeholder="Ej: María González"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     autoComplete="name"
-                                    className="h-11 rounded-xl"
+                                    className="h-14 rounded-2xl text-base font-bold bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33] px-4 shadow-sm"
                                 />
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label htmlFor="reg-contacto" className="text-sm font-semibold text-gray-700">
-                                    Correo o número de celular
+                            <div className="space-y-2">
+                                <label htmlFor="reg-contacto" className="block text-sm sm:text-base font-extrabold text-[#2D3E33]">
+                                    Número de celular o correo
                                 </label>
                                 <Input
                                     id="reg-contacto"
                                     type="text"
-                                    placeholder="300 123 4567 o correo@ejemplo.com"
+                                    placeholder="Ej: 301 530 3014 ó tu@correo.com"
                                     value={contacto}
                                     onChange={(e) => setContacto(e.target.value)}
                                     autoComplete="username"
-                                    className="h-11 rounded-xl"
+                                    className="h-14 rounded-2xl text-base font-bold bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33] px-4 shadow-sm"
                                 />
-                                <p className="text-xs text-gray-400">
-                                    Puedes registrarte con tu correo electrónico o tu número de celular.
+                                <p className="text-xs text-[#4A2E3D]/70 font-semibold">
+                                    Si eres productor, te recomendamos usar tu celular para entrar más fácil.
                                 </p>
                             </div>
 

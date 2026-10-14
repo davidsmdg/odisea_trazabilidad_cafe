@@ -15,6 +15,7 @@ import { getFincas } from '../../../services/fincasService';
 import { getMovimientos, getPeriodoActivo } from '../../../services/finanzasService';
 import { getPrecioReferencia } from '../data/preciosReferencia';
 import { formatoPlata } from '../utils/formato';
+import { Eyebrow } from '../../components/ui/Eyebrow';
 import type { Cosecha } from '../../../types/cosecha';
 
 const FASE_LABEL: Record<number, { txt: string; emoji: string; color: string }> = {
@@ -78,105 +79,111 @@ export function Inicio() {
             <div className="space-y-5 md:space-y-0 md:grid md:grid-cols-12 md:gap-6 items-start">
                 {/* ── COLUMNA IZQUIERDA EN PC (Finanzas y Finca) ── */}
                 <div className="space-y-5 md:col-span-5 lg:col-span-5">
-                    {/* Cuentas de la cosecha */}
+                    {/* Cuentas de la cosecha con diseño fiel a la landing */}
                     <Link
                         to="/producer/cuentas"
-                        className="pr-rise block rounded-3xl bg-[#5f705f] hover:bg-[#536353] transition-colors text-white p-5 shadow-lg shadow-[#5f705f]/20 relative overflow-hidden"
+                        className="pr-rise block rounded-[2rem] bg-[#2D3E33] hover:bg-[#25342a] transition-colors text-[#F6F2EC] p-6 shadow-xl shadow-[#2D3E33]/25 relative overflow-hidden border border-white/10"
                     >
-                        <Wallet className="absolute -right-4 -top-4 h-28 w-28 text-white/10" />
+                        <Wallet className="absolute -right-4 -top-4 h-32 w-32 text-white/5 pointer-events-none" />
                         <div className="flex items-center justify-between relative">
-                            <p className="text-[12px] font-black uppercase tracking-widest text-emerald-100 truncate pr-2">
-                                Ganancia del café · {periodoNombre}
-                            </p>
-                            <ChevronRight size={18} className="text-white/60 shrink-0" />
+                            <span className="inline-block px-3 py-1 rounded-full bg-[#E5A84B] text-[#1B263B] text-[11px] font-extrabold uppercase tracking-widest">
+                                Cosecha · {periodoNombre}
+                            </span>
+                            <ChevronRight size={20} className="text-[#CCD1C7] shrink-0" />
                         </div>
-                        <p className="pr-amount text-4xl mt-3 relative">{formatoPlata(cafe.saldo)}</p>
-                        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/15 relative">
+                        <p className="text-[13px] font-bold uppercase tracking-wider text-[#CCD1C7] mt-3">Ganancia del café</p>
+                        <p className="text-4xl sm:text-5xl font-heading text-[#F6F2EC] mt-1 relative tracking-wide">
+                            {formatoPlata(cafe.saldo)}
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 mt-5 pt-4 border-t border-white/15 relative">
                             <div>
-                                <p className="text-[11px] font-bold uppercase text-white/60 flex items-center gap-1">
-                                    <TrendingUp size={13} className="text-emerald-300" /> Ha entrado
+                                <p className="text-[12px] font-extrabold uppercase tracking-wider text-[#CCD1C7] flex items-center gap-1.5">
+                                    <TrendingUp size={15} className="text-[#E5A84B]" /> Ha entrado
                                 </p>
-                                <p className="text-lg font-black">{formatoPlata(cafe.ingresos)}</p>
+                                <p className="text-xl sm:text-2xl font-heading text-[#F6F2EC] mt-0.5">{formatoPlata(cafe.ingresos)}</p>
                             </div>
                             <div>
-                                <p className="text-[11px] font-bold uppercase text-white/60 flex items-center gap-1">
-                                    <TrendingDown size={13} className="text-red-300" /> Ha salido
+                                <p className="text-[12px] font-extrabold uppercase tracking-wider text-[#CCD1C7] flex items-center gap-1.5">
+                                    <TrendingDown size={15} className="text-red-300" /> Ha salido
                                 </p>
-                                <p className="text-lg font-black">{formatoPlata(cafe.gastos)}</p>
+                                <p className="text-xl sm:text-2xl font-heading text-[#F6F2EC] mt-0.5">{formatoPlata(cafe.gastos)}</p>
                             </div>
                         </div>
                         {cafe.ingresos === 0 && cafe.gastos === 0 && (
-                            <p className="text-[12px] text-white/70 mt-3 relative">
-                                Empieza a anotar tus ventas y gastos para ver cómo va la cosecha.
+                            <p className="text-[13px] text-[#CCD1C7] mt-4 relative font-medium">
+                                Anota tus primeras ventas o gastos para ver tu balance en tiempo real.
                             </p>
                         )}
                     </Link>
 
-                    {/* Botón principal: Anotar (visible siempre) */}
+                    {/* Botón principal: Anotar (altura generosa y color terracota) */}
                     <button
                         onClick={() => navigate('/producer/cuentas')}
-                        className="pr-tap w-full rounded-3xl bg-[#bb8d3b] hover:bg-[#a67b30] text-white font-black text-lg gap-3 shadow-lg shadow-[#bb8d3b]/25 active:scale-[0.98] transition-all"
+                        className="pr-tap w-full h-16 rounded-full bg-[#BD4A1F] hover:bg-[#a53e19] text-[#F6F2EC] font-extrabold text-base uppercase tracking-wider gap-3 shadow-lg shadow-[#BD4A1F]/25 active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer"
                     >
                         <span className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
                             <Plus size={24} />
                         </span>
-                        Anotar un movimiento
+                        Anotar venta o gasto
                     </button>
 
                     {/* Acceso a la finca */}
                     <Link
                         to="/producer/finca"
-                        className="flex items-center gap-4 rounded-3xl bg-white hover:border-[#5f705f]/40 border border-gray-100 p-4 shadow-sm transition-all"
+                        className="flex items-center gap-4 rounded-3xl bg-white hover:border-[#2D3E33]/40 border-2 border-[#DAD6CF]/60 p-4 shadow-sm transition-all"
                     >
-                        <span className="h-11 w-11 rounded-2xl bg-[#5f705f]/10 flex items-center justify-center text-[#5f705f]">
-                            <Sprout size={22} />
+                        <span className="h-12 w-12 rounded-2xl bg-[#2D3E33]/10 flex items-center justify-center text-[#2D3E33]">
+                            <Sprout size={24} />
                         </span>
                         <div className="flex-1">
-                            <p className="font-black text-gray-900">Mi finca y parcelas</p>
-                            <p className="text-[13px] text-gray-500">Revisa o completa los datos de tu finca.</p>
+                            <p className="font-extrabold text-base text-[#2D3E33]">Mi finca y parcelas</p>
+                            <p className="text-sm text-[#4A2E3D]/80 font-medium">Revisa o marca tus lotes en el mapa.</p>
                         </div>
-                        <ChevronRight size={18} className="text-gray-300" />
+                        <ChevronRight size={20} className="text-[#2D3E33]/40" />
                     </Link>
                 </div>
 
                 {/* ── COLUMNA DERECHA EN PC (Mis Cosechas) ── */}
-                <div className="space-y-4 md:col-span-7 lg:col-span-7">
+                <div className="space-y-5 md:col-span-7 lg:col-span-7">
                     <section className="space-y-3">
                         <div className="flex items-center justify-between px-1">
-                            <h2 className="text-lg font-black text-gray-900">Mis cosechas</h2>
+                            <div>
+                                <Eyebrow theme="dark">En curso</Eyebrow>
+                                <h2 className="text-2xl font-heading uppercase text-[#2D3E33]">Mis cosechas activas</h2>
+                            </div>
                             <Link
                                 to="/producer/cosechas"
-                                className="text-[12px] font-black uppercase tracking-wide text-[#5f705f] hover:underline flex items-center gap-1"
+                                className="text-[13px] font-extrabold uppercase tracking-wider text-[#BD4A1F] hover:underline flex items-center gap-1"
                             >
-                                Ver todas <ChevronRight size={14} />
+                                Ver todas <ChevronRight size={16} />
                             </Link>
                         </div>
 
                         {cargando ? (
                             <div className="space-y-3">
                                 {[1, 2].map((i) => (
-                                    <div key={i} className="h-24 rounded-3xl bg-white border border-gray-100 animate-pulse" />
+                                    <div key={i} className="h-24 rounded-[1.8rem] bg-white border border-[#DAD6CF]/60 animate-pulse" />
                                 ))}
                             </div>
                         ) : cosechasActivas.length === 0 ? (
                             <Link
                                 to="/producer/cosechas/nueva"
-                                className="flex flex-col items-center text-center gap-3 rounded-3xl border-2 border-dashed border-gray-200 bg-white py-10 px-6 hover:border-[#5f705f]/50 transition-colors"
+                                className="flex flex-col items-center text-center gap-3.5 rounded-[2rem] border-2 border-dashed border-[#DAD6CF] bg-white py-12 px-6 hover:border-[#2D3E33]/40 transition-colors shadow-sm"
                             >
-                                <span className="h-14 w-14 rounded-2xl bg-[#5f705f]/10 flex items-center justify-center text-[#5f705f]">
-                                    <Coffee size={28} />
+                                <span className="h-16 w-16 rounded-full bg-[#2D3E33]/10 flex items-center justify-center text-[#2D3E33]">
+                                    <Coffee size={32} />
                                 </span>
                                 <div>
-                                    <p className="font-black text-gray-800 text-base">Aún no tienes cosechas</p>
-                                    <p className="text-[13px] text-gray-500 mt-0.5">Toca aquí para registrar tu primer lote de café.</p>
+                                    <p className="font-heading text-2xl uppercase text-[#2D3E33]">Aún no tienes cosechas</p>
+                                    <p className="text-base text-[#4A2E3D]/80 mt-1 font-medium">Toca aquí para registrar tu primer lote de café recolectado.</p>
                                 </div>
-                                <span className="px-4 py-2 rounded-xl bg-[#5f705f] text-white text-xs font-black">
-                                    Registrar primer lote
+                                <span className="px-6 py-3 rounded-full bg-[#BD4A1F] text-[#F6F2EC] text-sm font-extrabold uppercase tracking-wider shadow-md">
+                                    Registrar primer lote →
                                 </span>
                             </Link>
                         ) : (
                             <div className="space-y-3">
-                                {cosechasActivas.map((c) => {
+                                {cosechasActivas.map((c, index) => {
                                     const fase = FASE_LABEL[c.fase] ?? FASE_LABEL[1];
                                     const kg =
                                         c.fase <= 1
@@ -184,31 +191,37 @@ export function Inicio() {
                                             : c.fase === 2
                                             ? c.pesos?.pergamino || 0
                                             : c.pesos?.verde || 0;
+                                    const numPaso = `0${c.fase || 1}`;
                                     return (
                                         <Link
                                             key={c.id}
                                             to="/producer/cosechas"
-                                            className="flex items-center gap-4 rounded-3xl bg-white hover:border-[#5f705f]/40 hover:shadow-md border border-gray-100 p-4 shadow-sm transition-all"
+                                            className="flex items-center gap-4 rounded-[1.8rem] bg-white hover:border-[#2D3E33]/40 hover:shadow-md border-2 border-[#DAD6CF]/60 p-4 sm:p-5 shadow-sm transition-all"
                                         >
-                                            <span className="text-3xl p-1 bg-gray-50 rounded-2xl">{fase.emoji}</span>
+                                            <div className="h-14 w-14 rounded-2xl bg-[#F6F2EC] flex flex-col items-center justify-center shrink-0 border border-[#2D3E33]/10">
+                                                <span className="font-heading text-xl text-[#BD4A1F] leading-none">{numPaso}</span>
+                                                <span className="text-xs">{fase.emoji}</span>
+                                            </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-black text-gray-900 truncate text-base">{c.codigo}</p>
-                                                <p className={`text-[13px] font-bold ${fase.color} flex items-center gap-1.5`}>
-                                                    <span>{fase.txt}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-heading text-xl text-[#2D3E33] tracking-wide truncate">{c.codigo}</p>
+                                                </div>
+                                                <p className="text-[13px] font-bold text-[#4A2E3D] flex items-center gap-1.5 mt-0.5">
+                                                    <span className="text-[#2D3E33]">{fase.txt}</span>
                                                     <span>·</span>
-                                                    <span className="font-extrabold text-gray-900">{kg}</span>
-                                                    <span className="text-xs uppercase tracking-wide bg-black/5 px-1.5 py-0.5 rounded font-black text-gray-700">kilos</span>
+                                                    <span className="font-heading text-lg text-[#2D3E33]">{kg}</span>
+                                                    <span className="text-[11px] uppercase tracking-wider font-extrabold text-[#4A2E3D]/80">kilos</span>
                                                 </p>
                                             </div>
-                                            <ChevronRight size={18} className="text-gray-300" />
+                                            <ChevronRight size={22} className="text-[#2D3E33]/30 shrink-0" />
                                         </Link>
                                     );
                                 })}
                                 <Link
                                     to="/producer/cosechas/nueva"
-                                    className="pr-tap w-full rounded-3xl border-2 border-[#5f705f]/20 hover:border-[#5f705f] text-[#5f705f] font-black gap-2 bg-white transition-colors"
+                                    className="w-full h-14 rounded-full border-2 border-[#2D3E33]/20 hover:border-[#2D3E33] text-[#2D3E33] font-extrabold text-sm uppercase tracking-wider gap-2 bg-white transition-colors flex items-center justify-center shadow-sm"
                                 >
-                                    <Plus size={20} /> Registrar cosecha
+                                    <Plus size={20} /> Registrar nueva cosecha
                                 </Link>
                             </div>
                         )}

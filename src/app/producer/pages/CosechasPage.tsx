@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
 import { BottomSheet } from '../components/BottomSheet';
 import { TimelineCosecha } from '../components/TimelineCosecha';
+import { Eyebrow } from '../../components/ui/Eyebrow';
 import { formatoNumero } from '../utils/formato';
 import type { Cosecha } from '../../../types/cosecha';
 import { getCosechas, saveCosechas } from '../../../services/cosechasService';
@@ -334,28 +335,33 @@ export function CosechasPage() {
     });
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
             <div className="px-1">
-                <h2 className="text-xl font-black text-gray-900">Cosechas</h2>
-                <p className="text-[14px] text-gray-500">Tu café desde que se recolecta hasta que está listo para vender.</p>
+                <Eyebrow theme="dark">Trazabilidad en campo</Eyebrow>
+                <h1 className="text-3xl sm:text-4xl font-heading uppercase text-[#2D3E33] tracking-tight">Cosechas y Lotes</h1>
+                <p className="text-base text-[#4A2E3D]/80 mt-1 font-medium">
+                    El registro de tu café paso a paso: de cereza fresca a secado y café verde trillado.
+                </p>
             </div>
 
             <button
                 onClick={() => navigate('/producer/cosechas/nueva')}
-                className="pr-tap w-full rounded-3xl bg-[#5f705f] text-white font-black text-lg gap-2 shadow-lg shadow-[#5f705f]/20 active:scale-[0.98] transition-transform"
+                className="w-full h-16 rounded-full bg-[#BD4A1F] hover:bg-[#a53e19] text-[#F6F2EC] font-extrabold text-base uppercase tracking-wider gap-3 shadow-lg shadow-[#BD4A1F]/25 active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer"
             >
-                <Plus size={22} /> Registrar cosecha
+                <Plus size={24} /> Registrar nueva cosecha
             </button>
 
-            {/* Filtros */}
-            <div className="flex gap-2">
+            {/* Filtros estilo píldora de landing */}
+            <div className="grid grid-cols-4 gap-2 bg-[#DAD6CF]/40 p-1.5 rounded-2xl border border-[#2D3E33]/10">
                 {FILTROS.map((f) => (
                     <button
                         key={f.id}
                         onClick={() => setFiltro(f.id)}
                         className={cn(
-                            'flex-1 rounded-xl py-2 text-[13px] font-black transition-colors',
-                            filtro === f.id ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-500'
+                            'rounded-xl py-2.5 text-[13px] font-extrabold uppercase tracking-wide transition-all cursor-pointer',
+                            filtro === f.id
+                                ? 'bg-[#2D3E33] text-[#F6F2EC] shadow-md shadow-[#2D3E33]/20'
+                                : 'text-[#2D3E33]/70 hover:text-[#2D3E33] hover:bg-white/60'
                         )}
                     >
                         {f.label}
@@ -398,21 +404,28 @@ export function CosechasPage() {
                                   .find((h: any) => h.estadoNuevo === 'Rechazado')?.motivo
                             : null;
 
+                        const numPaso = `0${lote.fase || 1}`;
+
                         return (
-                            <div key={lote.id} className="rounded-3xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
+                            <div key={lote.id} className="rounded-[2rem] bg-white border-2 border-[#DAD6CF]/60 shadow-md p-5 space-y-4">
                                 {/* Cabecera */}
-                                <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="h-9 px-3 rounded-full bg-[#F6F2EC] border border-[#2D3E33]/15 flex items-center justify-center font-heading text-base text-[#BD4A1F]">
+                                            {numPaso}
+                                        </span>
+                                        <span
+                                            className={cn(
+                                                'text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full text-white',
+                                                lote.modalidad === 'objetivo' ? 'bg-[#2D3E33]' : 'bg-[#E5A84B] text-[#1B263B]'
+                                            )}
+                                        >
+                                            {lote.modalidad === 'objetivo' ? 'Con plan' : 'Recolección libre'}
+                                        </span>
+                                    </div>
                                     <span
                                         className={cn(
-                                            'text-[10px] font-black uppercase px-2 py-0.5 rounded-md text-white',
-                                            lote.modalidad === 'objetivo' ? 'bg-[#5f705f]' : 'bg-[#bb8d3b]'
-                                        )}
-                                    >
-                                        {lote.modalidad === 'objetivo' ? 'Con plan' : 'Recolección libre'}
-                                    </span>
-                                    <span
-                                        className={cn(
-                                            'text-[10px] font-black uppercase px-2 py-0.5 rounded-md',
+                                            'text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full',
                                             STAGE_STYLE[stage]
                                         )}
                                     >
@@ -420,16 +433,16 @@ export function CosechasPage() {
                                     </span>
                                 </div>
 
-                                <div className="flex items-end justify-between">
+                                <div className="flex items-end justify-between pt-1">
                                     <div>
-                                        <h3 className="text-2xl font-black text-gray-900 leading-none">{lote.codigo}</h3>
-                                        <p className={cn('text-[14px] font-bold mt-1 flex items-center gap-1.5', info.color)}>
+                                        <h3 className="text-3xl font-heading text-[#2D3E33] tracking-wide leading-none">{lote.codigo}</h3>
+                                        <p className={cn('text-sm font-extrabold mt-1.5 flex items-center gap-1.5', info.color)}>
                                             <span className="text-base">{info.emoji}</span> {info.txt}
                                         </p>
                                     </div>
                                     <div className="text-right flex items-baseline gap-1.5">
-                                        <p className="pr-amount text-2xl text-gray-900">{formatoNumero(kilosActuales(lote))}</p>
-                                        <span className="text-xs font-black uppercase text-[#5f705f] bg-[#5f705f]/10 px-2 py-0.5 rounded-md">kilos</span>
+                                        <p className="font-heading text-3xl text-[#2D3E33]">{formatoNumero(kilosActuales(lote))}</p>
+                                        <span className="text-[11px] font-extrabold uppercase text-[#BD4A1F] bg-[#BD4A1F]/10 px-2 py-0.5 rounded-full">kilos</span>
                                     </div>
                                 </div>
 

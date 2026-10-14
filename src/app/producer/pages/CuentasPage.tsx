@@ -283,18 +283,20 @@ export function CuentasPage() {
                         </div>
                     )}
 
-                    {/* Pestañas de libro */}
-                    <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-gray-100 p-1.5">
+                    {/* Pestañas de libro ("Dos bolsillos") */}
+                    <div className="grid grid-cols-3 gap-2 rounded-2xl bg-[#DAD6CF]/40 p-2 border border-[#2D3E33]/10">
                         {tabs.map(({ id, label, Icon }) => (
                             <button
                                 key={id}
                                 onClick={() => setTab(id)}
                                 className={cn(
-                                    'flex flex-col items-center gap-1 rounded-xl py-2.5 text-[12px] font-black transition-all',
-                                    tab === id ? 'bg-white text-[#5f705f] shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                                    'flex flex-col items-center gap-1.5 rounded-xl py-3 text-[13px] font-extrabold uppercase tracking-wide transition-all cursor-pointer',
+                                    tab === id
+                                        ? 'bg-[#2D3E33] text-[#F6F2EC] shadow-md shadow-[#2D3E33]/20 scale-[1.02]'
+                                        : 'text-[#2D3E33]/70 hover:text-[#2D3E33] hover:bg-white/60'
                                 )}
                             >
-                                <Icon size={18} />
+                                <Icon size={20} />
                                 {label}
                             </button>
                         ))}
@@ -303,31 +305,38 @@ export function CuentasPage() {
                     {/* Tarjeta de saldo */}
                     <div
                         className={cn(
-                            'rounded-3xl p-5 text-white shadow-lg relative overflow-hidden transition-all',
-                            tab === 'hogar' ? 'bg-[#bb8d3b]' : 'bg-[#5f705f]'
+                            'rounded-[2rem] p-6 text-[#F6F2EC] shadow-xl relative overflow-hidden transition-all border border-white/10',
+                            tab === 'hogar' ? 'bg-[#4A2E3D]' : tab === 'cafe' ? 'bg-[#2D3E33]' : 'bg-[#1B263B]'
                         )}
                     >
-                        <PiggyBank className="absolute -right-4 -top-4 h-24 w-24 text-white/10" />
-                        <p className="text-[12px] font-black uppercase tracking-widest text-white/70 relative">
-                            {tab === 'cafe'
-                                ? 'Ganancia del café'
-                                : tab === 'hogar'
-                                ? 'Movimiento de la casa'
-                                : 'Lo que te queda'}
+                        <PiggyBank className="absolute -right-4 -top-4 h-28 w-28 text-white/5 pointer-events-none" />
+                        <div className="flex items-center justify-between relative">
+                            <span className="inline-block px-3 py-1 rounded-full bg-[#E5A84B] text-[#1B263B] text-[11px] font-extrabold uppercase tracking-widest">
+                                {tab === 'cafe'
+                                    ? 'Bolsillo del café'
+                                    : tab === 'hogar'
+                                    ? 'Bolsillo de la casa'
+                                    : 'Balance Total'}
+                            </span>
+                        </div>
+                        <p className="text-[13px] font-bold uppercase tracking-wider text-[#CCD1C7] mt-3">
+                            {tab === 'cafe' ? 'Ganancia neta' : tab === 'hogar' ? 'Gastos del hogar' : 'Lo que te queda'}
                         </p>
-                        <p className="pr-amount text-4xl mt-2 relative">{formatoPlata(r.saldo)}</p>
-                        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/15 relative">
+                        <p className="text-4xl sm:text-5xl font-heading text-[#F6F2EC] mt-1 relative tracking-wide">
+                            {formatoPlata(r.saldo)}
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 mt-5 pt-4 border-t border-white/15 relative">
                             <div>
-                                <p className="text-[11px] font-bold uppercase text-white/60 flex items-center gap-1">
-                                    <TrendingUp size={13} /> Entró
+                                <p className="text-[12px] font-extrabold uppercase tracking-wider text-[#CCD1C7] flex items-center gap-1.5">
+                                    <TrendingUp size={15} className="text-[#E5A84B]" /> Entró
                                 </p>
-                                <p className="text-lg font-black">{formatoPlata(r.ingresos)}</p>
+                                <p className="text-xl sm:text-2xl font-heading text-[#F6F2EC] mt-0.5">{formatoPlata(r.ingresos)}</p>
                             </div>
                             <div>
-                                <p className="text-[11px] font-bold uppercase text-white/60 flex items-center gap-1">
-                                    <TrendingDown size={13} /> Salió
+                                <p className="text-[12px] font-extrabold uppercase tracking-wider text-[#CCD1C7] flex items-center gap-1.5">
+                                    <TrendingDown size={15} className="text-red-300" /> Salió
                                 </p>
-                                <p className="text-lg font-black">{formatoPlata(r.gastos)}</p>
+                                <p className="text-xl sm:text-2xl font-heading text-[#F6F2EC] mt-0.5">{formatoPlata(r.gastos)}</p>
                             </div>
                         </div>
                         {tab === 'todo' && (

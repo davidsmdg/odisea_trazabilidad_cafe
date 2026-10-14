@@ -25,10 +25,10 @@ import { useAuth } from '../context/AuthContext';
 import type { Finca, LoteCafe } from '../../types/finca';
 
 const inputBase =
-    'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 font-bold text-gray-800 outline-none focus:border-[#5f705f]';
+    'w-full h-14 rounded-2xl bg-white border-2 border-[#DAD6CF] px-4 font-extrabold text-base text-[#2D3E33] outline-none focus:border-[#2D3E33] shadow-sm';
 
 function Label({ children }: { children: React.ReactNode }) {
-    return <span className="block text-[14px] font-black uppercase tracking-wide text-gray-700 mb-2">{children}</span>;
+    return <span className="block text-[15px] font-extrabold uppercase tracking-wide text-[#2D3E33] mb-2">{children}</span>;
 }
 
 const VARIEDADES_COMUNES = [
@@ -177,15 +177,15 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                     ) : (
                         <div className="h-9 w-9" />
                     )}
-                    <div className="flex-1 flex gap-1.5">
+                    <div className="flex-1 flex gap-2">
                         {[0, 1, 2].map((i) => (
                             <div
                                 key={i}
-                                className={cn('h-1.5 flex-1 rounded-full', i <= paso ? 'bg-[#5f705f]' : 'bg-gray-200')}
+                                className={cn('h-2.5 flex-1 rounded-full transition-colors', i <= paso ? 'bg-[#BD4A1F]' : 'bg-[#DAD6CF]/60')}
                             />
                         ))}
                     </div>
-                    <span className="text-[15px] font-black text-gray-600 w-10 text-right">{paso + 1}/3</span>
+                    <span className="text-base font-heading text-[#2D3E33] w-12 text-right">{paso + 1}/3</span>
                 </div>
             )}
 
@@ -195,11 +195,11 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                     {paso === 0 && (
                         <div className="space-y-5">
                             <div className="text-center pt-4">
-                                <span className="inline-flex h-16 w-16 rounded-3xl bg-[#5f705f]/10 items-center justify-center text-[#5f705f] mb-3">
-                                    <Sprout size={30} />
+                                <span className="inline-flex h-16 w-16 rounded-3xl bg-[#2D3E33]/10 items-center justify-center text-[#2D3E33] mb-3">
+                                    <Sprout size={32} />
                                 </span>
-                                <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Bienvenida a Odisea</h1>
-                                <p className="text-[16px] text-gray-600 mt-2 leading-relaxed">
+                                <h1 className="text-3xl sm:text-4xl font-heading uppercase text-[#2D3E33] tracking-tight">Bienvenido a Mi Finca</h1>
+                                <p className="text-base text-[#4A2E3D] mt-2 font-medium leading-relaxed">
                                     Empecemos por registrar tu finca. Toma menos de un minuto.
                                 </p>
                             </div>

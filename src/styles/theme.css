@@ -1,55 +1,65 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-size: 16px;
-  --background: #FDFDF8;
-  --foreground: #2c362c;
+  --font-size: 17px;
+  /* Paleta Oficial Mi Finca Odisea */
+  --crema: #F6F2EC;
+  --arena: #DAD6CF;
+  --niebla: #E3E5E8;
+  --salvia: #CCD1C7;
+  --terracota: #BD4A1F;
+  --berenjena: #4A2E3D;
+  --verde: #2D3E33;
+  --mostaza: #E5A84B;
+  --noche: #1B263B;
+
+  --background: #F6F2EC;
+  --foreground: #2D3E33;
   --card: #ffffff;
-  --card-foreground: #2c362c;
+  --card-foreground: #2D3E33;
   --popover: #ffffff;
-  --popover-foreground: #2c362c;
-  --primary: #5f705f;
-  /* Deep Teal */
-  --primary-foreground: #ffffff;
-  --secondary: #bb8d3b;
-  /* Dark Cyan */
-  --secondary-foreground: #ffffff;
-  --muted: #F2F4EF;
-  --muted-foreground: #6a7a6a;
-  --accent: #e3d5b8;
-  /* Lime Yellow */
-  --accent-foreground: #5f705f;
-  --destructive: #a35c5c;
-  /* Cherry Red */
+  --popover-foreground: #2D3E33;
+  --primary: #BD4A1F;
+  /* Terracota */
+  --primary-foreground: #F6F2EC;
+  --secondary: #2D3E33;
+  /* Verde bosque */
+  --secondary-foreground: #F6F2EC;
+  --muted: #E3E5E8;
+  --muted-foreground: #4A2E3D;
+  --accent: #E5A84B;
+  /* Mostaza */
+  --accent-foreground: #1B263B;
+  --destructive: #BD4A1F;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 110, 106, 0.1);
+  --border: rgba(45, 62, 51, 0.14);
   --input: transparent;
   --input-background: #ffffff;
-  --switch-background: #bb8d3b;
+  --switch-background: #E5A84B;
   --font-weight-black: 900;
   --font-weight-bold: 700;
-  --font-weight-medium: 500;
+  --font-weight-medium: 600;
   --font-weight-normal: 400;
-  --ring: #5f705f;
-  --chart-1: #5f705f;
-  --chart-2: #bb8d3b;
-  --chart-3: #8a9a8a;
-  --chart-4: #e3d5b8;
-  --chart-5: #a35c5c;
-  --radius: 1rem;
-  /* More rounded */
-  --sidebar: #bb8d3b;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #5f705f;
+  --ring: #BD4A1F;
+  --chart-1: #2D3E33;
+  --chart-2: #E5A84B;
+  --chart-3: #BD4A1F;
+  --chart-4: #4A2E3D;
+  --chart-5: #CCD1C7;
+  --radius: 1.25rem;
+  /* Rounded friendly */
+  --sidebar: #2D3E33;
+  --sidebar-foreground: #F6F2EC;
+  --sidebar-primary: #BD4A1F;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(255, 255, 255, 0.1);
+  --sidebar-accent: rgba(246, 242, 236, 0.12);
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #e3d5b8;
+  --sidebar-border: rgba(246, 242, 236, 0.12);
+  --sidebar-ring: #E5A84B;
 
-  /* Fuentes (Gilroy-style geometric sans) */
-  --font-ui: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-heading: 'Outfit', sans-serif;
+  /* Fuentes Odisea */
+  --font-ui: 'Open Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Anton', 'Archivo Black', Impact, sans-serif;
 }
 
 .dark {

@@ -65,18 +65,18 @@ export function BarraPrecioTicker() {
     const [expandido, setExpandido] = useState<boolean>(false);
 
     return (
-        <div className="w-full bg-[#1b2b1e] border-b border-[#2d4231] select-none">
+        <div className="w-full bg-[#1B263B] border-b border-[#2D3E33]/30 select-none">
             {/* ── Barra tocable de titulares de noticias ── */}
             <button
                 type="button"
                 onClick={() => setExpandido(!expandido)}
-                className="w-full py-2.5 px-3 flex items-center justify-between text-left text-white active:bg-[#233827] transition-colors focus:outline-none"
+                className="w-full py-2.5 px-3 flex items-center justify-between text-left text-[#F6F2EC] active:bg-black/20 transition-colors focus:outline-none cursor-pointer"
                 aria-label="Ver noticias del día"
             >
                 {/* Insignia NOTICIAS */}
-                <div className="shrink-0 flex items-center gap-1.5 bg-[#263e2a] px-3 py-1 rounded-full text-[#a4d4ab] uppercase tracking-wider text-[11px] font-black mr-2.5 z-10 shadow-sm border border-[#3b5b3f]/60">
-                    <Newspaper size={13} className="text-[#64d87c]" />
-                    <span>NOTICIAS</span>
+                <div className="shrink-0 flex items-center gap-1.5 bg-[#E5A84B] px-3 py-1 rounded-full text-[#1B263B] uppercase tracking-wider text-[11px] font-extrabold mr-2.5 z-10 shadow-sm">
+                    <Newspaper size={13} className="text-[#1B263B]" />
+                    <span>AL DÍA</span>
                 </div>
 
                 {/* Texto marquesina lento y legible con los titulares de noticias */}
@@ -84,19 +84,19 @@ export function BarraPrecioTicker() {
                     <div className="producer-ticker-track flex items-center gap-10">
                         {[...NOTICIAS_DEL_DIA, ...NOTICIAS_DEL_DIA].map((n, idx) => (
                             <div key={`${n.id}-${idx}`} className="flex items-center gap-2.5 whitespace-nowrap text-[13px]">
-                                <span className="text-emerald-400 font-black uppercase text-[10px] tracking-wider px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/40">
+                                <span className="text-[#E5A84B] font-extrabold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded bg-white/10 border border-white/10">
                                     {n.categoria}
                                 </span>
-                                <span className="text-white font-bold tracking-tight">{n.titulo}</span>
-                                <span className="text-gray-500 font-medium text-[11px]">{n.hora}</span>
-                                <span className="text-gray-600 ml-2">•</span>
+                                <span className="text-[#F6F2EC] font-bold tracking-tight">{n.titulo}</span>
+                                <span className="text-[#CCD1C7] font-medium text-[11px]">{n.hora}</span>
+                                <span className="text-white/40 ml-2">•</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Botón de expandir / colapsar */}
-                <div className="shrink-0 pl-1 text-[#a4d4ab] flex items-center">
+                <div className="shrink-0 pl-1 text-[#E5A84B] flex items-center">
                     {expandido ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
             </button>

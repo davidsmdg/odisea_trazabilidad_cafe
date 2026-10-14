@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
 import { BottomSheet } from '../components/BottomSheet';
+import { Eyebrow } from '../../components/ui/Eyebrow';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { REGIONES, DEPARTAMENTOS } from '../data/regiones';
@@ -160,22 +161,22 @@ export function FincaPage() {
                         key={finca.id}
                         className="rounded-3xl bg-white border-2 border-[#5f705f]/20 shadow-md overflow-hidden"
                     >
-                        {/* Cabecera principal de la FINCA */}
-                        <div className="bg-gradient-to-br from-[#2f4332] to-[#405c45] text-white p-5">
+                        {/* Cabecera principal de la FINCA con estilo landing */}
+                        <div className="bg-[#2D3E33] text-[#F6F2EC] p-6 rounded-t-[2rem] border-b border-white/10">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
-                                    <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-2 text-white">
-                                        <Sprout size={12} className="text-[#a4d4ab]" />
+                                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest mb-2.5 text-[#E5A84B]">
+                                        <Sprout size={14} className="text-[#E5A84B]" />
                                         <span>Tu Finca Cafetera</span>
                                     </div>
-                                    <h3 className="text-2xl font-black tracking-tight leading-tight">{finca.nombre}</h3>
-                                    <p className="text-[13px] font-bold text-white/80 mt-1 flex items-center gap-1.5">
+                                    <h3 className="text-3xl sm:text-4xl font-heading tracking-wide uppercase leading-tight">{finca.nombre}</h3>
+                                    <p className="text-sm sm:text-base font-bold text-[#CCD1C7] mt-1.5 flex items-center gap-2">
                                         <span>{finca.municipio}, {finca.departamento}</span>
                                         {finca.areaAproximada && (
                                             <>
                                                 <span>•</span>
-                                                <span className="bg-black/25 px-2 py-0.5 rounded-lg text-xs font-black">
-                                                    {finca.areaAproximada} hectáreas totales
+                                                <span className="bg-black/25 px-2.5 py-0.5 rounded-full text-xs font-heading tracking-wider text-[#E5A84B]">
+                                                    {finca.areaAproximada} Hectáreas
                                                 </span>
                                             </>
                                         )}
@@ -183,11 +184,11 @@ export function FincaPage() {
                                 </div>
                                 <button
                                     onClick={() => setFincaSheet(finca)}
-                                    className="h-10 w-10 shrink-0 rounded-2xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
+                                    className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 hover:bg-white/20 text-[#F6F2EC] flex items-center justify-center transition-colors cursor-pointer border border-white/15"
                                     aria-label="Editar datos de la finca"
                                     title="Editar datos de la finca"
                                 >
-                                    <Pencil size={17} />
+                                    <Pencil size={18} />
                                 </button>
                             </div>
                         </div>
