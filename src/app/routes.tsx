@@ -3,6 +3,7 @@ import { RootLayout } from './layouts/RootLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ExplorarOrigenes } from './pages/ExplorarOrigenes';
+import { MiFincaLanding } from './pages/MiFincaLanding';
 import { BancoCafes } from './pages/BancoCafes';
 import { TrazabilidadLote } from './pages/TrazabilidadLote';
 import { SobreNosotros } from './pages/SobreNosotros';
@@ -61,6 +62,10 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
+        Component: MiFincaLanding,
+      },
+      {
+        path: 'explorar',
         Component: ExplorarOrigenes,
       },
       {
