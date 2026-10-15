@@ -180,7 +180,7 @@ export function AdminConsolePage() {
                                     setPinInput(e.target.value);
                                     setPinError(false);
                                 }}
-                                placeholder="ODISEA••••"
+                                placeholder="••••••••"
                                 autoFocus
                                 className={cn(
                                     "w-full h-14 rounded-2xl bg-[#F6F2EC]/40 border-2 px-4 font-mono text-center text-xl tracking-widest outline-none transition-all",
@@ -196,9 +196,6 @@ export function AdminConsolePage() {
                             INGRESAR AL PANEL
                         </button>
                     </form>
-                    <p className="text-xs text-stone-400">
-                        Clave de acceso: <span className="font-mono font-bold text-stone-600">ODISEA2026</span>
-                    </p>
                 </div>
             </div>
         );
