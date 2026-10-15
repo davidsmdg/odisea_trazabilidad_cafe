@@ -18,7 +18,8 @@ import {
     RefreshCw,
     Activity,
     UserCheck,
-    Lock
+    Lock,
+    LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../components/ui/utils';
@@ -226,7 +227,7 @@ export function AdminConsolePage() {
                         <button
                             onClick={cargarDatos}
                             disabled={loading}
-                            className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase flex items-center gap-2 transition-all"
+                            className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase flex items-center gap-2 transition-all cursor-pointer"
                         >
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                             <span>Actualizar</span>
@@ -234,11 +235,15 @@ export function AdminConsolePage() {
                         <button
                             onClick={() => {
                                 sessionStorage.removeItem('odisea_admin_unlocked');
+                                setPinInput('');
                                 setPinUnlocked(false);
+                                toast.info('Sesión administrativa cerrada');
                             }}
-                            className="h-10 px-4 rounded-xl bg-[#BD4A1F] hover:bg-[#a33f1a] text-white font-bold text-xs uppercase transition-all"
+                            className="h-10 px-4 rounded-xl bg-[#BD4A1F] hover:bg-[#a33f1a] text-white font-bold text-xs uppercase flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+                            title="Cerrar sesión de administrador"
                         >
-                            Bloquear
+                            <LogOut size={15} />
+                            <span>Cerrar Sesión</span>
                         </button>
                     </div>
                 </div>
