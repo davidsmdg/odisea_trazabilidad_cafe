@@ -22,6 +22,7 @@ import { saveFincas, getFincas } from '../../services/fincasService';
 import { getPeriodoActivo, sembrarSaldoInicial } from '../../services/finanzasService';
 import { marcarOnboarding } from './utils/onboardingFlag';
 import { useAuth } from '../context/AuthContext';
+import { registrarEvento } from '../../services/telemetryService';
 import type { Finca, LoteCafe } from '../../types/finca';
 
 const inputBase =
@@ -136,6 +137,13 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
             }
 
             marcarOnboarding('completo');
+            registrarEvento('onboarding_completado', {
+                usuarioId: user?.id,
+                nombre: user?.name,
+                contacto: user?.celular || user?.email,
+                rol: user?.role || 'AGRICULTOR',
+                detalles: { finca: nombre.trim(), municipio, departamento }
+            });
             setPaso(3);
         } catch {
             toast.error('No se pudo guardar. Intenta otra vez.');

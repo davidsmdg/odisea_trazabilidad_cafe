@@ -53,6 +53,7 @@ import { RoasterToolkit } from './components/tostador/RoasterToolkit';
 import { ForwardBooking } from './components/tostador/ForwardBooking';
 import { PublicLayout } from './layouts/PublicLayout';
 import { TrazabilidadPublica } from './components/public/TrazabilidadPublica';
+import { AdminConsolePage } from './admin/AdminConsolePage';
 
 export const router = createBrowserRouter([
   // ── Rutas públicas (explorador) ──────────────────────────────────────────
@@ -97,6 +98,16 @@ export const router = createBrowserRouter([
         Component: RegisterPage,
       },
     ],
+  },
+
+  // ── Consola Administrativa & Telemetría (URL Dedicada) ────────────────────
+  {
+    path: '/admin-console',
+    Component: AdminConsolePage,
+  },
+  {
+    path: '/admin',
+    element: <Navigate to="/admin-console" replace />,
   },
 
   // ── Portal del productor (móvil, offline) ────────────────────────────────

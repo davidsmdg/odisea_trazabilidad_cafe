@@ -8,6 +8,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
 import { Eyebrow } from '../ui/Eyebrow';
+import { registrarEvento } from '../../../services/telemetryService';
 
 interface RoleCard {
     role: UserRole;
@@ -147,6 +148,12 @@ export function RegisterPage() {
 
             await register(name.trim(), rawContacto, password, selectedRole!);
             await consumirCodigoInvitacion(codigoInvitacion);
+            registrarEvento('codigo_canjeado', {
+                nombre: name.trim(),
+                contacto: rawContacto,
+                rol: selectedRole!,
+                detalles: { codigo: codigoInvitacion.trim().toUpperCase() }
+            });
 
             // Redirige según rol
             if (selectedRole === 'AGRICULTOR') {

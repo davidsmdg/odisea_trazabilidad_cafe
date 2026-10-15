@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Sun,
-    Wheat,
+    Coffee,
     CheckCircle2,
     Calendar,
     ChevronDown,
@@ -30,6 +30,27 @@ interface EtapaConfig {
     borderActivo: string;
 }
 
+function CoffeeBeanIcon({ size = 14, className }: { size?: number; className?: string }) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+        >
+            {/* Silueta ovalada del grano de café con inclinación natural */}
+            <path d="M17.5 6.5C14.5 3.5 9.5 3.5 6.5 6.5C3.5 9.5 3.5 14.5 6.5 17.5C9.5 20.5 14.5 20.5 17.5 17.5C20.5 14.5 20.5 9.5 17.5 6.5Z" />
+            {/* Hendidura central curva característica en S del grano de café */}
+            <path d="M7.5 7.5C10 10.5 9.5 13.5 12 16C13.5 17.5 16 16.5 16.5 16.5" />
+        </svg>
+    );
+}
+
 const ETAPAS: EtapaConfig[] = [
     {
         key: 1,
@@ -53,7 +74,7 @@ const ETAPAS: EtapaConfig[] = [
         key: 3,
         nombre: 'Pergamino',
         subtitulo: 'Seco al 11%',
-        icono: Wheat,
+        icono: CoffeeBeanIcon,
         colorActivo: 'text-emerald-800',
         bgActivo: 'bg-emerald-600',
         borderActivo: 'border-emerald-600',

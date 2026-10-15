@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { UserRole, AuthUser } from '../../types/usuario';
 import { supabase } from '../utils/supabaseClient';
 import { MOCK_USERS } from '../../data/usuarios.mock';
+import { registrarEvento } from '../../services/telemetryService';
 
 export type { UserRole, AuthUser };
 
@@ -123,6 +124,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const persistLocalUser = (u: AuthUser) => {
     setUser(u);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
+    registrarEvento('login', {
+      usuarioId: u.id,
+      nombre: u.name,
+      contacto: u.celular || u.email,
+      rol: u.role,
+    });
   };
 
   const login = async (identificador: string, password: string) => {
@@ -244,6 +251,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const profile = await fetchUserProfile(data.user.id);
           if (profile) {
             setUser(profile);
+            registrarEvento('register', {
+              usuarioId: profile.id,
+              nombre: profile.name,
+              contacto: profile.celular || profile.email,
+              rol: profile.role,
+            });
             return;
           }
         } else if (error) {

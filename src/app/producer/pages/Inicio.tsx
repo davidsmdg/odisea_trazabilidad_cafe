@@ -22,7 +22,7 @@ const FASE_LABEL: Record<number, { txt: string; emoji: string; color: string }> 
     0: { txt: 'Meta planeada', emoji: '🎯', color: 'text-gray-500' },
     1: { txt: 'Cereza fresca', emoji: '🍒', color: 'text-red-600' },
     2: { txt: 'En secado', emoji: '☀️', color: 'text-amber-600' },
-    3: { txt: 'Café verde', emoji: '🌾', color: 'text-[#5f705f]' },
+    3: { txt: 'Café verde', emoji: '☕', color: 'text-[#2D3E33]' },
 };
 
 export function Inicio() {
@@ -187,10 +187,10 @@ export function Inicio() {
                                     const fase = FASE_LABEL[c.fase] ?? FASE_LABEL[1];
                                     const kg =
                                         c.fase <= 1
-                                            ? c.pesos?.cereza || 0
+                                            ? Number(c.pesos?.cereza) || 0
                                             : c.fase === 2
-                                            ? c.pesos?.pergamino || 0
-                                            : c.pesos?.verde || 0;
+                                            ? (Number(c.pesos?.pergamino) > 0 ? Number(c.pesos?.pergamino) : (Number(c.pesos?.cereza) || 0))
+                                            : Number(c.pesos?.verde) || 0;
                                     const numPaso = `0${c.fase || 1}`;
                                     return (
                                         <Link

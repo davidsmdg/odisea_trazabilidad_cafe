@@ -3,49 +3,70 @@ import type { Cosecha } from '../types/cosecha';
 
 export async function getCosechas(): Promise<Cosecha[]> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    
+    // Si hay usuario logueado en Supabase, intentamos consultar primero
+    if (user) {
+        const { data, error } = await supabase
+            .from('lotes')
+            .select('*')
+            .eq('productor_id', user.id);
 
-    const { data, error } = await supabase
-        .from('lotes')
-        .select('*')
-        .eq('productor_id', user.id);
-
-    if (error) {
-        console.error('Error fetching cosechas:', error);
-        return [];
+        if (!error && data && data.length > 0) {
+            return data.map(l => {
+                const meta = l.metadata || {};
+                return {
+                    id: l.id,
+                    codigo: l.codigo,
+                    productor: meta.productor || 'María González',
+                    cosecha: meta.cosecha || 'Cosecha Principal',
+                    finca: meta.finca || 'Finca La Esperanza',
+                    parcelas: meta.parcelas || [],
+                    estado: l.estado_actual || 'Cereza',
+                    pesos: {
+                        cereza: Number(l.peso_cereza) || 0,
+                        pergamino: Number(l.peso_pergamino) || 0,
+                        verde: Number(l.peso_verde) || 0,
+                        objetivo: meta.pesos?.objetivo || 0
+                    },
+                    fase: meta.fase !== undefined ? meta.fase : 1,
+                    modalidad: meta.modalidad || 'diario',
+                    detallesObjetivo: l.variedad && l.proceso ? {
+                        variedad: l.variedad,
+                        proceso: l.proceso
+                    } : meta.detallesObjetivo,
+                    calificacion: Number(l.calificacion_final) || meta.calificacion || 0,
+                    macroperfil: meta.macroperfil || '',
+                    clientes: meta.clientes || [],
+                    factorRendimiento: meta.factorRendimiento ?? null
+                };
+            });
+        }
     }
 
-    return (data || []).map(l => {
-        const meta = l.metadata || {};
-        return {
-            id: l.id,
-            codigo: l.codigo,
-            productor: meta.productor || 'María González',
-            cosecha: meta.cosecha || 'Cosecha Principal',
-            finca: meta.finca || 'Finca La Esperanza',
-            parcelas: meta.parcelas || [],
-            estado: l.estado_actual || 'Cereza',
-            pesos: {
-                cereza: Number(l.peso_cereza) || 0,
-                pergamino: Number(l.peso_pergamino) || 0,
-                verde: Number(l.peso_verde) || 0,
-                objetivo: meta.pesos?.objetivo || 0
-            },
-            fase: meta.fase || 1,
-            modalidad: meta.modalidad || 'diario',
-            detallesObjetivo: l.variedad && l.proceso ? {
-                variedad: l.variedad,
-                proceso: l.proceso
-            } : meta.detallesObjetivo,
-            calificacion: Number(l.calificacion_final) || meta.calificacion || 0,
-            macroperfil: meta.macroperfil || '',
-            clientes: meta.clientes || [],
-            factorRendimiento: meta.factorRendimiento ?? null
-        };
-    });
+    // Fallback inteligente para modo demo / local storage
+    try {
+        const saved = localStorage.getItem('lotes_produccion');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+            }
+        }
+    } catch (e) {
+        console.error('Error reading lotes_produccion fallback:', e);
+    }
+
+    return [];
 }
 
 export async function saveCosechas(cosechas: Cosecha[]): Promise<void> {
+    // 1. Siempre respaldar y sincronizar en localStorage para consistencia inmediata entre vistas
+    try {
+        localStorage.setItem('lotes_produccion', JSON.stringify(cosechas));
+    } catch (e) {
+        console.error('Error writing lotes_produccion to localStorage:', e);
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -78,9 +99,9 @@ export async function saveCosechas(cosechas: Cosecha[]): Promise<void> {
                 variedad: c.detallesObjetivo?.variedad || 'Bourbon Rosado',
                 proceso: c.detallesObjetivo?.proceso || 'Lavado',
                 estado_actual: c.estado,
-                peso_cereza: c.pesos.cereza || 0,
-                peso_pergamino: c.pesos.pergamino || 0,
-                peso_verde: c.pesos.verde || 0,
+                peso_cereza: c.pesos?.cereza || 0,
+                peso_pergamino: c.pesos?.pergamino || 0,
+                peso_verde: c.pesos?.verde || 0,
                 calificacion_final: c.calificacion || 0,
                 metadata: {
                     productor: c.productor,
@@ -88,7 +109,7 @@ export async function saveCosechas(cosechas: Cosecha[]): Promise<void> {
                     finca: c.finca,
                     parcelas: c.parcelas,
                     pesos: {
-                        objetivo: c.pesos.objetivo || 0
+                        objetivo: c.pesos?.objetivo || 0
                     },
                     fase: c.fase,
                     modalidad: c.modalidad,

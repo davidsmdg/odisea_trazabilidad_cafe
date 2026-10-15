@@ -79,13 +79,16 @@ function faseInfo(lote: any) {
             txt: lote.pesos?.pergamino > 0 ? 'Pergamino seco' : 'En secado',
             color: 'text-amber-600',
         };
-    return { emoji: '🌾', txt: 'Café verde', color: 'text-[#5f705f]' };
+    return { emoji: '☕', txt: 'Café verde', color: 'text-[#2D3E33]' };
 }
 
 function kilosActuales(lote: any) {
-    if (lote.fase <= 1) return lote.pesos?.cereza || 0;
-    if (lote.fase === 2) return lote.pesos?.pergamino || 0;
-    return lote.pesos?.verde || 0;
+    if (lote.fase === 3) return Number(lote.pesos?.verde) || 0;
+    if (lote.fase === 2) {
+        const p = Number(lote.pesos?.pergamino);
+        return p > 0 ? p : (Number(lote.pesos?.cereza) || 0);
+    }
+    return Number(lote.pesos?.cereza) || 0;
 }
 
 /** Input de número grande y centrado para las hojas de acción. */
@@ -212,11 +215,17 @@ export function CosechasPage() {
             let total = 0;
             const next = cosechas.map((l) => {
                 if (l.id !== lote.id) return l;
-                total = (l.pesos.cereza || 0) + num;
-                return { ...l, pesos: { ...l.pesos, cereza: total }, fase: Math.max(1, l.fase), estado: 'Cereza (Fresco)' };
+                const prevCherry = Number(l.pesos?.cereza) || 0;
+                total = prevCherry + num;
+                return {
+                    ...l,
+                    pesos: { ...l.pesos, cereza: total },
+                    fase: l.fase === 0 ? 1 : l.fase,
+                    estado: l.fase >= 2 ? l.estado : 'Cereza (Fresco)',
+                };
             });
             await guardar(next);
-            toast.success(`+${num} kilos de cereza en ${lote.codigo}`);
+            toast.success(`+${num} kilos de cereza en ${lote.codigo} (Total: ${total} kg)`);
             try {
                 const a = await detectAnomaly(lote.codigo, 'peso_cereza', total, lote.finca || 'Finca La Esperanza', 'María González');
                 if (a)
@@ -261,7 +270,7 @@ export function CosechasPage() {
                         : l
                 )
             );
-            toast.success(`${lote.codigo} trillado: ${num} kilos de verde 🌾`);
+            toast.success(`${lote.codigo} trillado: ${num} kilos de verde ☕`);
         } else if (tipo === 'anotar_proceso') {
             if (!selectValue) return toast.error('Elige un proceso');
             await guardar(
@@ -837,7 +846,7 @@ function HistoriaMermas({ lote }: { lote: any }) {
                     <span className="font-black text-gray-900">{pergamino > 0 ? `${formatoNumero(pergamino)} kilos` : 'Pendiente'}</span>
                 </div>
                 <div className={rowStyle}>
-                    <span className="text-[14px] font-bold text-gray-500">🌾 Café verde</span>
+                    <span className="text-[14px] font-bold text-gray-500">☕ Café verde</span>
                     <span className="font-black text-[#5f705f]">{verde > 0 ? `${formatoNumero(verde)} kilos` : 'Pendiente'}</span>
                 </div>
             </div>

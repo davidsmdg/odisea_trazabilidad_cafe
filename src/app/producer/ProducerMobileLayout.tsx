@@ -20,6 +20,7 @@ import { debeVerOnboarding, marcarOnboarding } from './utils/onboardingFlag';
 import { getFincas } from '../../services/fincasService';
 import { cn } from '../components/ui/utils';
 import { BrandLogo } from '../components/ui/BrandLogo';
+import { registrarEvento } from '../../services/telemetryService';
 
 const NAV_ITEMS = [
     { to: '/producer/inicio', label: 'Inicio', icon: Home },
@@ -49,9 +50,23 @@ export function ProducerMobileLayout() {
                     setEstado('app');
                 } else {
                     setEstado('onboarding');
+                    registrarEvento('onboarding_iniciado', {
+                        usuarioId: user?.id,
+                        nombre: user?.name,
+                        contacto: user?.celular || user?.email,
+                        rol: user?.role || 'AGRICULTOR',
+                    });
                 }
             })
-            .catch(() => setEstado('onboarding'));
+            .catch(() => {
+                setEstado('onboarding');
+                registrarEvento('onboarding_iniciado', {
+                    usuarioId: user?.id,
+                    nombre: user?.name,
+                    contacto: user?.celular || user?.email,
+                    rol: user?.role || 'AGRICULTOR',
+                });
+            });
     }, []);
 
     if (estado === 'cargando') {

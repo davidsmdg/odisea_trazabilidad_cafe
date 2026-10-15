@@ -234,3 +234,50 @@ export async function crearCodigoInvitacion(nuevo: Omit<CodigoInvitacion, 'id' |
     saveLocalCodes([codigoObj, ...local]);
     return codigoObj;
 }
+
+export async function actualizarUsosMaximos(id: string, nuevoLimite: number): Promise<boolean> {
+    try {
+        await supabase
+            .from('codigos_invitacion')
+            .update({ usos_maximos: nuevoLimite })
+            .eq('id', id);
+    } catch {}
+
+    const localList = getLocalCodes();
+    const updated = localList.map((c) =>
+        c.id === id ? { ...c, usosMaximos: nuevoLimite } : c
+    );
+    saveLocalCodes(updated);
+    return true;
+}
+
+export async function alternarEstadoCodigo(id: string, activo: boolean): Promise<boolean> {
+    try {
+        await supabase
+            .from('codigos_invitacion')
+            .update({ activo })
+            .eq('id', id);
+    } catch {}
+
+    const localList = getLocalCodes();
+    const updated = localList.map((c) =>
+        c.id === id ? { ...c, activo } : c
+    );
+    saveLocalCodes(updated);
+    return true;
+}
+
+export async function eliminarCodigoInvitacion(id: string): Promise<boolean> {
+    try {
+        await supabase
+            .from('codigos_invitacion')
+            .delete()
+            .eq('id', id);
+    } catch {}
+
+    const localList = getLocalCodes();
+    const updated = localList.filter((c) => c.id !== id);
+    saveLocalCodes(updated);
+    return true;
+}
+
