@@ -95,6 +95,7 @@ export function HojaMovimiento({
                 icono: movimiento.icono,
                 libro,
                 tipo,
+                esPropia: false,
             };
         }
         if (!cat) return toast.error('Elige en qué fue');
