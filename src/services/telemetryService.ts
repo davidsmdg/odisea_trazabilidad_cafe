@@ -140,11 +140,150 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
       }));
       const ids = new Set(mapeados.map((e) => e.id));
       const localesUnicos = eventos.filter((e) => !ids.has(e.id));
-      eventos = [...mapeados, ...localesUnicos].sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
+      eventos = [...mapeados, ...localesUnicos];
     }
   } catch {}
+
+  // Extraer también eventos directos de los lotes reales existentes (Supabase o localStorage)
+  try {
+    const { data: dbLotes } = await supabase.from('lotes').select('*').order('created_at', { ascending: false });
+    let todosLosLotes: any[] = dbLotes || [];
+
+    // Complementar con lotes_produccion local
+    const rawLocal = localStorage.getItem('lotes_produccion');
+    if (rawLocal) {
+      try {
+        const parsed = JSON.parse(rawLocal);
+        if (Array.isArray(parsed)) {
+          const codigosExistentes = new Set(todosLosLotes.map((l: any) => l.codigo || l.id));
+          for (const pl of parsed) {
+            if (!codigosExistentes.has(pl.codigo) && !codigosExistentes.has(pl.id)) {
+              todosLosLotes.push(pl);
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // Convertir cada lote existente en eventos sintéticos si no están ya en la bitácora
+    const eventIds = new Set(eventos.map((e) => e.id));
+    for (const l of todosLosLotes) {
+      const cod = l.codigo || l.id;
+      const meta = l.metadata || {};
+      const fecha = l.created_at || l.fecha_cosecha || meta.fecha || new Date().toISOString();
+      const cereza = Number(l.peso_cereza ?? l.pesos?.cereza) || 0;
+      const pergamino = Number(l.peso_pergamino ?? l.pesos?.pergamino) || 0;
+      const verde = Number(l.peso_verde ?? l.pesos?.verde) || 0;
+
+      // Evento de creación
+      const idCreacion = `lote-creado-${cod}`;
+      if (!eventIds.has(idCreacion)) {
+        eventos.push({
+          id: idCreacion,
+          tipo: 'cosecha_creada',
+          nombre: meta.productor || 'David',
+          contacto: meta.celular || 'david@odisea.co',
+          rol: 'AGRICULTOR',
+          detalles: {
+            codigo: cod,
+            variedad: l.variedad || meta.detallesObjetivo?.variedad || 'Caturra',
+            kilosCereza: cereza,
+            finca: meta.finca || 'Finca La Esperanza',
+          },
+          timestamp: fecha,
+        });
+        eventIds.add(idCreacion);
+      }
+
+      // Si tiene cereza recolectada (>0)
+      if (cereza > 0) {
+        const idCereza = `lote-cereza-${cod}`;
+        if (!eventIds.has(idCereza)) {
+          eventos.push({
+            id: idCereza,
+            tipo: 'cereza_sumada',
+            nombre: meta.productor || 'David',
+            contacto: meta.celular || 'david@odisea.co',
+            rol: 'AGRICULTOR',
+            detalles: {
+              codigo: cod,
+              kilosSumados: cereza,
+              totalCereza: cereza,
+            },
+            timestamp: fecha,
+          });
+          eventIds.add(idCereza);
+        }
+      }
+
+      // Si está en secado o tiene pergamino
+      const fase = meta.fase ?? l.fase;
+      if (fase >= 2 || l.estado_actual === 'En Secado' || pergamino > 0) {
+        const idSecado = `lote-secado-${cod}`;
+        if (!eventIds.has(idSecado)) {
+          eventos.push({
+            id: idSecado,
+            tipo: 'secado_iniciado',
+            nombre: meta.productor || 'David',
+            contacto: meta.celular || 'david@odisea.co',
+            rol: 'AGRICULTOR',
+            detalles: {
+              codigo: cod,
+              kilosCereza: cereza,
+            },
+            timestamp: fecha,
+          });
+          eventIds.add(idSecado);
+        }
+      }
+
+      // Si tiene pergamino seco registrado
+      if (pergamino > 0) {
+        const idPerg = `lote-pergamino-${cod}`;
+        if (!eventIds.has(idPerg)) {
+          eventos.push({
+            id: idPerg,
+            tipo: 'pergamino_registrado',
+            nombre: meta.productor || 'David',
+            contacto: meta.celular || 'david@odisea.co',
+            rol: 'AGRICULTOR',
+            detalles: {
+              codigo: cod,
+              kilosPergamino: pergamino,
+              factorRendimiento: meta.factorRendimiento || null,
+            },
+            timestamp: fecha,
+          });
+          eventIds.add(idPerg);
+        }
+      }
+
+      // Si tiene café verde trillado
+      if (verde > 0) {
+        const idVerde = `lote-verde-${cod}`;
+        if (!eventIds.has(idVerde)) {
+          eventos.push({
+            id: idVerde,
+            tipo: 'trilla_registrada',
+            nombre: meta.productor || 'David',
+            contacto: meta.celular || 'david@odisea.co',
+            rol: 'AGRICULTOR',
+            detalles: {
+              codigo: cod,
+              kilosVerde: verde,
+            },
+            timestamp: fecha,
+          });
+          eventIds.add(idVerde);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error sincronizando lotes a eventos de telemetría:', err);
+  }
+
+  // Ordenar cronológicamente descendente
+  eventos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   // Contadores
   const totalLogins = eventos.filter((e) => e.tipo === 'login').length;
