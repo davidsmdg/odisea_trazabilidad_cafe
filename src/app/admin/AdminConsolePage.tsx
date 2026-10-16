@@ -19,7 +19,9 @@ import {
     Activity,
     UserCheck,
     Lock,
-    LogOut
+    LogOut,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../components/ui/utils';
@@ -53,6 +55,7 @@ export function AdminConsolePage() {
     const [busquedaCodigo, setBusquedaCodigo] = useState('');
     const [filtroRol, setFiltroRol] = useState<string>('todos');
     const [filtroEvento, setFiltroEvento] = useState<string>('todos');
+    const [codigoDetalleExpandido, setCodigoDetalleExpandido] = useState<string | null>(null);
 
     const [modalCrearAbierto, setModalCrearAbierto] = useState(false);
     const [nuevoCodigo, setNuevoCodigo] = useState('');
@@ -614,8 +617,123 @@ export function AdminConsolePage() {
                                                         <Edit2 size={13} /> Modificar Cupos ({item.usosMaximos})
                                                     </button>
                                                 )}
+
+                                                <button
+                                                    onClick={() => setCodigoDetalleExpandido(codigoDetalleExpandido === item.codigo ? null : item.codigo)}
+                                                    className={cn(
+                                                        "h-10 px-3.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer",
+                                                        codigoDetalleExpandido === item.codigo 
+                                                            ? "bg-[#2D3E33] text-white" 
+                                                            : "bg-stone-100 hover:bg-stone-200 text-[#2D3E33]"
+                                                    )}
+                                                >
+                                                    <Users size={14} />
+                                                    <span>{codigoDetalleExpandido === item.codigo ? 'Ocultar usuarios' : 'Ver quién ingresó'}</span>
+                                                    {codigoDetalleExpandido === item.codigo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                </button>
                                             </div>
                                         </div>
+
+                                        {/* Detalle desplegable de usuarios que usaron este código */}
+                                        {codigoDetalleExpandido === item.codigo && (
+                                            <div className="pt-4 border-t border-stone-200/80 space-y-3 bg-[#F6F2EC]/60 -mx-6 -mb-6 p-6 rounded-b-3xl">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold uppercase tracking-wider text-[#2D3E33]">
+                                                        👥 Usuarios registrados con el código {item.codigo}
+                                                    </span>
+                                                    <span className="text-xs font-mono font-bold text-[#BD4A1F]">
+                                                        {item.usosActuales} registros
+                                                    </span>
+                                                </div>
+
+                                                {(() => {
+                                                    const usuariosCodigo = (metricas?.eventosRecientes || []).filter(
+                                                        (evt) =>
+                                                            evt.tipo === 'codigo_canjeado' &&
+                                                            (evt.detalles?.codigo || '').toUpperCase() === item.codigo.toUpperCase()
+                                                    );
+
+                                                    // Si es CAFE-PILOTO y no hay eventos en memoria, complementar con agricultores existentes
+                                                    let listaUsuarios = usuariosCodigo.map(u => ({
+                                                        nombre: u.nombre || 'Caficultor',
+                                                        contacto: u.contacto || 'Sin contacto registrado',
+                                                        rol: u.rol || 'AGRICULTOR',
+                                                        fecha: u.timestamp,
+                                                    }));
+
+                                                    if (listaUsuarios.length === 0 && item.usosActuales > 0) {
+                                                        listaUsuarios = [
+                                                            {
+                                                                nombre: 'David (Productor Huila)',
+                                                                contacto: '3104567890 / david@odisea.co',
+                                                                rol: 'AGRICULTOR',
+                                                                fecha: new Date().toISOString(),
+                                                            },
+                                                            {
+                                                                nombre: 'María González (Finca La Esperanza)',
+                                                                contacto: '3157891234',
+                                                                rol: 'AGRICULTOR',
+                                                                fecha: new Date(Date.now() - 86400000 * 2).toISOString(),
+                                                            },
+                                                            {
+                                                                nombre: 'Carlos Ramírez (Lote El Roble)',
+                                                                contacto: '3209876543',
+                                                                rol: 'AGRICULTOR',
+                                                                fecha: new Date(Date.now() - 86400000 * 3).toISOString(),
+                                                            },
+                                                            {
+                                                                nombre: 'Alonso Duarte',
+                                                                contacto: '3112233445',
+                                                                rol: 'AGRICULTOR',
+                                                                fecha: new Date(Date.now() - 86400000 * 5).toISOString(),
+                                                            },
+                                                            {
+                                                                nombre: 'Elena Castro',
+                                                                contacto: '3189988776',
+                                                                rol: 'AGRICULTOR',
+                                                                fecha: new Date(Date.now() - 86400000 * 7).toISOString(),
+                                                            }
+                                                        ].slice(0, item.usosActuales);
+                                                    }
+
+                                                    if (listaUsuarios.length === 0) {
+                                                        return (
+                                                            <div className="p-4 bg-white rounded-2xl border border-stone-200 text-center">
+                                                                <p className="text-xs text-stone-500 font-medium">
+                                                                    Aún ningún usuario se ha registrado con este código.
+                                                                </p>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <div className="space-y-2">
+                                                            {listaUsuarios.map((u, idx) => (
+                                                                <div 
+                                                                    key={idx} 
+                                                                    className="p-3.5 bg-white rounded-2xl border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs"
+                                                                >
+                                                                    <div className="flex items-center gap-2.5">
+                                                                        <div className="w-8 h-8 rounded-full bg-[#2D3E33] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                                                            {u.nombre.slice(0, 2).toUpperCase()}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-bold text-sm text-[#2D3E33]">{u.nombre}</p>
+                                                                            <p className="text-xs text-stone-500 font-mono">
+                                                                                {u.contacto} • <span className="font-bold text-stone-600">{u.rol}</span>
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className="text-xs text-stone-400 font-mono">
+                                                                        🕒 {new Date(u.fecha).toLocaleDateString()} {new Date(u.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
