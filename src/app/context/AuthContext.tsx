@@ -166,6 +166,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const profile = await fetchUserProfile(data.user.id);
           if (profile) {
             setUser(profile);
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(profile));
+            registrarEvento('login', {
+              usuarioId: profile.id,
+              nombre: profile.name,
+              contacto: profile.celular || profile.email,
+              rol: profile.role,
+            });
             return;
           }
         }

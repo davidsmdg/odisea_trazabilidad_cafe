@@ -1,8 +1,19 @@
-﻿import { supabase } from '../app/utils/supabaseClient';
+import { supabase } from '../app/utils/supabaseClient';
 
 export interface TelemetryEvent {
   id: string;
-  tipo: 'login' | 'register' | 'onboarding_iniciado' | 'onboarding_completado' | 'onboarding_omitido' | 'codigo_canjeado';
+  tipo: 
+    | 'login' 
+    | 'register' 
+    | 'onboarding_iniciado' 
+    | 'onboarding_completado' 
+    | 'onboarding_omitido' 
+    | 'codigo_canjeado'
+    | 'cosecha_creada'
+    | 'cereza_sumada'
+    | 'secado_iniciado'
+    | 'pergamino_registrado'
+    | 'trilla_registrada';
   usuarioId?: string;
   nombre?: string;
   contacto?: string;
@@ -26,7 +37,7 @@ function getStoredEvents(): TelemetryEvent[] {
 
 function saveStoredEvents(events: TelemetryEvent[]) {
   try {
-    localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(events.slice(0, 500))); // límite de 500 eventos
+    localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(events.slice(0, 1000))); // límite de 1000 eventos
   } catch {}
 }
 
@@ -51,7 +62,7 @@ export async function registrarEvento(
     timestamp: new Date().toISOString(),
   };
 
-  // 1. Guardar localmente de inmediato (garantiza cero fallos si no hay red)
+  // 1. Guardar localmente de inmediato (garantiza persistencia inmediata)
   const locales = getStoredEvents();
   saveStoredEvents([evento, ...locales]);
 
@@ -68,8 +79,17 @@ export async function registrarEvento(
       created_at: evento.timestamp,
     });
   } catch {
-    // Si no existe la tabla en Supabase o estamos offline, el evento persiste en localStorage
+    // Si no existe la tabla o estamos offline, el evento persiste en localStorage
   }
+}
+
+export interface UsuarioConexion {
+  usuarioId?: string;
+  nombre: string;
+  contacto?: string;
+  rol: string;
+  ultimaConexion: string;
+  totalLogins: number;
 }
 
 export interface MetricSummary {
@@ -87,6 +107,13 @@ export interface MetricSummary {
     estado: 'completado' | 'en_progreso';
     fecha: string;
   }[];
+  usuariosConectados: UsuarioConexion[];
+  operacionesCafe: {
+    totalCosechas: number;
+    kilosCereza: number;
+    kilosPergamino: number;
+    kilosVerde: number;
+  };
 }
 
 export async function obtenerResumenMetricas(): Promise<MetricSummary> {
@@ -98,7 +125,7 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
       .from('eventos_telemetria')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(200);
+      .limit(300);
 
     if (data && data.length > 0) {
       const mapeados: TelemetryEvent[] = data.map((d: any) => ({
@@ -111,7 +138,6 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
         detalles: d.detalles,
         timestamp: d.created_at,
       }));
-      // Mezclar deduplicando por id
       const ids = new Set(mapeados.map((e) => e.id));
       const localesUnicos = eventos.filter((e) => !ids.has(e.id));
       eventos = [...mapeados, ...localesUnicos].sort(
@@ -141,6 +167,37 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
       usuariosPorRol[r] = (usuariosPorRol[r] || 0) + 1;
     });
 
+  // Mapa de usuarios y su última conexión
+  const conexionesMap = new Map<string, UsuarioConexion>();
+
+  // Revisar logins y eventos para calcular última conexión
+  for (const e of eventos) {
+    const clave = e.contacto || e.usuarioId || e.nombre;
+    if (!clave) continue;
+
+    if (!conexionesMap.has(clave)) {
+      conexionesMap.set(clave, {
+        usuarioId: e.usuarioId,
+        nombre: e.nombre || 'Usuario',
+        contacto: e.contacto,
+        rol: e.rol || 'AGRICULTOR',
+        ultimaConexion: e.timestamp,
+        totalLogins: e.tipo === 'login' ? 1 : 0,
+      });
+    } else {
+      const item = conexionesMap.get(clave)!;
+      if (e.tipo === 'login') {
+        item.totalLogins += 1;
+      }
+      // Si el timestamp es más reciente, actualizar fecha
+      if (new Date(e.timestamp) > new Date(item.ultimaConexion)) {
+        item.ultimaConexion = e.timestamp;
+      }
+      if (e.nombre && item.nombre === 'Usuario') item.nombre = e.nombre;
+      if (e.rol && item.rol === 'AGRICULTOR') item.rol = e.rol;
+    }
+  }
+
   // Trazabilidad de usuarios y estado de onboarding
   const usuariosMap = new Map<string, {
     nombre: string;
@@ -150,7 +207,6 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
     fecha: string;
   }>();
 
-  // Revisar completados
   eventos.forEach((e) => {
     const clave = e.contacto || e.usuarioId || e.nombre;
     if (!clave) return;
@@ -176,6 +232,43 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
     }
   });
 
+  // Métricas de operaciones de café
+  const cosechasCreadas = eventos.filter((e) => e.tipo === 'cosecha_creada').length;
+  let kilosCereza = 0;
+  let kilosPergamino = 0;
+  let kilosVerde = 0;
+
+  for (const e of eventos) {
+    if (e.tipo === 'cereza_sumada') {
+      kilosCereza += Number(e.detalles?.kilosSumados) || 0;
+    } else if (e.tipo === 'cosecha_creada') {
+      kilosCereza += Number(e.detalles?.kilosCereza) || 0;
+    } else if (e.tipo === 'pergamino_registrado') {
+      kilosPergamino += Number(e.detalles?.kilosPergamino) || 0;
+    } else if (e.tipo === 'trilla_registrada') {
+      kilosVerde += Number(e.detalles?.kilosVerde) || 0;
+    }
+  }
+
+  // Si aún no hay eventos detallados pero hay lotes guardados localmente, sumar de lotes_produccion
+  try {
+    const rawLotes = localStorage.getItem('lotes_produccion');
+    if (rawLotes) {
+      const lotes = JSON.parse(rawLotes);
+      if (Array.isArray(lotes) && lotes.length > 0) {
+        if (kilosCereza === 0) {
+          kilosCereza = lotes.reduce((acc, l) => acc + (Number(l.pesos?.cereza) || 0), 0);
+        }
+        if (kilosPergamino === 0) {
+          kilosPergamino = lotes.reduce((acc, l) => acc + (Number(l.pesos?.pergamino) || 0), 0);
+        }
+        if (kilosVerde === 0) {
+          kilosVerde = lotes.reduce((acc, l) => acc + (Number(l.pesos?.verde) || 0), 0);
+        }
+      }
+    }
+  } catch {}
+
   return {
     totalLogins,
     totalRegistros,
@@ -183,7 +276,16 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
     totalOnboardingCompletados: onboardingCompletados,
     tasaOnboarding,
     usuariosPorRol,
-    eventosRecientes: eventos.slice(0, 50),
+    eventosRecientes: eventos.slice(0, 100),
     usuariosEnOnboarding: Array.from(usuariosMap.values()),
+    usuariosConectados: Array.from(conexionesMap.values()).sort(
+      (a, b) => new Date(b.ultimaConexion).getTime() - new Date(a.ultimaConexion).getTime()
+    ),
+    operacionesCafe: {
+      totalCosechas: Math.max(cosechasCreadas, 0),
+      kilosCereza,
+      kilosPergamino,
+      kilosVerde,
+    },
   };
 }

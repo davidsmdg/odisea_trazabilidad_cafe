@@ -52,6 +52,7 @@ export function AdminConsolePage() {
 
     const [busquedaCodigo, setBusquedaCodigo] = useState('');
     const [filtroRol, setFiltroRol] = useState<string>('todos');
+    const [filtroEvento, setFiltroEvento] = useState<string>('todos');
 
     const [modalCrearAbierto, setModalCrearAbierto] = useState(false);
     const [nuevoCodigo, setNuevoCodigo] = useState('');
@@ -318,6 +319,81 @@ export function AdminConsolePage() {
                                     {codigos.reduce((acc, c) => acc + c.usosActuales, 0)} accesos consumidos
                                 </p>
                             </div>
+                        </div>
+
+                        {/* Métricas de Café & Operaciones */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                            <div className="rounded-3xl bg-white border border-[#2D3E33]/15 p-6 shadow-sm">
+                                <span className="text-xs font-bold uppercase tracking-wider text-stone-500">🍒 Kilos Cereza Recolectada</span>
+                                <p className="font-['Anton'] text-4xl text-[#BD4A1F] my-2">
+                                    {metricas?.operacionesCafe?.kilosCereza?.toLocaleString('es-CO') || 0} <span className="text-sm font-sans font-bold text-stone-400">kg</span>
+                                </p>
+                                <p className="text-xs text-stone-500">En registro y recepción</p>
+                            </div>
+
+                            <div className="rounded-3xl bg-white border border-[#2D3E33]/15 p-6 shadow-sm">
+                                <span className="text-xs font-bold uppercase tracking-wider text-stone-500">☀️ Pergamino Seco Obtenido</span>
+                                <p className="font-['Anton'] text-4xl text-[#E5A84B] my-2">
+                                    {metricas?.operacionesCafe?.kilosPergamino?.toLocaleString('es-CO') || 0} <span className="text-sm font-sans font-bold text-stone-400">kg</span>
+                                </p>
+                                <p className="text-xs text-stone-500">Secado al 10-12% de humedad</p>
+                            </div>
+
+                            <div className="rounded-3xl bg-white border border-[#2D3E33]/15 p-6 shadow-sm">
+                                <span className="text-xs font-bold uppercase tracking-wider text-stone-500">☕ Café Verde Trillado</span>
+                                <p className="font-['Anton'] text-4xl text-[#2D3E33] my-2">
+                                    {metricas?.operacionesCafe?.kilosVerde?.toLocaleString('es-CO') || 0} <span className="text-sm font-sans font-bold text-stone-400">kg</span>
+                                </p>
+                                <p className="text-xs text-stone-500">Listo para exportación o cata</p>
+                            </div>
+                        </div>
+
+                        {/* Usuarios y Última Conexión */}
+                        <div className="rounded-3xl bg-white border border-[#2D3E33]/15 p-6 shadow-sm space-y-4">
+                            <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                                <div>
+                                    <h3 className="font-['Anton'] text-xl text-[#2D3E33] tracking-wide uppercase">
+                                        USUARIOS Y ÚLTIMA CONEXIÓN
+                                    </h3>
+                                    <p className="text-xs text-stone-500 font-medium mt-0.5">
+                                        Registro de actividad reciente y sesiones por usuario
+                                    </p>
+                                </div>
+                                <span className="text-xs font-mono font-bold bg-[#2D3E33]/10 text-[#2D3E33] px-3 py-1 rounded-full">
+                                    {metricas?.usuariosConectados?.length || 0} usuarios activos
+                                </span>
+                            </div>
+
+                            {metricas?.usuariosConectados && metricas.usuariosConectados.length > 0 ? (
+                                <div className="divide-y divide-stone-100">
+                                    {metricas.usuariosConectados.map((u, i) => (
+                                        <div key={i} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-[#2D3E33] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                                                    {(u.nombre || 'U').slice(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm text-[#2D3E33]">{u.nombre}</p>
+                                                    <p className="text-xs text-stone-500 font-mono">
+                                                        {u.contacto || 'Sin contacto'} • <span className="font-bold text-stone-600">{u.rol}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="sm:text-right flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
+                                                <span className="text-xs font-bold text-[#BD4A1F] bg-[#BD4A1F]/10 px-2.5 py-1 rounded-lg">
+                                                    🕒 {new Date(u.ultimaConexion).toLocaleString()}
+                                                </span>
+                                                <span className="text-[11px] text-stone-400 font-medium">
+                                                    {u.totalLogins} {u.totalLogins === 1 ? 'login' : 'logins'} registrados
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-stone-500 text-sm py-4 text-center">No hay conexiones registradas aún.</p>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -609,52 +685,129 @@ export function AdminConsolePage() {
 
                 {activeTab === 'auditoria' && (
                     <div className="space-y-6">
-                        <div>
-                            <Eyebrow text="TELEMETRÍA EN DIRECTO" variant="terracota" />
-                            <h2 className="font-['Anton'] text-3xl uppercase tracking-wide text-[#2D3E33]">
-                                BITÁCORA DE EVENTOS
-                            </h2>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <Eyebrow text="TELEMETRÍA EN DIRECTO" variant="terracota" />
+                                <h2 className="font-['Anton'] text-3xl uppercase tracking-wide text-[#2D3E33]">
+                                    BITÁCORA DE EVENTOS EN VIVO
+                                </h2>
+                            </div>
+
+                            {/* Filtros de eventos */}
+                            <div className="flex flex-wrap gap-2">
+                                {[
+                                    { id: 'todos', label: 'Todos' },
+                                    { id: 'login', label: '🔐 Logins' },
+                                    { id: 'cafe', label: '☕ Café & Kilos' },
+                                    { id: 'onboarding', label: '🚀 Onboarding' },
+                                    { id: 'codigo', label: '🔑 Códigos' },
+                                ].map((f) => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => setFiltroEvento(f.id)}
+                                        className={cn(
+                                            "px-4 py-2 rounded-full text-xs font-bold uppercase transition-all cursor-pointer",
+                                            filtroEvento === f.id
+                                                ? "bg-[#2D3E33] text-white shadow-sm"
+                                                : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
+                                        )}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="bg-white rounded-3xl border border-[#2D3E33]/15 p-6 shadow-sm">
-                            {metricas?.eventosRecientes && metricas.eventosRecientes.length > 0 ? (
-                                <div className="space-y-3">
-                                    {metricas.eventosRecientes.map((evt) => (
-                                        <div 
-                                            key={evt.id} 
-                                            className="p-4 rounded-2xl bg-[#F6F2EC]/40 border border-stone-200 flex items-center justify-between gap-4"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <span className={cn(
-                                                    "w-3 h-3 rounded-full shrink-0",
-                                                    evt.tipo === 'login' ? "bg-blue-500" :
-                                                    evt.tipo === 'register' ? "bg-emerald-500" :
-                                                    evt.tipo === 'codigo_canjeado' ? "bg-purple-500" :
-                                                    evt.tipo === 'onboarding_completado' ? "bg-emerald-600" : "bg-amber-500"
-                                                )} />
-                                                <div>
-                                                    <p className="font-bold text-sm text-[#2D3E33]">
-                                                        {evt.tipo === 'login' && `Login: ${evt.nombre || evt.contacto || 'Usuario'}`}
-                                                        {evt.tipo === 'register' && `Registro: ${evt.nombre} (${evt.rol})`}
-                                                        {evt.tipo === 'codigo_canjeado' && `Código Canjeado: ${evt.detalles?.codigo || ''} (${evt.nombre})`}
-                                                        {evt.tipo === 'onboarding_iniciado' && `Onboarding Iniciado: ${evt.nombre || 'Caficultor'}`}
-                                                        {evt.tipo === 'onboarding_completado' && `Onboarding Completado: ${evt.nombre}`}
-                                                    </p>
-                                                    <p className="text-xs text-stone-500 font-mono">
-                                                        {new Date(evt.timestamp).toLocaleString()} • {evt.rol || 'N/A'}
-                                                    </p>
-                                                </div>
-                                            </div>
+                            {(() => {
+                                const eventosFiltrados = (metricas?.eventosRecientes || []).filter((evt) => {
+                                    if (filtroEvento === 'todos') return true;
+                                    if (filtroEvento === 'login') return evt.tipo === 'login';
+                                    if (filtroEvento === 'cafe') {
+                                        return ['cosecha_creada', 'cereza_sumada', 'secado_iniciado', 'pergamino_registrado', 'trilla_registrada'].includes(evt.tipo);
+                                    }
+                                    if (filtroEvento === 'onboarding') {
+                                        return ['onboarding_iniciado', 'onboarding_completado', 'onboarding_omitido', 'register'].includes(evt.tipo);
+                                    }
+                                    if (filtroEvento === 'codigo') return evt.tipo === 'codigo_canjeado';
+                                    return true;
+                                });
 
-                                            <span className="text-xs font-mono font-bold uppercase text-stone-400 shrink-0">
-                                                {evt.tipo}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-stone-500 text-center py-8 text-sm">Sin eventos en la bitácora.</p>
-                            )}
+                                if (eventosFiltrados.length === 0) {
+                                    return (
+                                        <p className="text-stone-500 text-center py-10 text-sm">
+                                            No hay eventos registrados en esta categoría aún.
+                                        </p>
+                                    );
+                                }
+
+                                return (
+                                    <div className="space-y-3">
+                                        {eventosFiltrados.map((evt) => (
+                                            <div 
+                                                key={evt.id} 
+                                                className="p-4 rounded-2xl bg-[#F6F2EC]/40 border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-stone-300 transition-colors"
+                                            >
+                                                <div className="flex items-start sm:items-center gap-3">
+                                                    <span className={cn(
+                                                        "w-3.5 h-3.5 rounded-full shrink-0 mt-1 sm:mt-0",
+                                                        evt.tipo === 'login' ? "bg-blue-500" :
+                                                        evt.tipo === 'register' ? "bg-emerald-500" :
+                                                        evt.tipo === 'codigo_canjeado' ? "bg-purple-500" :
+                                                        evt.tipo === 'cosecha_creada' ? "bg-[#BD4A1F]" :
+                                                        evt.tipo === 'cereza_sumada' ? "bg-red-500" :
+                                                        evt.tipo === 'secado_iniciado' ? "bg-amber-500" :
+                                                        evt.tipo === 'pergamino_registrado' ? "bg-emerald-600" :
+                                                        evt.tipo === 'trilla_registrada' ? "bg-[#2D3E33]" :
+                                                        evt.tipo === 'onboarding_completado' ? "bg-emerald-600" : "bg-amber-500"
+                                                    )} />
+                                                    <div>
+                                                        <p className="font-bold text-sm text-[#2D3E33]">
+                                                            {evt.tipo === 'login' && `🔐 Inicio de Sesión: ${evt.nombre || evt.contacto || 'Usuario'}`}
+                                                            {evt.tipo === 'register' && `📝 Registro de Usuario: ${evt.nombre} (${evt.rol})`}
+                                                            {evt.tipo === 'codigo_canjeado' && `🔑 Código Canjeado: ${evt.detalles?.codigo || ''} por ${evt.nombre}`}
+                                                            {evt.tipo === 'onboarding_iniciado' && `🚀 Onboarding Iniciado: ${evt.nombre || 'Caficultor'}`}
+                                                            {evt.tipo === 'onboarding_completado' && `✅ Onboarding Completado: ${evt.nombre}`}
+                                                            {evt.tipo === 'cosecha_creada' && (
+                                                                <span>
+                                                                    🌱 Cosecha Creada: Lote <strong className="text-[#BD4A1F]">{evt.detalles?.codigo}</strong> ({evt.detalles?.variedad} · {evt.detalles?.kilosCereza ? `${evt.detalles.kilosCereza} kg` : 'Con meta'})
+                                                                </span>
+                                                            )}
+                                                            {evt.tipo === 'cereza_sumada' && (
+                                                                <span>
+                                                                    🍒 Cereza Sumada: <strong className="text-red-700">+{evt.detalles?.kilosSumados} kg</strong> en Lote <strong>{evt.detalles?.codigo}</strong> (Total acumulado: {evt.detalles?.totalCereza} kg)
+                                                                </span>
+                                                            )}
+                                                            {evt.tipo === 'secado_iniciado' && (
+                                                                <span>
+                                                                    ☀️ Pasó a Secado: Lote <strong>{evt.detalles?.codigo}</strong> ({evt.detalles?.kilosCereza} kg de cereza fresca)
+                                                                </span>
+                                                            )}
+                                                            {evt.tipo === 'pergamino_registrado' && (
+                                                                <span>
+                                                                    ☕ Pergamino Seco: <strong>{evt.detalles?.kilosPergamino} kg</strong> en Lote <strong>{evt.detalles?.codigo}</strong> {evt.detalles?.factorRendimiento ? `(Factor ${evt.detalles.factorRendimiento})` : ''}
+                                                                </span>
+                                                            )}
+                                                            {evt.tipo === 'trilla_registrada' && (
+                                                                <span>
+                                                                    🌾 Café Verde Trillado: <strong>{evt.detalles?.kilosVerde} kg</strong> en Lote <strong>{evt.detalles?.codigo}</strong>
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                        <p className="text-xs text-stone-500 font-mono mt-0.5">
+                                                            🕒 {new Date(evt.timestamp).toLocaleString()} • {evt.rol || 'N/A'} {evt.contacto ? `• ${evt.contacto}` : ''}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <span className="text-[11px] font-mono font-bold uppercase text-stone-500 bg-stone-100 px-2.5 py-1 rounded-lg shrink-0 self-start sm:self-center">
+                                                    {evt.tipo.replace('_', ' ')}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 )}

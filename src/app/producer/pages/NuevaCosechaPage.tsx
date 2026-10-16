@@ -8,6 +8,7 @@ import { addLote } from '../../../services/lotesService';
 import { getFincas } from '../../../services/fincasService';
 import type { Finca } from '../../../types/finca';
 import { detectAnomaly, detectHarvestDateAnomaly } from '../../../services/anomaliesService';
+import { registrarEvento } from '../../../services/telemetryService';
 import { Eyebrow } from '../../components/ui/Eyebrow';
 
 const VARIEDADES = [
@@ -210,6 +211,19 @@ export function NuevaCosechaPage() {
                 fecha: new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
                 pesos: { cereza: modalidad === 'diario' ? Number(peso) : 0, pergamino: 0, verde: 0 },
             } as any);
+
+            await registrarEvento('cosecha_creada', {
+                nombre: 'Productor',
+                rol: 'AGRICULTOR',
+                detalles: {
+                    codigo: randomCode,
+                    modalidad,
+                    variedad: variedad || 'Bourbon Rosado',
+                    proceso: proceso || 'Lavado',
+                    kilosCereza: modalidad === 'diario' ? Number(peso) : 0,
+                    finca,
+                },
+            });
 
             toast.success(
                 modalidad === 'objetivo' ? '¡Plan de cosecha creado!' : `¡Registrado! ${peso} kilos de cereza`

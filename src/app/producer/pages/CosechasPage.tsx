@@ -27,6 +27,7 @@ import {
     updateLote,
 } from '../../../services/lotesService';
 import { detectAnomaly } from '../../../services/anomaliesService';
+import { registrarEvento } from '../../../services/telemetryService';
 
 type AccionTipo =
     | 'sumar_cereza'
@@ -183,6 +184,14 @@ export function CosechasPage() {
                 l.id === lote.id ? { ...l, fase: 2, estado: 'En Secado', pesos: { ...l.pesos, pergamino: 0 } } : l
             )
         );
+        registrarEvento('secado_iniciado', {
+            nombre: 'Productor',
+            rol: 'AGRICULTOR',
+            detalles: {
+                codigo: lote.codigo,
+                kilosCereza: lote.pesos?.cereza || 0,
+            },
+        });
         toast.success(`Lote ${lote.codigo} pasó a secado ☀️`);
     };
 
@@ -225,6 +234,15 @@ export function CosechasPage() {
                 };
             });
             await guardar(next);
+            await registrarEvento('cereza_sumada', {
+                nombre: 'Productor',
+                rol: 'AGRICULTOR',
+                detalles: {
+                    codigo: lote.codigo,
+                    kilosSumados: num,
+                    totalCereza: total,
+                },
+            });
             toast.success(`+${num} kilos de cereza en ${lote.codigo} (Total: ${total} kg)`);
             try {
                 const a = await detectAnomaly(lote.codigo, 'peso_cereza', total, lote.finca || 'Finca La Esperanza', 'María González');
@@ -249,6 +267,15 @@ export function CosechasPage() {
                         : l
                 )
             );
+            await registrarEvento('pergamino_registrado', {
+                nombre: 'Productor',
+                rol: 'AGRICULTOR',
+                detalles: {
+                    codigo: lote.codigo,
+                    kilosPergamino: num,
+                    factorRendimiento: !isNaN(factor) && factor > 0 ? factor : null,
+                },
+            });
             toast.success(`${lote.codigo}: ${num} kilos de pergamino seco`);
             try {
                 const a = await detectAnomaly(lote.codigo, 'peso_pergamino', num, lote.finca || 'Finca La Esperanza', 'María González');
@@ -270,6 +297,15 @@ export function CosechasPage() {
                         : l
                 )
             );
+            await registrarEvento('trilla_registrada', {
+                nombre: 'Productor',
+                rol: 'AGRICULTOR',
+                detalles: {
+                    codigo: lote.codigo,
+                    kilosVerde: num,
+                    factorRendimiento: !isNaN(factor) && factor > 0 ? factor : null,
+                },
+            });
             toast.success(`${lote.codigo} trillado: ${num} kilos de verde ☕`);
         } else if (tipo === 'anotar_proceso') {
             if (!selectValue) return toast.error('Elige un proceso');
