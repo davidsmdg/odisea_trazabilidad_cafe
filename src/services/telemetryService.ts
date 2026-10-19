@@ -83,6 +83,18 @@ export async function registrarEvento(
       }, { onConflict: 'email' });
     }
 
+    // Guardar también en el canal sincronizado en la nube para garantizar persistencia y visibilidad entre dispositivos
+    await supabase.from('movimientos_financieros').insert({
+      id: `evt-tel-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      periodo_id: 'per-2026',
+      tipo: 'ingreso',
+      categoria_id: 'evento-telemetria',
+      monto: 0,
+      fecha: new Date().toISOString().split('T')[0],
+      descripcion: JSON.stringify(evento),
+      nota: `telemetria:${evento.tipo}`,
+    });
+
     // Intentar también en eventos_telemetria si existe
     await supabase.from('eventos_telemetria').insert({
       id: evento.id,
@@ -160,6 +172,44 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
     }
   } catch {}
 
+  // Traer también eventos guardados en la nube sincronizada (canal compartido)
+  try {
+    const { data: rowsTel } = await supabase
+      .from('movimientos_financieros')
+      .select('*')
+      .or('id.like.evt-tel-%,id.like.evt-canje-%')
+      .order('fecha', { ascending: false })
+      .limit(300);
+
+    if (rowsTel && rowsTel.length > 0) {
+      const mapeadosNube: TelemetryEvent[] = [];
+      for (const r of rowsTel) {
+        try {
+          const parsed = JSON.parse(r.descripcion);
+          if (parsed && (parsed.tipo || parsed.nombre)) {
+            mapeadosNube.push({
+              id: parsed.id || r.id,
+              tipo: parsed.tipo || 'codigo_canjeado',
+              usuarioId: parsed.usuarioId,
+              nombre: parsed.nombre,
+              contacto: parsed.contacto,
+              rol: parsed.rol || 'AGRICULTOR',
+              detalles: parsed.detalles || (parsed.codigo ? { codigo: parsed.codigo } : {}),
+              timestamp: parsed.timestamp || parsed.fecha || r.fecha,
+            });
+          }
+        } catch {}
+      }
+      const idsExistentes = new Set(eventos.map((e) => e.id));
+      for (const en of mapeadosNube) {
+        if (!idsExistentes.has(en.id)) {
+          eventos.push(en);
+          idsExistentes.add(en.id);
+        }
+      }
+    }
+  } catch {}
+
   const eventIds = new Set(eventos.map((e) => e.id));
 
   // Extraer también eventos directos de los lotes reales existentes (Supabase o localStorage)
@@ -192,9 +242,9 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
       const cod = l.codigo || l.id;
       const meta = l.metadata || {};
       const fincaEncontrada = fincaMap.get(l.finca_id);
-      const fincaNombre = meta.finca || fincaEncontrada?.nombre || 'Finca La Odisea';
-      const productorNombre = meta.productor || (cod.startsWith('HUI-ESP') ? 'David (Productor Huila)' : 'María González');
-      const productorContacto = meta.celular || '3104567890';
+      const fincaNombre = meta.finca || fincaEncontrada?.nombre || 'Finca Cafetera';
+      const productorNombre = meta.productor || (cod.startsWith('HUI-ESP') ? 'David (Productor Huila)' : (fincaEncontrada?.nombre ? `Productor (${fincaEncontrada.nombre})` : 'Productor'));
+      const productorContacto = meta.celular || 'Contacto no registrado';
       const fecha = l.fecha_cosecha || l.fecha_actualizacion || meta.fecha || new Date().toISOString();
       const cereza = Number(l.peso_cereza ?? l.pesos?.cereza) || 0;
       const pergamino = Number(l.peso_pergamino ?? l.pesos?.pergamino) || 0;
@@ -495,7 +545,7 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
     const { data: dbFincas } = await supabase.from('fincas').select('*');
     if (dbFincas && dbFincas.length > 0) {
       for (const f of dbFincas) {
-        const prodNombre = f.nombre === 'Finca La Esperanza' ? 'David' : (f.nombre === 'El naranjo ' ? 'Daniela Yucumá ' : 'María González');
+        const prodNombre = f.nombre === 'Finca La Esperanza' ? 'David' : (f.nombre.toLowerCase().includes('naranjo') ? 'Daniela Yucumá' : (f.propietario || 'Productor'));
         const clave = `${f.nombre}-${f.id}`;
         if (!usuariosMap.has(clave)) {
           usuariosMap.set(clave, {

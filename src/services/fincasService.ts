@@ -38,12 +38,13 @@ export async function getFincas(): Promise<Finca[]> {
 
     try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return local;
 
-        const { data, error } = await supabase
-            .from('fincas')
-            .select('*')
-            .eq('productor_id', user.id);
+        let query = supabase.from('fincas').select('*');
+        if (user) {
+            query = query.eq('productor_id', user.id);
+        }
+
+        const { data, error } = await query;
 
         if (!error && data && data.length > 0) {
             const mapped: Finca[] = data.map((f) => ({
@@ -82,7 +83,7 @@ export async function saveFincas(fincas: Finca[]): Promise<void> {
 
     try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        let prodId: string | null = user?.id || null;
 
         for (const f of normalizadas) {
             const areaNum = parseFloat(f.areaAproximada || '1') || 1.0;
@@ -96,7 +97,7 @@ export async function saveFincas(fincas: Finca[]): Promise<void> {
                 .from('fincas')
                 .upsert({
                     id: f.id,
-                    productor_id: user.id,
+                    productor_id: prodId,
                     nombre: f.nombre,
                     departamento: f.departamento,
                     municipio: f.municipio,

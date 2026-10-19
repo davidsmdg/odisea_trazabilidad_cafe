@@ -5,7 +5,7 @@
      plano se actualiza. Así la app abre sin internet después del primer uso.
    Los datos del productor viven en localStorage, no dependen de la red. */
 
-const CACHE = 'odisea-productor-v1';
+const CACHE = 'odisea-productor-v2';
 const APP_SHELL = ['/', '/index.html', '/pwa-icon.svg', '/favicon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

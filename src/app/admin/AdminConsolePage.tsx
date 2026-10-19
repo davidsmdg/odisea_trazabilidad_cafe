@@ -647,53 +647,38 @@ export function AdminConsolePage() {
                                                 </div>
 
                                                 {(() => {
-                                                    const usuariosCodigo = (metricas?.eventosRecientes || []).filter(
-                                                        (evt) =>
-                                                            evt.tipo === 'codigo_canjeado' &&
-                                                            (evt.detalles?.codigo || '').toUpperCase() === item.codigo.toUpperCase()
-                                                    );
-
-                                                    // Si es CAFE-PILOTO y no hay eventos en memoria, complementar con agricultores existentes
-                                                    let listaUsuarios = usuariosCodigo.map(u => ({
+                                                    // 1. Usuarios canjeados asociados directamente al código desde la nube/BD
+                                                    const canjeadosDirectos = (item.usuariosCanjeados || []).map(u => ({
                                                         nombre: u.nombre || 'Caficultor',
-                                                        contacto: u.contacto || 'Sin contacto registrado',
+                                                        contacto: u.contacto || 'Sin contacto',
                                                         rol: u.rol || 'AGRICULTOR',
-                                                        fecha: u.timestamp,
+                                                        fecha: u.fecha || new Date().toISOString(),
                                                     }));
 
-                                                    if (listaUsuarios.length === 0 && item.usosActuales > 0) {
-                                                        listaUsuarios = [
-                                                            {
-                                                                nombre: 'David (Productor Huila)',
-                                                                contacto: '3104567890 / david@odisea.co',
-                                                                rol: 'AGRICULTOR',
-                                                                fecha: new Date().toISOString(),
-                                                            },
-                                                            {
-                                                                nombre: 'María González (Finca La Esperanza)',
-                                                                contacto: '3157891234',
-                                                                rol: 'AGRICULTOR',
-                                                                fecha: new Date(Date.now() - 86400000 * 2).toISOString(),
-                                                            },
-                                                            {
-                                                                nombre: 'Carlos Ramírez (Lote El Roble)',
-                                                                contacto: '3209876543',
-                                                                rol: 'AGRICULTOR',
-                                                                fecha: new Date(Date.now() - 86400000 * 3).toISOString(),
-                                                            },
-                                                            {
-                                                                nombre: 'Alonso Duarte',
-                                                                contacto: '3112233445',
-                                                                rol: 'AGRICULTOR',
-                                                                fecha: new Date(Date.now() - 86400000 * 5).toISOString(),
-                                                            },
-                                                            {
-                                                                nombre: 'Elena Castro',
-                                                                contacto: '3189988776',
-                                                                rol: 'AGRICULTOR',
-                                                                fecha: new Date(Date.now() - 86400000 * 7).toISOString(),
-                                                            }
-                                                        ].slice(0, item.usosActuales);
+                                                    // 2. Eventos de telemetría de canje sincronizados
+                                                    const usuariosEventos = (metricas?.eventosRecientes || [])
+                                                        .filter(
+                                                            (evt) =>
+                                                                evt.tipo === 'codigo_canjeado' &&
+                                                                (evt.detalles?.codigo || '').toUpperCase() === item.codigo.toUpperCase()
+                                                        )
+                                                        .map(u => ({
+                                                            nombre: u.nombre || 'Caficultor',
+                                                            contacto: u.contacto || 'Sin contacto',
+                                                            rol: u.rol || 'AGRICULTOR',
+                                                            fecha: u.timestamp,
+                                                        }));
+
+                                                    // 3. Unir y desduplicar por nombre y contacto
+                                                    const listaUsuarios: typeof canjeadosDirectos = [];
+                                                    const vistos = new Set<string>();
+
+                                                    for (const u of [...canjeadosDirectos, ...usuariosEventos]) {
+                                                        const clave = `${u.nombre.trim().toLowerCase()}-${(u.contacto || '').trim().toLowerCase()}`;
+                                                        if (!vistos.has(clave)) {
+                                                            vistos.add(clave);
+                                                            listaUsuarios.push(u);
+                                                        }
                                                     }
 
                                                     if (listaUsuarios.length === 0) {

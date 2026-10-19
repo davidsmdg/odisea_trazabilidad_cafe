@@ -10,6 +10,7 @@ import type { Finca } from '../../../types/finca';
 import { detectAnomaly, detectHarvestDateAnomaly } from '../../../services/anomaliesService';
 import { registrarEvento } from '../../../services/telemetryService';
 import { Eyebrow } from '../../components/ui/Eyebrow';
+import { useAuth } from '../../context/AuthContext';
 
 const VARIEDADES = [
     'Castillo',
@@ -51,6 +52,7 @@ const selectClass =
 
 export function NuevaCosechaPage() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [fincasUsuario, setFincasUsuario] = useState<Finca[]>([]);
 
@@ -153,13 +155,15 @@ export function NuevaCosechaPage() {
                 clientes: [],
             };
 
+            const nombreProductor = user?.name || (user?.celular ? `Productor ${user.celular}` : 'Productor');
+
             let hasHistoricalAnomaly = false;
             if (modalidad === 'diario') {
-                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', Number(peso), finca, 'María González');
-                const checkFecha = await detectHarvestDateAnomaly(randomCode, fecha, finca, 'María González');
+                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', Number(peso), finca, nombreProductor);
+                const checkFecha = await detectHarvestDateAnomaly(randomCode, fecha, finca, nombreProductor);
                 if (checkPeso || checkFecha) hasHistoricalAnomaly = true;
             } else if (modalidad === 'objetivo' && kilosObjetivoCereza) {
-                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', kilosObjetivoCereza, finca, 'María González');
+                const checkPeso = await detectAnomaly(randomCode, 'peso_cereza', kilosObjetivoCereza, finca, nombreProductor);
                 if (checkPeso) hasHistoricalAnomaly = true;
             }
 
@@ -176,34 +180,15 @@ export function NuevaCosechaPage() {
                 try {
                     currentLotes = JSON.parse(saved);
                 } catch {}
-            } else {
-                currentLotes = [
-                    {
-                        id: 'lc1',
-                        codigo: 'MG-ESP-042',
-                        productor: 'María',
-                        cosecha: 'Oct-Nov 2024',
-                        finca: 'Finca La Esperanza',
-                        parcelas: ['Lote El Mirador'],
-                        estado: 'Verde (Trillado)',
-                        pesos: { cereza: 1200, pergamino: 250, verde: 180, objetivo: 1500 },
-                        fase: 3,
-                        modalidad: 'objetivo',
-                        detallesObjetivo: { variedad: 'Bourbon Rosado', proceso: 'Lavado' },
-                        calificacion: 86.5,
-                        macroperfil: 'Frutal',
-                        clientes: [],
-                    },
-                ];
             }
             currentLotes.unshift(newLot);
             localStorage.setItem('lotes_produccion', JSON.stringify(currentLotes));
 
             await addLote({
                 id: randomCode,
-                productor: 'María González',
+                productor: nombreProductor,
                 finca,
-                municipio: 'San Agustín, Huila',
+                municipio: fincasUsuario.find(f => f.nombre === finca)?.municipio || 'San Agustín, Huila',
                 variedad: variedad || 'Bourbon Rosado',
                 proceso: proceso || 'Lavado',
                 estado: 'En Finca',
@@ -213,7 +198,7 @@ export function NuevaCosechaPage() {
             } as any);
 
             await registrarEvento('cosecha_creada', {
-                nombre: 'Productor',
+                nombre: nombreProductor,
                 rol: 'AGRICULTOR',
                 detalles: {
                     codigo: randomCode,

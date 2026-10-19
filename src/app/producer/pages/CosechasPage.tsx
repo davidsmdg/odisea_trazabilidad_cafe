@@ -28,6 +28,7 @@ import {
 } from '../../../services/lotesService';
 import { detectAnomaly } from '../../../services/anomaliesService';
 import { registrarEvento } from '../../../services/telemetryService';
+import { useAuth } from '../../context/AuthContext';
 
 type AccionTipo =
     | 'sumar_cereza'
@@ -131,6 +132,7 @@ function NumeroGrande({
 
 export function CosechasPage() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [cosechas, setCosechas] = useState<any[]>([]);
     const [filtro, setFiltro] = useState('Todos');
     const [cargando, setCargando] = useState(true);
@@ -234,8 +236,9 @@ export function CosechasPage() {
                 };
             });
             await guardar(next);
+            const nombreProd = user?.name || lote.productor || 'Productor';
             await registrarEvento('cereza_sumada', {
-                nombre: 'Productor',
+                nombre: nombreProd,
                 rol: 'AGRICULTOR',
                 detalles: {
                     codigo: lote.codigo,
@@ -245,7 +248,7 @@ export function CosechasPage() {
             });
             toast.success(`+${num} kilos de cereza en ${lote.codigo} (Total: ${total} kg)`);
             try {
-                const a = await detectAnomaly(lote.codigo, 'peso_cereza', total, lote.finca || 'Finca La Esperanza', 'María González');
+                const a = await detectAnomaly(lote.codigo, 'peso_cereza', total, lote.finca || 'Finca Cafetera', nombreProd);
                 if (a)
                     toast.warning('Peso poco usual', {
                         description: 'Se registró para que la Mesa de Control lo revise.',
@@ -267,8 +270,9 @@ export function CosechasPage() {
                         : l
                 )
             );
+            const nombreProd = user?.name || lote.productor || 'Productor';
             await registrarEvento('pergamino_registrado', {
-                nombre: 'Productor',
+                nombre: nombreProd,
                 rol: 'AGRICULTOR',
                 detalles: {
                     codigo: lote.codigo,
@@ -278,7 +282,7 @@ export function CosechasPage() {
             });
             toast.success(`${lote.codigo}: ${num} kilos de pergamino seco`);
             try {
-                const a = await detectAnomaly(lote.codigo, 'peso_pergamino', num, lote.finca || 'Finca La Esperanza', 'María González');
+                const a = await detectAnomaly(lote.codigo, 'peso_pergamino', num, lote.finca || 'Finca Cafetera', nombreProd);
                 if (a) toast.warning('Peso poco usual', { description: 'Se registró para revisión.' });
             } catch {}
         } else if (tipo === 'avanzar_verde') {
@@ -297,8 +301,9 @@ export function CosechasPage() {
                         : l
                 )
             );
+            const nombreProd = user?.name || lote.productor || 'Productor';
             await registrarEvento('trilla_registrada', {
-                nombre: 'Productor',
+                nombre: nombreProd,
                 rol: 'AGRICULTOR',
                 detalles: {
                     codigo: lote.codigo,
@@ -325,8 +330,9 @@ export function CosechasPage() {
             if (!num || num <= 0) return toast.error('Escribe el factor de rendimiento');
             await guardar(cosechas.map((l) => (l.id === lote.id ? { ...l, factorRendimiento: num } : l)));
             toast.success(`Factor ${num} guardado`);
+            const nombreProd = user?.name || lote.productor || 'Productor';
             try {
-                const a = await detectAnomaly(lote.codigo, 'factor_rendimiento', num, lote.finca || 'Finca La Esperanza', 'María González');
+                const a = await detectAnomaly(lote.codigo, 'factor_rendimiento', num, lote.finca || 'Finca Cafetera', nombreProd);
                 if (a) toast.warning('Factor poco usual', { description: 'Se registró para revisión.' });
             } catch {}
         }
@@ -343,6 +349,7 @@ export function CosechasPage() {
 
     const guardarCorreccion = async () => {
         if (!correccion) return;
+        const nombreProd = user?.name || correccion.productor || 'Productor';
         await guardar(
             cosechas.map((l) =>
                 l.id === correccion.id
@@ -362,7 +369,7 @@ export function CosechasPage() {
         await updateValidationStage(
             correccion.codigo,
             'En validación',
-            'Productor María González',
+            `Productor ${nombreProd}`,
             'Registro corregido y reenviado.'
         );
         const s = await getValidationStageForLote(correccion.codigo);

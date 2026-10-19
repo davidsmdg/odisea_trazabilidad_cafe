@@ -129,7 +129,15 @@ export async function getMovimientos(): Promise<MovimientoFinanciero[]> {
         }
         const { data, error } = await query;
         if (!error && data && data.length > 0) {
-            return data.map((m) => ({
+            const soloFinanzas = data.filter((m) => 
+                !m.id.startsWith('cfg-cod-') && 
+                !m.id.startsWith('evt-tel-') && 
+                !m.id.startsWith('evt-canje-') &&
+                m.categoria_id !== 'sistema-codigos' &&
+                m.categoria_id !== 'evento-telemetria' &&
+                m.categoria_id !== 'evento-canje'
+            );
+            return soloFinanzas.map((m) => ({
                 id: m.id,
                 libro: (m.libro as any) || 'cafe',
                 tipo: m.tipo as any,

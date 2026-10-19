@@ -1,6 +1,13 @@
 import { supabase } from '../app/utils/supabaseClient';
 import type { UserRole } from '../types/usuario';
 
+export interface UsuarioCanje {
+    nombre: string;
+    contacto?: string;
+    rol?: string;
+    fecha: string;
+}
+
 export interface CodigoInvitacion {
     id: string;
     codigo: string;
@@ -9,6 +16,7 @@ export interface CodigoInvitacion {
     usosActuales: number;
     activo: boolean;
     expiraEl?: string | null;
+    usuariosCanjeados?: UsuarioCanje[];
 }
 
 const LOCAL_STORAGE_KEY = 'odisea_codigos_invitacion';
@@ -191,8 +199,17 @@ export async function validarCodigoInvitacion(
     return { valido: true, codigo: found };
 }
 
-export async function consumirCodigoInvitacion(codigoInput: string): Promise<void> {
+export async function consumirCodigoInvitacion(
+    codigoInput: string,
+    usuarioInfo?: { nombre: string; contacto?: string; rol?: string }
+): Promise<void> {
     const normalizado = codigoInput.trim().toUpperCase();
+    const infoCanje: UsuarioCanje = {
+        nombre: usuarioInfo?.nombre || 'Usuario',
+        contacto: usuarioInfo?.contacto || '',
+        rol: usuarioInfo?.rol || 'AGRICULTOR',
+        fecha: new Date().toISOString(),
+    };
 
     // 1. Intentar actualizar en codigos_invitacion de Supabase
     try {
@@ -207,13 +224,12 @@ export async function consumirCodigoInvitacion(codigoInput: string): Promise<voi
                 .from('codigos_invitacion')
                 .update({ usos_actuales: (data.usos_actuales || 0) + 1 })
                 .eq('id', data.id);
-            return;
         }
     } catch (e) {
         console.warn('No se pudo incrementar uso en codigos_invitacion:', e);
     }
 
-    // 2. Intentar actualizar en códigos guardados en la nube sincronizada
+    // 2. Intentar actualizar en códigos guardados en la nube sincronizada (guardando el usuario que canjeó)
     try {
         const { data: rows } = await supabase
             .from('movimientos_financieros')
@@ -226,6 +242,8 @@ export async function consumirCodigoInvitacion(codigoInput: string): Promise<voi
                     const parsed = JSON.parse(r.descripcion);
                     if (parsed && parsed.codigo?.toUpperCase() === normalizado) {
                         parsed.usosActuales = (parsed.usosActuales || 0) + 1;
+                        if (!parsed.usuariosCanjeados) parsed.usuariosCanjeados = [];
+                        parsed.usuariosCanjeados.push(infoCanje);
                         await supabase
                             .from('movimientos_financieros')
                             .update({ descripcion: JSON.stringify(parsed) })
@@ -237,13 +255,33 @@ export async function consumirCodigoInvitacion(codigoInput: string): Promise<voi
         }
     } catch {}
 
-    // 3. Actualizar conteo local
+    // 3. Guardar también como registro de evento de canje en Supabase para sincronización global entre dispositivos
+    try {
+        await supabase.from('movimientos_financieros').insert({
+            id: `evt-canje-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            periodo_id: 'per-2026',
+            tipo: 'ingreso',
+            categoria_id: 'evento-canje',
+            monto: 0,
+            fecha: new Date().toISOString().split('T')[0],
+            descripcion: JSON.stringify({
+                tipo: 'codigo_canjeado',
+                codigo: normalizado,
+                ...infoCanje,
+            }),
+            nota: `canje:${normalizado}`,
+        });
+    } catch {}
+
+    // 4. Actualizar conteo local
     const localList = getLocalCodes();
-    const updated = localList.map((c) =>
-        c.codigo.toUpperCase() === normalizado
-            ? { ...c, usosActuales: c.usosActuales + 1 }
-            : c
-    );
+    const updated = localList.map((c) => {
+        if (c.codigo.toUpperCase() === normalizado) {
+            const canjeados = c.usuariosCanjeados ? [...c.usuariosCanjeados, infoCanje] : [infoCanje];
+            return { ...c, usosActuales: c.usosActuales + 1, usuariosCanjeados: canjeados };
+        }
+        return c;
+    });
     saveLocalCodes(updated);
 }
 
@@ -280,11 +318,55 @@ export async function getTodosLosCodigos(): Promise<CodigoInvitacion[]> {
         }
     } catch {}
 
-    // 3. Mezclar con locales si no están en Supabase
+    // 3. Traer todos los eventos de canje guardados en Supabase (para poblar usuariosCanjeados en cualquier dispositivo)
+    try {
+        const { data: canjesNube } = await supabase
+            .from('movimientos_financieros')
+            .select('descripcion')
+            .like('id', 'evt-canje-%');
+
+        if (canjesNube && canjesNube.length > 0) {
+            for (const r of canjesNube) {
+                try {
+                    const parsed = JSON.parse(r.descripcion);
+                    if (parsed && parsed.codigo && parsed.tipo === 'codigo_canjeado') {
+                        const targetCod = todosMap.get(parsed.codigo.toUpperCase());
+                        if (targetCod) {
+                            if (!targetCod.usuariosCanjeados) targetCod.usuariosCanjeados = [];
+                            const yaExiste = targetCod.usuariosCanjeados.some(
+                                (u) => u.nombre === parsed.nombre && u.contacto === parsed.contacto
+                            );
+                            if (!yaExiste) {
+                                targetCod.usuariosCanjeados.push({
+                                    nombre: parsed.nombre,
+                                    contacto: parsed.contacto,
+                                    rol: parsed.rol,
+                                    fecha: parsed.fecha,
+                                });
+                            }
+                        }
+                    }
+                } catch {}
+            }
+        }
+    } catch {}
+
+    // 4. Mezclar con locales si no están en Supabase
     const localList = getLocalCodes();
     for (const c of localList) {
         if (!todosMap.has(c.codigo.toUpperCase())) {
             todosMap.set(c.codigo.toUpperCase(), c);
+        } else {
+            // Unir usuariosCanjeados locales si los hay
+            const current = todosMap.get(c.codigo.toUpperCase())!;
+            if (c.usuariosCanjeados && c.usuariosCanjeados.length > 0) {
+                if (!current.usuariosCanjeados) current.usuariosCanjeados = [];
+                for (const u of c.usuariosCanjeados) {
+                    if (!current.usuariosCanjeados.some((ex) => ex.nombre === u.nombre && ex.contacto === u.contacto)) {
+                        current.usuariosCanjeados.push(u);
+                    }
+                }
+            }
         }
     }
 

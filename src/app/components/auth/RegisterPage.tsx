@@ -147,7 +147,11 @@ export function RegisterPage() {
             }
 
             await register(name.trim(), rawContacto, password, selectedRole!);
-            await consumirCodigoInvitacion(codigoInvitacion);
+            await consumirCodigoInvitacion(codigoInvitacion, {
+                nombre: name.trim(),
+                contacto: rawContacto,
+                rol: selectedRole!,
+            });
             registrarEvento('codigo_canjeado', {
                 nombre: name.trim(),
                 contacto: rawContacto,

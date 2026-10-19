@@ -17,9 +17,9 @@ export async function getCosechas(): Promise<Cosecha[]> {
                 return {
                     id: l.id,
                     codigo: l.codigo,
-                    productor: meta.productor || 'María González',
+                    productor: meta.productor || 'Productor',
                     cosecha: meta.cosecha || 'Cosecha Principal',
-                    finca: meta.finca || 'Finca La Esperanza',
+                    finca: meta.finca || 'Finca Cafetera',
                     parcelas: meta.parcelas || [],
                     estado: l.estado_actual || 'Cereza',
                     pesos: {
@@ -68,20 +68,31 @@ export async function saveCosechas(cosechas: Cosecha[]): Promise<void> {
     }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
 
-    for (const c of cosechas) {
-        // Buscar el id de la finca correspondiente o asociar el primero
+    let defaultFincaId: string | null = null;
+    let productorId: string | null = user?.id || null;
+
+    if (user) {
         const { data: fincas } = await supabase
             .from('fincas')
             .select('id')
             .eq('productor_id', user.id);
+        defaultFincaId = fincas?.[0]?.id || null;
+    }
 
-        const fincaId = fincas?.[0]?.id;
-        if (!fincaId) {
-            console.error('No finca found for producer to associate with harvest');
-            continue;
-        }
+    if (!defaultFincaId) {
+        try {
+            const { data: dbFincas } = await supabase.from('fincas').select('id, nombre, productor_id');
+            if (dbFincas && dbFincas.length > 0) {
+                defaultFincaId = dbFincas[0].id;
+                if (!productorId && dbFincas[0].productor_id) productorId = dbFincas[0].productor_id;
+            }
+        } catch {}
+    }
+
+    for (const c of cosechas) {
+        const fincaId = defaultFincaId;
+        if (!fincaId) continue;
 
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(c.id);
         const loteId = isUuid ? c.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (x) => {
@@ -95,7 +106,7 @@ export async function saveCosechas(cosechas: Cosecha[]): Promise<void> {
                 id: loteId,
                 codigo: c.codigo || `LOT-${loteId.slice(0, 8).toUpperCase()}`,
                 finca_id: fincaId,
-                productor_id: user.id,
+                productor_id: productorId,
                 variedad: c.detallesObjetivo?.variedad || 'Bourbon Rosado',
                 proceso: c.detallesObjetivo?.proceso || 'Lavado',
                 estado_actual: c.estado,

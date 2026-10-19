@@ -5,8 +5,8 @@ function mapLoteDbToUnificado(l: any): LoteUnificado {
     const meta = l.metadata || {};
     return {
         id: l.codigo || l.id,
-        productor: meta.productor || 'María González',
-        finca: meta.finca || 'Finca La Esperanza',
+        productor: meta.productor || 'Productor',
+        finca: meta.finca || 'Finca Cafetera',
         municipio: meta.municipio || 'Pitalito',
         variedad: l.variedad || 'Bourbon Rosado',
         proceso: l.proceso || 'Lavado',
@@ -86,19 +86,33 @@ export async function getLotePorId(id: string): Promise<LoteUnificado | undefine
 
 export async function addLote(lote: LoteUnificado): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
 
-    const { data: fincas } = await supabase
-        .from('fincas')
-        .select('id')
-        .eq('productor_id', user.id);
+    let fincaId: string | null = null;
+    let productorId: string | null = user?.id || null;
 
-    const fincaId = fincas?.[0]?.id;
-    if (!fincaId) return;
+    if (user) {
+        const { data: fincas } = await supabase
+            .from('fincas')
+            .select('id')
+            .eq('productor_id', user.id);
+        fincaId = fincas?.[0]?.id || null;
+    }
+
+    // Si aún no hay fincaId, buscar finca por nombre o usar la primera disponible
+    if (!fincaId) {
+        try {
+            const { data: dbFincas } = await supabase.from('fincas').select('id, nombre, productor_id');
+            if (dbFincas && dbFincas.length > 0) {
+                const encontrada = dbFincas.find((f: any) => f.nombre?.toLowerCase() === lote.finca?.toLowerCase());
+                fincaId = encontrada ? encontrada.id : dbFincas[0].id;
+                if (!productorId && encontrada?.productor_id) productorId = encontrada.productor_id;
+            }
+        } catch {}
+    }
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lote.id);
     const dbId = isUuid ? lote.id : crypto.randomUUID();
-    const dbCodigo = isUuid ? `LOT-HUI-${Math.floor(100 + Math.random()*900)}` : lote.id;
+    const dbCodigo = lote.id || `LOT-HUI-${Math.floor(100 + Math.random()*900)}`;
 
     const { error } = await supabase
         .from('lotes')
@@ -106,7 +120,7 @@ export async function addLote(lote: LoteUnificado): Promise<void> {
             id: dbId,
             codigo: dbCodigo,
             finca_id: fincaId,
-            productor_id: user.id,
+            productor_id: productorId,
             variedad: lote.variedad || 'Bourbon Rosado',
             proceso: lote.proceso || 'Lavado',
             estado_actual: lote.estado || 'Cereza',

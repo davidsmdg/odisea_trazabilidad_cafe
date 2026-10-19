@@ -191,7 +191,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           : u.email?.toLowerCase() === id.toLowerCase()
       );
 
-    const found = buscar(MOCK_USERS) || buscar(getRegistrados());
+    // Consultar tabla usuarios en Supabase para obtener el nombre real guardado
+    try {
+      let query = supabase.from('usuarios').select('*');
+      if (esCel) {
+        query = query.eq('celular', idDigitos);
+      } else {
+        query = query.eq('email', id.toLowerCase());
+      }
+      const { data: usuarioDb } = await query.maybeSingle();
+      if (usuarioDb) {
+        const uCloud: AuthUser = {
+          id: `u_${usuarioDb.id || Date.now()}`,
+          name: usuarioDb.nombre,
+          role: (usuarioDb.rol as UserRole) || 'AGRICULTOR',
+          avatarInitials: inicialesDe(usuarioDb.nombre),
+          email: usuarioDb.email || undefined,
+          celular: usuarioDb.celular || undefined,
+        };
+        addRegistrado(uCloud);
+        persistLocalUser(uCloud);
+        return;
+      }
+    } catch {}
+
+    const found = buscar(getRegistrados()) || buscar(MOCK_USERS);
     if (found) {
       persistLocalUser(found);
       return;
@@ -282,6 +306,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       avatarInitials: inicialesDe(name),
       ...(esEmail ? { email: rawContacto } : { celular: rawContacto }),
     };
+
+    // Asegurar que el usuario quede en la base de datos Supabase usuarios
+    try {
+      await supabase.from('usuarios').upsert({
+        nombre: name,
+        email: esEmail ? rawContacto : null,
+        celular: esCel ? rawContacto : null,
+        rol: role,
+        actualizado_en: new Date().toISOString(),
+      }, { onConflict: 'email' });
+    } catch (e) {
+      console.warn('Error saving to supabase usuarios:', e);
+    }
+
     addRegistrado(newUser);
     persistLocalUser(newUser);
   };
