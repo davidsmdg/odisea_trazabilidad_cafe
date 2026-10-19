@@ -608,6 +608,22 @@ export function MiFincaLanding() {
           .landing-odisea-root .section { padding-block: 52px; }
           .landing-odisea-root .btn { width: 100%; justify-content: center; }
           .landing-odisea-root .hero .ctas .btn { width: auto; }
+          .landing-odisea-root .header-row {
+            align-items: flex-start;
+          }
+          .landing-odisea-root .header-actions {
+            flex-direction: column-reverse;
+            align-items: flex-end !important;
+            gap: 4px !important;
+          }
+          .landing-odisea-root .header-actions .btn {
+            width: auto;
+          }
+          .landing-odisea-root .header-actions .btn-ghost {
+            padding: 4px 10px;
+            min-height: auto;
+            font-size: 11px;
+          }
         }
       `}</style>
 
@@ -615,12 +631,12 @@ export function MiFincaLanding() {
       <header>
         <div className="side">
           <div className="wrap header-row">
-            <Link to="/" className="brandmark">
+            <Link to="/" className="brandmark" style={{ flexShrink: 0, paddingTop: '4px' }}>
               <img src="/landing-images/logo-odisea.png" alt="Odisea Café" />
               <span className="divider"></span>
               <span className="name">Mi Finca</span>
             </Link>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <Link className="btn btn-ghost" to="/explorar" style={{ border: 'none' }}>
                 Explorar mapa
               </Link>
@@ -638,7 +654,7 @@ export function MiFincaLanding() {
           <div className="side">
             <div className="wrap hero-inner">
               <p className="eyebrow">Portal del productor</p>
-              <h1>La plata de tu café, clara en el celular</h1>
+              <h1>Tu finca, en tu celular</h1>
               <p className="lead">
                 Entra con tu celular o tu correo, el que tengas más a la mano. Registra tu finca, anota tu cosecha y mira cuánto te queda: lo del café y lo de la casa.
               </p>
