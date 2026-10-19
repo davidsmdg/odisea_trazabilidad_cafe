@@ -183,7 +183,11 @@ export async function addMovimiento(data: Omit<MovimientoFinanciero, 'id'>): Pro
             origen: local.origen,
         });
     } catch (e) {
-        console.error('Error adding movimiento to Supabase:', e);
+        console.error('Error adding movimiento to Supabase, encolando offline:', e);
+        try {
+            const { encolarOperacion } = await import('./offlineSyncService');
+            await encolarOperacion('movimiento', 'crear', local);
+        } catch {}
     }
     return local;
 }

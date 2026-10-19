@@ -112,11 +112,19 @@ export async function saveFincas(fincas: Finca[]): Promise<void> {
                 });
 
             if (error) {
-                console.error('Error guardando finca en Supabase:', error);
+                console.error('Error guardando finca en Supabase, encolando offline:', error);
+                const { encolarOperacion } = await import('./offlineSyncService');
+                await encolarOperacion('finca', 'crear', { ...f, productorId: prodId });
             }
         }
     } catch (e) {
-        console.error('Error en saveFincas:', e);
+        console.error('Error en saveFincas, encolando offline:', e);
+        try {
+            const { encolarOperacion } = await import('./offlineSyncService');
+            for (const f of normalizadas) {
+                await encolarOperacion('finca', 'crear', f);
+            }
+        } catch {}
     }
 }
 

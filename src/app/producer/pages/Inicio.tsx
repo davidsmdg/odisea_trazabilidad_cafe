@@ -141,6 +141,17 @@ export function Inicio() {
                         </div>
                         <ChevronRight size={20} className="text-[#2D3E33]/40" />
                     </Link>
+
+                    {/* Tarjeta de instalación en celular / PWA */}
+                    <div className="rounded-3xl bg-white border-2 border-[#DAD6CF]/60 p-4 flex items-center gap-3.5 shadow-sm">
+                        <div className="h-11 w-11 rounded-2xl bg-[#2D3E33] flex items-center justify-center text-[#E5A84B] shrink-0 shadow-sm">
+                            <ArrowUpRight size={22} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-extrabold text-[14px] text-[#2D3E33] leading-tight">Instalar en la pantalla de tu celular</p>
+                            <p className="text-[12px] text-[#4A2E3D]/80 font-medium mt-0.5">Entra más rápido y úsala en el campo sin datos ni señal.</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* ── COLUMNA DERECHA EN PC (Mis Cosechas) ── */}

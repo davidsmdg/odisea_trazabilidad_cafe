@@ -22,6 +22,9 @@ import { cn } from '../components/ui/utils';
 import { BrandLogo } from '../components/ui/BrandLogo';
 import { registrarEvento } from '../../services/telemetryService';
 
+import { SyncStatusBadge } from './components/SyncStatusBadge';
+import { PwaInstallPrompt } from '../components/PwaInstallPrompt';
+
 const NAV_ITEMS = [
     { to: '/producer/inicio', label: 'Inicio', icon: Home },
     { to: '/producer/finca', label: 'Mi Finca & Parcelas', icon: Sprout },
@@ -84,6 +87,7 @@ export function ProducerMobileLayout() {
 
     return (
         <div className="producer-shell min-h-screen bg-[#F6F2EC] text-[#2D3E33] flex flex-col md:flex-row">
+            <PwaInstallPrompt />
             {/* ── SIDEBAR LATERAL (Solo para Tablet y PC: md en adelante) ── */}
             <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-[#2D3E33] text-[#F6F2EC] shrink-0 sticky top-0 h-screen z-30 shadow-xl border-r border-white/10">
                 {/* Logo & Marca Oficial */}
@@ -91,15 +95,21 @@ export function ProducerMobileLayout() {
                     <BrandLogo to="/producer/inicio" subtitle="Mi Finca" theme="light" size="md" />
                 </div>
 
-                {/* Perfil resumido en sidebar */}
-                <div className="px-5 py-4 border-b border-white/10 flex items-center gap-3 bg-black/15">
-                    <div className="h-11 w-11 rounded-full bg-[#BD4A1F] text-[#F6F2EC] flex items-center justify-center font-heading text-base shadow">
-                        {user?.avatarInitials || (primerNombre ? primerNombre.slice(0, 2).toUpperCase() : 'PR')}
+                {/* Perfil resumido en sidebar con estado de sincronización */}
+                <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-3 bg-black/15">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-11 w-11 rounded-full bg-[#BD4A1F] text-[#F6F2EC] flex items-center justify-center font-heading text-base shadow shrink-0">
+                            {user?.avatarInitials || (primerNombre ? primerNombre.slice(0, 2).toUpperCase() : 'PR')}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-base font-extrabold text-[#F6F2EC] truncate">{user?.name || 'Productor'}</p>
+                            <p className="text-[12px] text-[#CCD1C7] font-semibold capitalize truncate">{hoy}</p>
+                        </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                        <p className="text-base font-extrabold text-[#F6F2EC] truncate">{user?.name || 'Productor'}</p>
-                        <p className="text-[12px] text-[#CCD1C7] font-semibold capitalize truncate">{hoy}</p>
-                    </div>
+                </div>
+
+                <div className="px-5 py-2.5 border-b border-white/5">
+                    <SyncStatusBadge />
                 </div>
 
                 {/* Navegación de escritorio */}
@@ -150,15 +160,16 @@ export function ProducerMobileLayout() {
                     <BarraPrecioTicker />
                 </div>
 
-                {/* Encabezado compacto (solo móvil) con BrandLogo oficial */}
+                {/* Encabezado compacto (solo móvil) con BrandLogo oficial y Badge Sync */}
                 <header className="md:hidden bg-[#F6F2EC]/95 backdrop-blur-md px-5 pt-3 pb-3 flex items-center justify-between border-b border-[#2D3E33]/10">
                     <div className="flex items-center gap-3 min-w-0">
                         <BrandLogo to="/producer/inicio" subtitle="Mi Finca" theme="dark" size="sm" />
                     </div>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2">
+                        <SyncStatusBadge />
                         <Link
                             to="/producer/perfil"
-                            className="h-11 w-11 shrink-0 rounded-full bg-[#2D3E33] text-[#F6F2EC] flex items-center justify-center font-heading text-sm shadow-md border border-[#2D3E33]/20"
+                            className="h-10 w-10 shrink-0 rounded-full bg-[#2D3E33] text-[#F6F2EC] flex items-center justify-center font-heading text-sm shadow-md border border-[#2D3E33]/20"
                             aria-label="Mi perfil"
                         >
                             {user?.avatarInitials || (primerNombre ? primerNombre.slice(0, 2).toUpperCase() : 'PR')}
@@ -170,7 +181,7 @@ export function ProducerMobileLayout() {
                 {!online && (
                     <div className="mx-4 md:mx-8 mt-3 flex items-center gap-2 rounded-2xl bg-[#bb8d3b]/15 border border-[#bb8d3b]/30 px-4 py-2.5 text-[13px] font-bold text-[#8a6a26]">
                         <WifiOff size={16} className="shrink-0" />
-                        Sin internet. Todo lo que anotes se guarda en tu dispositivo.
+                        Sin internet. Todo lo que anotes queda respaldado en tu teléfono y subirá automáticamente al recuperar señal.
                     </div>
                 )}
 

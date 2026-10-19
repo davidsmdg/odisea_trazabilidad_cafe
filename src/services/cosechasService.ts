@@ -130,7 +130,31 @@ export async function saveCosechas(cosechas: Cosecha[]): Promise<void> {
                 }
             });
         if (error) {
-            console.error('Error saving harvest/lote:', error);
+            console.error('Error saving harvest/lote, encolando offline:', error);
+            const { encolarOperacion } = await import('./offlineSyncService');
+            await encolarOperacion('cosecha', 'crear', {
+                id: loteId,
+                codigo: c.codigo || `LOT-${loteId.slice(0, 8).toUpperCase()}`,
+                fincaId,
+                productorId,
+                variedad: c.detallesObjetivo?.variedad || 'Bourbon Rosado',
+                proceso: c.detallesObjetivo?.proceso || 'Lavado',
+                estado: c.estado,
+                pesos: c.pesos,
+                calificacion: c.calificacion,
+                metadata: {
+                    productor: c.productor,
+                    cosecha: c.cosecha,
+                    finca: c.finca,
+                    parcelas: c.parcelas,
+                    pesos: { objetivo: c.pesos?.objetivo || 0 },
+                    fase: c.fase,
+                    modalidad: c.modalidad,
+                    macroperfil: c.macroperfil,
+                    clientes: c.clientes,
+                    factorRendimiento: c.factorRendimiento
+                }
+            });
         }
     }
 }
