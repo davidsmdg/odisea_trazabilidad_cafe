@@ -17,6 +17,11 @@ import { getPrecioReferencia } from '../data/preciosReferencia';
 import { formatoPlata } from '../utils/formato';
 import { Eyebrow } from '../../components/ui/Eyebrow';
 import type { Cosecha } from '../../../types/cosecha';
+import {
+    isPwaInstalled,
+    triggerPwaInstall,
+    openPwaInstallModal,
+} from '../../utils/pwaInstallManager';
 
 const FASE_LABEL: Record<number, { txt: string; emoji: string; color: string }> = {
     0: { txt: 'Meta planeada', emoji: '🎯', color: 'text-gray-500' },
@@ -32,8 +37,12 @@ export function Inicio() {
     const [cafe, setCafe] = useState({ ingresos: 0, gastos: 0, saldo: 0 });
     const [periodoNombre, setPeriodoNombre] = useState('esta cosecha');
     const [cargando, setCargando] = useState(true);
+    const [pwaInstalada, setPwaInstalada] = useState<boolean>(isPwaInstalled());
 
     useEffect(() => {
+        const onInstalled = () => setPwaInstalada(true);
+        window.addEventListener('odisea:pwa-installed', onInstalled);
+
         Promise.all([getCosechas(), getFincas(), getMovimientos(), getPeriodoActivo()])
             .then(([cs, fs, movs, per]) => {
                 setCosechas(cs);
@@ -46,7 +55,18 @@ export function Inicio() {
             })
             .catch(() => {})
             .finally(() => setCargando(false));
+
+        return () => window.removeEventListener('odisea:pwa-installed', onInstalled);
     }, []);
+
+    const handleClickInstalar = async () => {
+        const resultado = await triggerPwaInstall();
+        if (resultado === 'installed') {
+            setPwaInstalada(true);
+        } else if (resultado === 'manual') {
+            openPwaInstallModal();
+        }
+    };
 
     const precio = getPrecioReferencia(departamento);
     const cosechasActivas = cosechas.filter((c) => c.fase < 3 || (c.calificacion ?? 0) === 0).slice(0, 3);
@@ -142,16 +162,23 @@ export function Inicio() {
                         <ChevronRight size={20} className="text-[#2D3E33]/40" />
                     </Link>
 
-                    {/* Tarjeta de instalación en celular / PWA */}
-                    <div className="rounded-3xl bg-white border-2 border-[#DAD6CF]/60 p-4 flex items-center gap-3.5 shadow-sm">
-                        <div className="h-11 w-11 rounded-2xl bg-[#2D3E33] flex items-center justify-center text-[#E5A84B] shrink-0 shadow-sm">
-                            <ArrowUpRight size={22} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-extrabold text-[14px] text-[#2D3E33] leading-tight">Instalar en la pantalla de tu celular</p>
-                            <p className="text-[12px] text-[#4A2E3D]/80 font-medium mt-0.5">Entra más rápido y úsala en el campo sin datos ni señal.</p>
-                        </div>
-                    </div>
+                    {/* Tarjeta de instalación en celular / PWA (se oculta si ya se instaló) */}
+                    {!pwaInstalada && (
+                        <button
+                            type="button"
+                            onClick={handleClickInstalar}
+                            className="w-full text-left rounded-3xl bg-white hover:border-[#2D3E33]/40 active:scale-[0.98] border-2 border-[#DAD6CF]/60 p-4 flex items-center gap-3.5 shadow-sm transition-all cursor-pointer"
+                        >
+                            <div className="h-11 w-11 rounded-2xl bg-[#2D3E33] flex items-center justify-center text-[#E5A84B] shrink-0 shadow-sm">
+                                <ArrowUpRight size={22} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-extrabold text-[14px] text-[#2D3E33] leading-tight">Instalar en la pantalla de tu celular</p>
+                                <p className="text-[12px] text-[#4A2E3D]/80 font-medium mt-0.5">Entra más rápido y úsala en el campo sin datos ni señal.</p>
+                            </div>
+                            <ChevronRight size={20} className="text-[#2D3E33]/40 shrink-0" />
+                        </button>
+                    )}
                 </div>
 
                 {/* ── COLUMNA DERECHA EN PC (Mis Cosechas) ── */}

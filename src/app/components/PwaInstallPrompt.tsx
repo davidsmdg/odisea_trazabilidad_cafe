@@ -1,84 +1,91 @@
 import React, { useEffect, useState } from 'react';
-import { Download, X, Smartphone, Check, Share2, PlusSquare } from 'lucide-react';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
-}
+import { Download, X, Smartphone, Share2, PlusSquare, MoreVertical } from 'lucide-react';
+import {
+  isPwaInstalled,
+  getDeferredInstallPrompt,
+  triggerPwaInstall,
+  markPwaInstalled,
+} from '../utils/pwaInstallManager';
 
 export function PwaInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [mostrarModal, setMostrarModal] = useState<boolean>(false);
   const [esIos, setEsIos] = useState<boolean>(false);
-  const [yaInstalada, setYaInstalada] = useState<boolean>(false);
+  const [yaInstalada, setYaInstalada] = useState<boolean>(isPwaInstalled());
+  const [tienePromptNativo, setTienePromptNativo] = useState<boolean>(!!getDeferredInstallPrompt());
 
   useEffect(() => {
-    // Detectar si ya corre como standalone PWA
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
-
-    if (isStandalone) {
+    if (isPwaInstalled()) {
       setYaInstalada(true);
       return;
     }
 
-    // Detectar iOS
     const ua = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(ua);
     setEsIos(isIosDevice);
 
-    // Evento de instalación en Android / Chrome
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-
-      // Mostrar modal al menos una vez si nunca se ha descartado
-      const yaMostrado = localStorage.getItem('odisea_pwa_prompt_dismissed');
-      if (!yaMostrado) {
-        // Dar 2 segundos de espera tras entrar a la app para no ser invasivo
-        setTimeout(() => {
-          setMostrarModal(true);
-        }, 2000);
-      }
+    const checkPrompt = () => {
+      setTienePromptNativo(!!getDeferredInstallPrompt());
     };
 
-    window.addEventListener('beforeinstallprompt', handler);
+    const handleOpenManual = () => {
+      setTienePromptNativo(!!getDeferredInstallPrompt());
+      setMostrarModal(true);
+    };
 
-    // Si es iOS y nunca se ha visto, mostrar banner con instrucciones
-    if (isIosDevice) {
-      const yaMostradoIos = localStorage.getItem('odisea_pwa_prompt_dismissed');
-      if (!yaMostradoIos) {
-        setTimeout(() => {
+    const handleInstalled = () => {
+      setYaInstalada(true);
+      setMostrarModal(false);
+    };
+
+    window.addEventListener('odisea:pwa-prompt-ready', checkPrompt);
+    window.addEventListener('odisea:open-pwa-modal', handleOpenManual);
+    window.addEventListener('odisea:pwa-installed', handleInstalled);
+
+    // Mostrar automáticamente una primera vez si no ha sido descartado antes
+    const yaDescartado = localStorage.getItem('odisea_pwa_prompt_dismissed');
+    if (!yaDescartado) {
+      const timer = setTimeout(() => {
+        if (!isPwaInstalled()) {
+          setTienePromptNativo(!!getDeferredInstallPrompt());
           setMostrarModal(true);
-        }, 2500);
-      }
+        }
+      }, 2200);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('odisea:pwa-prompt-ready', checkPrompt);
+        window.removeEventListener('odisea:open-pwa-modal', handleOpenManual);
+        window.removeEventListener('odisea:pwa-installed', handleInstalled);
+      };
     }
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('odisea:pwa-prompt-ready', checkPrompt);
+      window.removeEventListener('odisea:open-pwa-modal', handleOpenManual);
+      window.removeEventListener('odisea:pwa-installed', handleInstalled);
     };
   }, []);
 
   const handleInstalar = async () => {
-    if (deferredPrompt) {
-      try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-        if (choice.outcome === 'accepted') {
-          setMostrarModal(false);
-          setYaInstalada(true);
-        }
-      } catch (err) {
-        console.warn('Error al activar prompt PWA:', err);
-      }
-      setDeferredPrompt(null);
+    const res = await triggerPwaInstall();
+    if (res === 'installed') {
+      setMostrarModal(false);
+      setYaInstalada(true);
+    } else if (res === 'dismissed') {
+      setTienePromptNativo(false);
     }
   };
 
   const handleCerrar = () => {
     setMostrarModal(false);
-    localStorage.setItem('odisea_pwa_prompt_dismissed', 'true');
+    try {
+      localStorage.setItem('odisea_pwa_prompt_dismissed', 'true');
+    } catch {}
+  };
+
+  const handleYaLaInstale = () => {
+    markPwaInstalled();
+    setMostrarModal(false);
+    setYaInstalada(true);
   };
 
   if (yaInstalada || !mostrarModal) {
@@ -91,13 +98,13 @@ export function PwaInstallPrompt() {
         <button
           onClick={handleCerrar}
           aria-label="Cerrar aviso de instalación"
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 text-[#2D3E33]/60 hover:text-[#2D3E33] transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 text-[#2D3E33]/60 hover:text-[#2D3E33] transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
 
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#2D3E33] flex items-center justify-center text-[#E5A84B] shadow-md">
+          <div className="w-12 h-12 rounded-2xl bg-[#2D3E33] flex items-center justify-center text-[#E5A84B] shadow-md shrink-0">
             <Smartphone size={24} />
           </div>
           <div>
@@ -107,35 +114,56 @@ export function PwaInstallPrompt() {
         </div>
 
         <p className="text-[13px] text-[#4A2E3D] font-medium leading-relaxed mb-4">
-          Instala la aplicación en tu celular para guardar tus cosechas y cuentas cafetaleras incluso cuando no tengas señal o datos en el campo.
+          Descarga la aplicación en la pantalla principal de tu celular para anotar cosechas y cuentas incluso sin señal ni datos en la finca.
         </p>
 
-        {esIos ? (
-          <div className="bg-white/80 rounded-2xl p-3.5 border border-[#2D3E33]/10 text-[12px] text-[#2D3E33] space-y-2 mb-4">
-            <p className="font-bold flex items-center gap-1.5">
-              <Share2 size={15} className="text-[#BD4A1F]" /> 1. Toca el botón <strong>Compartir</strong> en Safari.
+        {tienePromptNativo ? (
+          <button
+            onClick={handleInstalar}
+            className="w-full py-3.5 rounded-full bg-[#BD4A1F] hover:bg-[#a63e18] text-[#F6F2EC] font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#BD4A1F]/30 transition-all mb-3 cursor-pointer"
+          >
+            <Download size={18} /> Descargar e instalar ahora
+          </button>
+        ) : esIos ? (
+          <div className="bg-white rounded-2xl p-4 border border-[#2D3E33]/15 text-[13px] text-[#2D3E33] space-y-2.5 mb-4 shadow-sm">
+            <p className="font-extrabold text-[#BD4A1F] uppercase text-[11px] tracking-wider">Pasos en tu iPhone:</p>
+            <p className="font-bold flex items-center gap-2">
+              <Share2 size={16} className="text-[#BD4A1F] shrink-0" />
+              <span>1. Toca el botón <strong>Compartir</strong> abajo en Safari.</span>
             </p>
-            <p className="font-bold flex items-center gap-1.5">
-              <PlusSquare size={15} className="text-[#BD4A1F]" /> 2. Elige <strong>"Agregar a pantalla de inicio"</strong>.
+            <p className="font-bold flex items-center gap-2">
+              <PlusSquare size={16} className="text-[#BD4A1F] shrink-0" />
+              <span>2. Elige <strong>"Agregar a pantalla de inicio"</strong>.</span>
             </p>
           </div>
         ) : (
-          deferredPrompt && (
-            <button
-              onClick={handleInstalar}
-              className="w-full py-3.5 rounded-full bg-[#BD4A1F] hover:bg-[#a63e18] text-[#F6F2EC] font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#BD4A1F]/30 transition-all mb-2"
-            >
-              <Download size={18} /> Instalar ahora en mi celular
-            </button>
-          )
+          <div className="bg-white rounded-2xl p-4 border border-[#2D3E33]/15 text-[13px] text-[#2D3E33] space-y-2.5 mb-4 shadow-sm">
+            <p className="font-extrabold text-[#BD4A1F] uppercase text-[11px] tracking-wider">Cómo instalarla en 2 toques:</p>
+            <p className="font-bold flex items-start gap-2">
+              <MoreVertical size={16} className="text-[#BD4A1F] shrink-0 mt-0.5" />
+              <span>1. Toca los <strong>3 puntos (⋮)</strong> arriba a la derecha de tu navegador.</span>
+            </p>
+            <p className="font-bold flex items-start gap-2">
+              <Download size={16} className="text-[#BD4A1F] shrink-0 mt-0.5" />
+              <span>2. Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>.</span>
+            </p>
+          </div>
         )}
 
-        <button
-          onClick={handleCerrar}
-          className="w-full py-2.5 rounded-full text-center text-xs font-bold text-[#2D3E33]/60 hover:text-[#2D3E33] transition-colors"
-        >
-          Ahora no, continuar en el navegador
-        </button>
+        <div className="flex flex-col gap-1.5">
+          <button
+            onClick={handleYaLaInstale}
+            className="w-full py-2 rounded-full text-center text-xs font-extrabold text-[#2D3E33] hover:bg-black/5 transition-colors cursor-pointer"
+          >
+            ✓ Ya la instalé, no volver a mostrar
+          </button>
+          <button
+            onClick={handleCerrar}
+            className="w-full py-2 rounded-full text-center text-xs font-bold text-[#2D3E33]/60 hover:text-[#2D3E33] transition-colors cursor-pointer"
+          >
+            Ahora no
+          </button>
+        </div>
       </div>
     </div>
   );
