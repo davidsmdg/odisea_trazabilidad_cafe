@@ -215,28 +215,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch {}
 
-    const found = buscar(getRegistrados()) || buscar(MOCK_USERS);
+    const found = buscar(getRegistrados());
     if (found) {
       persistLocalUser(found);
       return;
     }
 
-    const genericUser: AuthUser = esCel
-      ? {
-          id: `u_${Date.now()}`,
-          name: 'Productor',
-          celular: id,
-          role: 'AGRICULTOR',
-          avatarInitials: 'PR',
-        }
-      : {
-          id: `u_${Date.now()}`,
-          name: id.split('@')[0],
-          email: id,
-          role: 'AGRICULTOR',
-          avatarInitials: id.slice(0, 2).toUpperCase(),
-        };
-    persistLocalUser(genericUser);
+    // Si no está registrado en ningún lado, no permitir el acceso con datos ficticios
+    throw new Error('Usuario no registrado. Debes registrarte primero con un código de invitación válido.');
   };
 
   const register = async (name: string, contacto: string, password: string, role: UserRole) => {

@@ -128,7 +128,7 @@ export async function getMovimientos(): Promise<MovimientoFinanciero[]> {
             query = query.or(`productor_id.eq.${user.id},productor_id.is.null`);
         }
         const { data, error } = await query;
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
             const soloFinanzas = data.filter((m) => 
                 !m.id.startsWith('cfg-cod-') && 
                 !m.id.startsWith('evt-tel-') && 
@@ -156,7 +156,7 @@ export async function getMovimientos(): Promise<MovimientoFinanciero[]> {
     } catch (e) {
         console.warn('Error fetching movimientos from Supabase:', e);
     }
-    return storeGetMovimientos();
+    return [];
 }
 
 export async function addMovimiento(data: Omit<MovimientoFinanciero, 'id'>): Promise<MovimientoFinanciero> {

@@ -47,8 +47,8 @@ export function LoginPage() {
                     navigate('/producer/inicio', { replace: true });
                 }
             }
-        } catch {
-            setError('Credenciales inválidas. Intenta de nuevo.');
+        } catch (err: any) {
+            setError(err?.message || 'Credenciales inválidas. Intenta de nuevo.');
         } finally {
             setIsLoading(false);
         }
