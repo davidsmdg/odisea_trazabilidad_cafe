@@ -28,6 +28,7 @@ import { cn } from '../components/ui/utils';
 import { Eyebrow } from '../components/ui/Eyebrow';
 import { 
     obtenerResumenMetricas, 
+    resetTelemetriaGlobal,
     type MetricSummary 
 } from '../../services/telemetryService';
 import { 
@@ -235,6 +236,20 @@ export function AdminConsolePage() {
                         >
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                             <span>Actualizar</span>
+                        </button>
+                        <button
+                            onClick={async () => {
+                                if (window.confirm('¿Deseas resetear toda la bitácora y usuarios activos a cero? Esta acción no borra los códigos de invitación.')) {
+                                    await resetTelemetriaGlobal();
+                                    toast.success('Bitácora y telemetría reseteadas a cero.');
+                                    cargarDatos();
+                                }
+                            }}
+                            className="h-10 px-3.5 rounded-xl bg-white/10 hover:bg-amber-600/30 text-amber-300 font-bold text-xs uppercase flex items-center gap-1.5 transition-all cursor-pointer border border-amber-500/30"
+                            title="Resetear telemetría y usuarios activos"
+                        >
+                            <Trash2 size={14} />
+                            <span>Limpiar Datos</span>
                         </button>
                         <button
                             onClick={() => {

@@ -42,31 +42,13 @@ export function ProducerMobileLayout() {
             setEstado('app');
             return;
         }
-        // Usuario de vuelta que ya tiene finca: no molestamos con el onboarding.
-        getFincas()
-            .then((fs) => {
-                if (fs.length > 0) {
-                    marcarOnboarding('completo');
-                    setEstado('app');
-                } else {
-                    setEstado('onboarding');
-                    registrarEvento('onboarding_iniciado', {
-                        usuarioId: user?.id,
-                        nombre: user?.name,
-                        contacto: user?.celular || user?.email,
-                        rol: user?.role || 'AGRICULTOR',
-                    });
-                }
-            })
-            .catch(() => {
-                setEstado('onboarding');
-                registrarEvento('onboarding_iniciado', {
-                    usuarioId: user?.id,
-                    nombre: user?.name,
-                    contacto: user?.celular || user?.email,
-                    rol: user?.role || 'AGRICULTOR',
-                });
-            });
+        setEstado('onboarding');
+        registrarEvento('onboarding_iniciado', {
+            usuarioId: user?.id,
+            nombre: user?.name,
+            contacto: user?.celular || user?.email,
+            rol: user?.role || 'AGRICULTOR',
+        });
     }, []);
 
     if (estado === 'cargando') {

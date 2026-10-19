@@ -39,14 +39,15 @@ export async function getFincas(): Promise<Finca[]> {
     try {
         const { data: { user } } = await supabase.auth.getUser();
 
-        let query = supabase.from('fincas').select('*');
-        if (user) {
-            query = query.eq('productor_id', user.id);
-        }
+        // Si no hay usuario en sesión, retornar solo local si coincide, sino vacío
+        if (!user) return local;
 
-        const { data, error } = await query;
+        const { data, error } = await supabase
+            .from('fincas')
+            .select('*')
+            .eq('productor_id', user.id);
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
             const mapped: Finca[] = data.map((f) => ({
                 id: f.id,
                 nombre: f.nombre,

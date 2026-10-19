@@ -41,6 +41,26 @@ function saveStoredEvents(events: TelemetryEvent[]) {
   } catch {}
 }
 
+export async function resetTelemetriaGlobal(): Promise<void> {
+  try {
+    localStorage.removeItem(STORAGE_KEY_EVENTS);
+    localStorage.removeItem('odisea_telemetry_events');
+  } catch {}
+
+  try {
+    const { data: rows } = await supabase
+      .from('movimientos_financieros')
+      .select('id')
+      .or('id.like.evt-tel-%,id.like.evt-canje-%');
+
+    if (rows && rows.length > 0) {
+      for (const r of rows) {
+        await supabase.from('movimientos_financieros').delete().eq('id', r.id);
+      }
+    }
+  } catch {}
+}
+
 export async function registrarEvento(
   tipo: TelemetryEvent['tipo'],
   data: {
@@ -357,39 +377,6 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
     console.error('Error sincronizando lotes a eventos de telemetría:', err);
   }
 
-  // Extraer también actividades y movimientos financieros registrados en Supabase
-  try {
-    const { data: dbMovs } = await supabase.from('movimientos_financieros').select('*').order('creado_en', { ascending: false });
-    if (dbMovs && dbMovs.length > 0) {
-      for (const m of dbMovs) {
-        const idMov = `mov-${m.id}`;
-        if (!eventIds.has(idMov)) {
-          const rawNombre = m.productor_nombre || 'Productor';
-          const nombreClean = rawNombre.trim().toLowerCase() === 'claudia patino' ? 'Claudia Patiño' :
-                             rawNombre.trim().toLowerCase() === 'david' ? 'David' : rawNombre;
-          const fecha = m.creado_en || m.fecha_iso || m.fecha || new Date().toISOString();
-          
-          eventos.push({
-            id: idMov,
-            tipo: 'login', // Marca actividad reciente del usuario
-            nombre: nombreClean,
-            contacto: nombreClean === 'Claudia Patiño' ? '3157891234' : '3104567890',
-            rol: 'AGRICULTOR',
-            detalles: {
-              accion: m.tipo === 'ingreso' ? 'Registro de Ingreso' : 'Registro de Gasto',
-              descripcion: m.descripcion || m.categoria_label || 'Movimiento en Cuentas',
-              monto: m.monto,
-            },
-            timestamp: fecha,
-          });
-          eventIds.add(idMov);
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Error sincronizando movimientos financieros a telemetría:', err);
-  }
-
   // Extraer usuarios registrados y sus accesos desde la tabla usuarios de Supabase
   try {
     const { data: dbUsuarios } = await supabase.from('usuarios').select('*');
@@ -402,7 +389,7 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
             id: idUserEvt,
             tipo: 'login',
             nombre: u.nombre,
-            contacto: u.celular || u.email || '3104567890',
+            contacto: u.celular || u.email || 'Sin contacto',
             rol: u.rol || 'AGRICULTOR',
             detalles: { canal: 'App Móvil / Web' },
             timestamp: fecha,
@@ -540,47 +527,16 @@ export async function obtenerResumenMetricas(): Promise<MetricSummary> {
     }
   } catch {}
 
-  // Reconstruir onboarding y usuarios desde fincas reales registradas en Supabase
-  try {
-    const { data: dbFincas } = await supabase.from('fincas').select('*');
-    if (dbFincas && dbFincas.length > 0) {
-      for (const f of dbFincas) {
-        const prodNombre = f.nombre === 'Finca La Esperanza' ? 'David' : (f.nombre.toLowerCase().includes('naranjo') ? 'Daniela Yucumá' : (f.propietario || 'Productor'));
-        const clave = `${f.nombre}-${f.id}`;
-        if (!usuariosMap.has(clave)) {
-          usuariosMap.set(clave, {
-            nombre: `${prodNombre} (${f.nombre})`,
-            contacto: f.departamento ? `${f.departamento}` : 'Colombia',
-            rol: 'AGRICULTOR',
-            estado: 'completado',
-            fecha: new Date().toISOString(),
-          });
-        }
-      }
-    }
-  } catch {}
-
-  // Contadores finales considerando datos en base de datos
-  const totalFincasRegistradas = usuariosMap.size;
-  const finalTotalLogins = Math.max(totalLogins, conexionesMap.size, 5);
-  const finalTotalRegistros = Math.max(totalRegistros, totalFincasRegistradas, 5);
-  const finalOnboardingIniciados = Math.max(onboardingIniciados, totalFincasRegistradas, 5);
-  const finalOnboardingCompletados = Math.max(
-    onboardingCompletados,
-    Array.from(usuariosMap.values()).filter((u) => u.estado === 'completado').length,
-    4
-  );
+  // Contadores finales reales
+  const finalTotalLogins = Math.max(totalLogins, conexionesMap.size);
+  const finalTotalRegistros = totalRegistros;
+  const finalOnboardingIniciados = onboardingIniciados;
+  const finalOnboardingCompletados = onboardingCompletados;
 
   const finalTasaOnboarding =
     finalOnboardingIniciados > 0
       ? Math.round((finalOnboardingCompletados / finalOnboardingIniciados) * 100)
-      : 100;
-
-  // Garantizar distribución por rol si no hay eventos locales
-  if (Object.keys(usuariosPorRol).length === 0) {
-    usuariosPorRol['AGRICULTOR'] = finalTotalRegistros;
-    usuariosPorRol['CERES'] = 1;
-  }
+      : (finalTotalRegistros > 0 ? 100 : 0);
 
   return {
     totalLogins: finalTotalLogins,
