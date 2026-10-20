@@ -24,9 +24,10 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { REGIONES, DEPARTAMENTOS } from '../data/regiones';
 import { getFincas, saveFincas } from '../../../services/fincasService';
 import type { Finca, LoteCafe } from '../../../types/finca';
+import { MensajeErrorCampo, vibrarError } from '../../utils/usabilidad';
 
 const selectClass =
-    'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 font-bold text-gray-800 outline-none focus:border-[#5f705f]';
+    'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 font-bold text-gray-800 outline-none focus:border-[#5f705f] transition-all';
 
 function Campo({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
     return (
@@ -74,10 +75,13 @@ export function FincaPage() {
 
     const guardarFinca = (data: Partial<Finca>) => {
         if (fincaSheet === 'nueva') {
-            const nuevaId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-                const r = (Math.random() * 16) | 0;
-                return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-            });
+            const nuevaId =
+                typeof crypto !== 'undefined' && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                          const r = (Math.random() * 16) | 0;
+                          return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+                      });
             const nueva: Finca = {
                 id: nuevaId,
                 nombre: data.nombre!,
@@ -212,11 +216,10 @@ export function FincaPage() {
                                 </span>
                             </div>
 
-                            {/* Lista de parcelas: En móvil apilada, en PC en cuadrícula de 2 o 3 columnas */}
                             {finca.lotesDeCafe.length === 0 ? (
                                 <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center">
                                     <p className="text-sm font-bold text-gray-600">Aún no has agregado parcelas a esta finca.</p>
-                                    <p className="text-xs text-gray-400 mt-1">Agrega tu primer lote o lote de café sembrado.</p>
+                                    <p className="text-xs text-gray-400 mt-1">Agrega tu primer lote de café sembrado.</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -360,10 +363,19 @@ function FincaForm({ finca, onSave }: { finca: Finca | null; onSave: (d: Partial
     const [departamento, setDepartamento] = useState(finca?.departamento || '');
     const [municipio, setMunicipio] = useState(finca?.municipio || '');
     const [area, setArea] = useState(finca?.areaAproximada || '');
+    const [errores, setErrores] = useState<{ nombre?: string; departamento?: string; municipio?: string }>({});
+    const [shakeKey, setShakeKey] = useState(0);
 
     const submit = () => {
-        if (!nombre.trim() || !departamento || !municipio) {
-            toast.error('Completa nombre, departamento y municipio');
+        const err: { nombre?: string; departamento?: string; municipio?: string } = {};
+        if (!nombre.trim()) err.nombre = 'Escribe cómo se llama tu finca.';
+        if (!departamento) err.departamento = 'Elige el departamento de la finca.';
+        if (!municipio) err.municipio = departamento ? 'Elige el municipio de la finca.' : 'Primero elige el departamento.';
+
+        if (err.nombre || err.departamento || err.municipio) {
+            setErrores(err);
+            setShakeKey((k) => k + 1);
+            vibrarError();
             return;
         }
         onSave({ nombre: nombre.trim(), departamento, municipio, areaAproximada: area });
@@ -371,43 +383,85 @@ function FincaForm({ finca, onSave }: { finca: Finca | null; onSave: (d: Partial
 
     return (
         <div className="space-y-4">
-            <Campo label="Nombre de la finca">
-                <input
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej: Finca La Esperanza"
-                    className={selectClass}
-                    autoFocus
-                />
-            </Campo>
-            <Campo label="Departamento">
-                <select
-                    value={departamento}
-                    onChange={(e) => {
-                        setDepartamento(e.target.value);
-                        setMunicipio('');
-                    }}
-                    className={selectClass}
-                >
-                    <option value="">Elige…</option>
-                    {DEPARTAMENTOS.map((d) => (
-                        <option key={d}>{d}</option>
-                    ))}
-                </select>
-            </Campo>
-            <Campo label="Municipio">
-                <select
-                    value={municipio}
-                    onChange={(e) => setMunicipio(e.target.value)}
-                    disabled={!departamento}
-                    className={cn(selectClass, !departamento && 'opacity-40')}
-                >
-                    <option value="">Elige…</option>
-                    {(REGIONES[departamento] || []).map((m) => (
-                        <option key={m}>{m}</option>
-                    ))}
-                </select>
-            </Campo>
+            <div key={`f-nom-${shakeKey}-${!!errores.nombre}`} className={cn(errores.nombre && 'odisea-shake')}>
+                <Campo label="Nombre de la finca *">
+                    <input
+                        value={nombre}
+                        onChange={(e) => {
+                            setNombre(e.target.value);
+                            if (errores.nombre) setErrores((p) => ({ ...p, nombre: undefined }));
+                        }}
+                        placeholder="Ej: Finca La Esperanza"
+                        className={cn(
+                            selectClass,
+                            errores.nombre && 'odisea-field-error',
+                            !errores.nombre && nombre.trim().length >= 2 && 'odisea-field-ok'
+                        )}
+                        autoFocus
+                    />
+                </Campo>
+                <MensajeErrorCampo mensaje={errores.nombre} />
+            </div>
+
+            <div key={`f-dep-${shakeKey}-${!!errores.departamento}`} className={cn(errores.departamento && 'odisea-shake')}>
+                <Campo label="Departamento *">
+                    <select
+                        value={departamento}
+                        onChange={(e) => {
+                            setDepartamento(e.target.value);
+                            setMunicipio('');
+                            if (errores.departamento) setErrores((p) => ({ ...p, departamento: undefined }));
+                        }}
+                        className={cn(
+                            selectClass,
+                            errores.departamento && 'odisea-field-error',
+                            !errores.departamento && departamento && 'odisea-field-ok'
+                        )}
+                    >
+                        <option value="">Toca aquí para elegir…</option>
+                        {DEPARTAMENTOS.map((d) => (
+                            <option key={d}>{d}</option>
+                        ))}
+                    </select>
+                </Campo>
+                <MensajeErrorCampo mensaje={errores.departamento} />
+            </div>
+
+            <div
+                key={`f-mun-${shakeKey}-${!!errores.municipio}`}
+                className={cn(errores.municipio && 'odisea-shake')}
+                onClick={() => {
+                    if (!departamento) {
+                        setErrores((p) => ({ ...p, departamento: 'Primero elige el departamento arriba.' }));
+                        setShakeKey((k) => k + 1);
+                        vibrarError();
+                    }
+                }}
+            >
+                <Campo label="Municipio *">
+                    <select
+                        value={municipio}
+                        onChange={(e) => {
+                            setMunicipio(e.target.value);
+                            if (errores.municipio) setErrores((p) => ({ ...p, municipio: undefined }));
+                        }}
+                        disabled={!departamento}
+                        className={cn(
+                            selectClass,
+                            !departamento && 'opacity-40 pointer-events-none',
+                            errores.municipio && 'odisea-field-error',
+                            !errores.municipio && municipio && 'odisea-field-ok'
+                        )}
+                    >
+                        <option value="">{departamento ? 'Toca aquí para elegir…' : 'Primero elige el departamento…'}</option>
+                        {(REGIONES[departamento] || []).map((m) => (
+                            <option key={m}>{m}</option>
+                        ))}
+                    </select>
+                </Campo>
+                <MensajeErrorCampo mensaje={errores.municipio} />
+            </div>
+
             <Campo label="Área total aproximada" hint="Un estimado está bien. Después lo ajustas.">
                 <div className="relative">
                     <input
@@ -421,8 +475,8 @@ function FincaForm({ finca, onSave }: { finca: Finca | null; onSave: (d: Partial
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg">hectáreas</span>
                 </div>
             </Campo>
-            <button onClick={submit} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg gap-2">
-                <Check size={20} /> Guardar
+            <button onClick={submit} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg gap-2 cursor-pointer">
+                <Check size={20} /> Guardar finca
             </button>
         </div>
     );
@@ -452,7 +506,6 @@ function ParcelaForm({
     onSave: (d: LoteCafe) => void;
     onDelete?: () => void;
 }) {
-    const online = useOnlineStatus();
     const geo = useGeolocation();
     const [nombre, setNombre] = useState(parcela?.nombre || '');
     const [area, setArea] = useState(parcela?.area || '');
@@ -465,6 +518,9 @@ function ParcelaForm({
     const [altitud, setAltitud] = useState(parcela?.altitudMsnm?.toString() || '');
     const [sombrio, setSombrio] = useState<LoteCafe['tipoSombrio'] | ''>(parcela?.tipoSombrio || '');
     const [fuente, setFuente] = useState<LoteCafe['fuenteAgua'] | ''>(parcela?.fuenteAgua || '');
+    const [errorNombre, setErrorNombre] = useState<string | null>(null);
+    const [shakeKey, setShakeKey] = useState(0);
+    const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
     const ubic = geo.posicion
         ? { ...geo.posicion, metodo: 'GPS' as const }
@@ -487,14 +543,21 @@ function ParcelaForm({
 
     const submit = () => {
         if (!nombre.trim()) {
-            toast.error('Ponle un nombre a la parcela');
+            setErrorNombre('Ponle un nombre a esta parcela (ej: "El Mirador" o "Lote 1").');
+            setShakeKey((k) => k + 1);
+            vibrarError();
             return;
         }
+        const variedadesFinales =
+            nuevaVar.trim() && !variedades.includes(nuevaVar.trim())
+                ? [...variedades, nuevaVar.trim()]
+                : variedades;
+
         const data: LoteCafe = {
             id: parcela?.id || Date.now().toString(),
             nombre: nombre.trim(),
             area: area || '',
-            variedades,
+            variedades: variedadesFinales,
             ubicacion: ubic,
             coordenadaCentral: ubic ? `Lat: ${ubic.lat}, Long: ${ubic.lng}` : parcela?.coordenadaCentral || '',
             estadoEUDR: ubic ? 'En revisión' : parcela?.estadoEUDR || 'Pendiente',
@@ -514,9 +577,26 @@ function ParcelaForm({
 
     return (
         <div className="space-y-4">
-            <Campo label="Nombre de la parcela" hint='Como la conoces: "El Mirador", "Lote de abajo"…'>
-                <input value={nombre} onChange={(e) => setNombre(e.target.value)} className={selectClass} autoFocus />
-            </Campo>
+            <div key={`p-nom-${shakeKey}-${!!errorNombre}`} className={cn(errorNombre && 'odisea-shake')}>
+                <Campo label="Nombre de la parcela *" hint='Como la conoces: "El Mirador", "Lote de abajo"…'>
+                    <input
+                        value={nombre}
+                        onChange={(e) => {
+                            setNombre(e.target.value);
+                            if (errorNombre) setErrorNombre(null);
+                        }}
+                        placeholder='Ej: "El Mirador"'
+                        className={cn(
+                            selectClass,
+                            errorNombre && 'odisea-field-error',
+                            !errorNombre && nombre.trim().length >= 2 && 'odisea-field-ok'
+                        )}
+                        autoFocus
+                    />
+                </Campo>
+                <MensajeErrorCampo mensaje={errorNombre} />
+            </div>
+
             <Campo label="Área">
                 <div className="relative">
                     <input
@@ -555,7 +635,6 @@ function ParcelaForm({
                         })}
                     </div>
 
-                    {/* Variedades añadidas que no están en la lista común */}
                     {variedades.filter((v) => !VARIEDADES_COMUNES.includes(v)).length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3 pt-1 border-t border-gray-100">
                             {variedades
@@ -580,7 +659,6 @@ function ParcelaForm({
                         </div>
                     )}
 
-                    {/* Botón o input para otra variedad */}
                     {!mostrarOtro ? (
                         <button
                             type="button"
@@ -665,7 +743,7 @@ function ParcelaForm({
                 <button
                     onClick={geo.capturar}
                     disabled={geo.capturando}
-                    className="pr-tap w-full rounded-xl bg-[#5f705f] text-white font-black text-[15px] gap-2"
+                    className="pr-tap w-full rounded-xl bg-[#5f705f] text-white font-black text-[15px] gap-2 cursor-pointer"
                 >
                     {geo.capturando ? (
                         <>
@@ -682,7 +760,7 @@ function ParcelaForm({
             {/* Más datos opcionales */}
             <button
                 onClick={() => setMasDatos((v) => !v)}
-                className="w-full flex items-center justify-between text-[14px] font-black text-[#5f705f]"
+                className="w-full flex items-center justify-between text-[14px] font-black text-[#5f705f] cursor-pointer"
             >
                 Más datos de la parcela (opcional)
                 <ChevronDown size={18} className={cn('transition-transform', masDatos && 'rotate-180')} />
@@ -741,16 +819,41 @@ function ParcelaForm({
                 )}
             </AnimatePresence>
 
-            <button onClick={submit} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg gap-2">
+            <button onClick={submit} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg gap-2 cursor-pointer">
                 <Check size={20} /> Guardar parcela
             </button>
             {onDelete && (
-                <button
-                    onClick={onDelete}
-                    className="pr-tap w-full rounded-2xl bg-white border border-rose-100 text-rose-600 font-bold text-[15px] gap-2"
-                >
-                    <Trash2 size={18} /> Eliminar parcela
-                </button>
+                !confirmandoBorrado ? (
+                    <button
+                        type="button"
+                        onClick={() => setConfirmandoBorrado(true)}
+                        className="pr-tap w-full rounded-2xl bg-white border border-rose-200 text-rose-600 font-bold text-[15px] gap-2 cursor-pointer"
+                    >
+                        <Trash2 size={18} /> Eliminar parcela
+                    </button>
+                ) : (
+                    <div className="rounded-2xl bg-red-50 border-2 border-red-300 p-3 space-y-2 animate-fade-in">
+                        <p className="text-center text-xs font-extrabold text-red-800">
+                            ¿Seguro que quieres borrar la parcela "{nombre}"?
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmandoBorrado(false)}
+                                className="h-11 rounded-xl bg-white border border-gray-300 font-bold text-xs text-gray-700 cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onDelete}
+                                className="h-11 rounded-xl bg-red-600 text-white font-extrabold text-xs cursor-pointer"
+                            >
+                                Sí, borrarla
+                            </button>
+                        </div>
+                    </div>
+                )
             )}
         </div>
     );

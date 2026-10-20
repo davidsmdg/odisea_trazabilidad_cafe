@@ -18,6 +18,7 @@ import { BottomSheet } from '../components/BottomSheet';
 import { HojaMovimiento } from '../components/finanzas/HojaMovimiento';
 import { iconoDe } from '../data/iconosFinanzas';
 import { formatoPlata, formatoNumero, etiquetaDia, mesLabel } from '../utils/formato';
+import { describirMontoEnPalabras, vibrarError, vibrarExito, MensajeErrorCampo } from '../../utils/usabilidad';
 import type {
     CategoriaFinanciera,
     Libro,
@@ -518,43 +519,72 @@ function SemillaForm({
     const [gc, setGc] = useState('');
     const [ic, setIc] = useState('');
     const [gh, setGh] = useState('');
-    const input =
-        'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 pl-9 pr-4 text-lg font-black text-gray-800 outline-none focus:border-[#5f705f]';
+    const [errorVacio, setErrorVacio] = useState(false);
+    const [shakeKey, setShakeKey] = useState(0);
 
-    const campo = (label: string, v: string, set: (x: string) => void) => (
-        <label className="block">
-            <span className="block text-[13px] font-bold text-gray-600 mb-1.5">{label}</span>
-            <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-gray-300">$</span>
-                <input
-                    type="text"
-                    inputMode="numeric"
-                    value={v ? formatoNumero(Number(v)) : ''}
-                    onChange={(e) => set(e.target.value.replace(/\D/g, ''))}
-                    placeholder="0"
-                    className={input}
-                />
-            </div>
-        </label>
-    );
+    const input =
+        'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 pl-9 pr-4 text-lg font-black text-gray-800 outline-none focus:border-[#5f705f] transition-colors';
+
+    const campo = (label: string, v: string, set: (x: string) => void) => {
+        const num = Number(v) || 0;
+        return (
+            <label className="block">
+                <span className="block text-[13px] font-bold text-gray-600 mb-1.5">{label}</span>
+                <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-gray-300">$</span>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        value={v ? formatoNumero(Number(v)) : ''}
+                        onChange={(e) => {
+                            set(e.target.value.replace(/\D/g, ''));
+                            if (errorVacio) setErrorVacio(false);
+                        }}
+                        placeholder="0"
+                        className={cn(input, errorVacio && 'odisea-field-error')}
+                    />
+                </div>
+                {num > 0 && (
+                    <p className="mt-1.5 text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 inline-block">
+                        ✓ Estás anotando: {describirMontoEnPalabras(num)}
+                    </p>
+                )}
+            </label>
+        );
+    };
+
+    const guardar = () => {
+        const gCafe = Number(gc) || 0;
+        const iCafe = Number(ic) || 0;
+        const gHogar = Number(gh) || 0;
+        if (gCafe <= 0 && iCafe <= 0 && gHogar <= 0) {
+            setErrorVacio(true);
+            setShakeKey((k) => k + 1);
+            vibrarError();
+            return;
+        }
+        vibrarExito();
+        onGuardar({
+            gastoCafe: gCafe || undefined,
+            ingresoCafe: iCafe || undefined,
+            gastoHogar: gHogar || undefined,
+        });
+    };
 
     return (
-        <div className="space-y-4">
+        <div key={shakeKey} className={cn('space-y-4', errorVacio && 'odisea-shake')}>
             <p className="text-[14px] text-gray-500">
                 No tiene que ser exacto. Un aproximado sirve para que las cuentas de esta cosecha empiecen con la realidad.
             </p>
             {campo('Más o menos he gastado en el café', gc, setGc)}
             {campo('Más o menos he recibido por el café', ic, setIc)}
             {campo('Más o menos he gastado en la casa', gh, setGh)}
+            {errorVacio && (
+                <MensajeErrorCampo mensaje="Escribe al menos un valor aproximado en cualquiera de las casillas para guardar." />
+            )}
             <button
-                onClick={() =>
-                    onGuardar({
-                        gastoCafe: Number(gc) || undefined,
-                        ingresoCafe: Number(ic) || undefined,
-                        gastoHogar: Number(gh) || undefined,
-                    })
-                }
-                className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg"
+                onClick={guardar}
+                className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg cursor-pointer"
             >
                 Guardar punto de partida
             </button>

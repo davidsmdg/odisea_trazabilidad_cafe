@@ -11,7 +11,6 @@ import {
     X,
     PartyPopper,
     AlertCircle,
-    HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../components/ui/utils';
@@ -24,9 +23,15 @@ import { marcarOnboarding } from './utils/onboardingFlag';
 import { useAuth } from '../context/AuthContext';
 import { registrarEvento } from '../../services/telemetryService';
 import type { Finca, LoteCafe } from '../../types/finca';
+import {
+    MensajeErrorCampo,
+    vibrarError,
+    enfocarCampoConError,
+    describirMontoEnPalabras,
+} from '../utils/usabilidad';
 
 const inputBase =
-    'w-full h-14 rounded-2xl bg-white border-2 border-[#DAD6CF] px-4 font-extrabold text-base text-[#2D3E33] outline-none focus:border-[#2D3E33] shadow-sm';
+    'w-full h-14 rounded-2xl bg-white border-2 border-[#DAD6CF] px-4 font-extrabold text-base text-[#2D3E33] outline-none focus:border-[#2D3E33] shadow-sm transition-all';
 
 function Label({ children }: { children: React.ReactNode }) {
     return <span className="block text-[15px] font-extrabold uppercase tracking-wide text-[#2D3E33] mb-2">{children}</span>;
@@ -57,6 +62,8 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
     const [departamento, setDepartamento] = useState('');
     const [municipio, setMunicipio] = useState('');
     const [area, setArea] = useState('');
+    const [erroresPaso0, setErroresPaso0] = useState<{ nombre?: string; departamento?: string; municipio?: string }>({});
+    const [shakeKey, setShakeKey] = useState(0);
 
     // Parcela
     const [pNombre, setPNombre] = useState('');
@@ -85,25 +92,56 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
         setMostrarOtro(false);
     };
 
+    const avanzarPaso0 = () => {
+        const err: { nombre?: string; departamento?: string; municipio?: string } = {};
+        if (!nombre.trim()) err.nombre = 'Escribe cómo se llama tu finca.';
+        if (!departamento) err.departamento = 'Toca aquí y elige tu departamento.';
+        if (!municipio) err.municipio = departamento ? 'Toca aquí y elige tu municipio.' : 'Primero elige el departamento arriba.';
+
+        if (err.nombre || err.departamento || err.municipio) {
+            setErroresPaso0(err);
+            setShakeKey((k) => k + 1);
+            vibrarError();
+            if (err.nombre) enfocarCampoConError('onb-finca-nombre');
+            else if (err.departamento) enfocarCampoConError('onb-finca-depto');
+            else if (err.municipio) enfocarCampoConError('onb-finca-mpio');
+            return;
+        }
+        setErroresPaso0({});
+        setPaso(1);
+    };
+
     const finalizar = async () => {
         setGuardando(true);
         try {
-            const fincaId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-                const r = (Math.random() * 16) | 0;
-                return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-            });
+            const fincaId =
+                typeof crypto !== 'undefined' && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                          const r = (Math.random() * 16) | 0;
+                          return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+                      });
+
+            const variedadesFinales =
+                nuevaVar.trim() && !variedades.includes(nuevaVar.trim())
+                    ? [...variedades, nuevaVar.trim()]
+                    : variedades;
+
             const parcelas: LoteCafe[] = [];
             if (pNombre.trim()) {
-                const parcelaId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-                    const r = (Math.random() * 16) | 0;
-                    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-                });
+                const parcelaId =
+                    typeof crypto !== 'undefined' && crypto.randomUUID
+                        ? crypto.randomUUID()
+                        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                              const r = (Math.random() * 16) | 0;
+                              return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+                          });
                 const ubic = geo.posicion ? { ...geo.posicion, metodo: 'GPS' as const } : undefined;
                 parcelas.push({
                     id: parcelaId,
                     nombre: pNombre.trim(),
                     area: pArea || '',
-                    variedades,
+                    variedades: variedadesFinales,
                     ubicacion: ubic,
                     coordenadaCentral: ubic ? `Lat: ${ubic.lat}, Long: ${ubic.lng}` : '',
                     estadoEUDR: ubic ? 'En revisión' : 'Pendiente',
@@ -142,7 +180,7 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                 nombre: user?.name,
                 contacto: user?.celular || user?.email,
                 rol: user?.role || 'AGRICULTOR',
-                detalles: { finca: nombre.trim(), municipio, departamento }
+                detalles: { finca: nombre.trim(), municipio, departamento },
             });
             setPaso(3);
         } catch {
@@ -152,22 +190,30 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
         }
     };
 
-    const money = (label: string, v: string, set: (x: string) => void) => (
-        <label className="block">
-            <span className="block text-[15px] font-bold text-gray-800 mb-2">{label}</span>
-            <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl text-gray-400">$</span>
-                <input
-                    type="text"
-                    inputMode="numeric"
-                    value={v ? formatoNumero(Number(v)) : ''}
-                    onChange={(e) => set(e.target.value.replace(/\D/g, ''))}
-                    placeholder="0"
-                    className={cn(inputBase, 'pl-10 text-xl font-black text-gray-900')}
-                />
-            </div>
-        </label>
-    );
+    const money = (label: string, v: string, set: (x: string) => void) => {
+        const enPalabras = describirMontoEnPalabras(v);
+        return (
+            <label className="block space-y-1.5">
+                <span className="block text-[15px] font-bold text-gray-800">{label}</span>
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl text-gray-400">$</span>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        value={v ? formatoNumero(Number(v)) : ''}
+                        onChange={(e) => set(e.target.value.replace(/\D/g, ''))}
+                        placeholder="0"
+                        className={cn(inputBase, 'pl-10 text-xl font-black text-gray-900', Number(v) > 0 && 'odisea-field-ok')}
+                    />
+                </div>
+                {enPalabras && (
+                    <p className="text-xs font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                        ✓ {enPalabras}
+                    </p>
+                )}
+            </label>
+        );
+    };
 
     return (
         <div className="producer-shell min-h-screen bg-[#FDFDF8] text-[#2c362c] mx-auto w-full max-w-md flex flex-col">
@@ -211,45 +257,113 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                                     Empecemos por registrar tu finca. Toma menos de un minuto.
                                 </p>
                             </div>
+
+                            <div
+                                key={`nom-${shakeKey}-${!!erroresPaso0.nombre}`}
+                                className={cn(erroresPaso0.nombre && 'odisea-shake')}
+                            >
+                                <label className="block">
+                                    <Label>1. Nombre de la finca *</Label>
+                                    <input
+                                        id="onb-finca-nombre"
+                                        value={nombre}
+                                        onChange={(e) => {
+                                            setNombre(e.target.value);
+                                            if (erroresPaso0.nombre) setErroresPaso0((p) => ({ ...p, nombre: undefined }));
+                                        }}
+                                        placeholder="Ej: Finca La Esperanza"
+                                        className={cn(
+                                            inputBase,
+                                            erroresPaso0.nombre && 'odisea-field-error',
+                                            !erroresPaso0.nombre && nombre.trim().length >= 2 && 'odisea-field-ok'
+                                        )}
+                                        autoFocus
+                                    />
+                                </label>
+                                <MensajeErrorCampo mensaje={erroresPaso0.nombre} />
+                            </div>
+
+                            <div
+                                key={`dep-${shakeKey}-${!!erroresPaso0.departamento}`}
+                                className={cn(erroresPaso0.departamento && 'odisea-shake')}
+                            >
+                                <label className="block">
+                                    <Label>2. Departamento *</Label>
+                                    <select
+                                        id="onb-finca-depto"
+                                        value={departamento}
+                                        onChange={(e) => {
+                                            setDepartamento(e.target.value);
+                                            setMunicipio('');
+                                            if (erroresPaso0.departamento) setErroresPaso0((p) => ({ ...p, departamento: undefined }));
+                                        }}
+                                        className={cn(
+                                            inputBase,
+                                            erroresPaso0.departamento && 'odisea-field-error',
+                                            !erroresPaso0.departamento && departamento && 'odisea-field-ok'
+                                        )}
+                                    >
+                                        <option value="">Toca aquí para elegir…</option>
+                                        {DEPARTAMENTOS.map((d) => (
+                                            <option key={d}>{d}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <MensajeErrorCampo mensaje={erroresPaso0.departamento} />
+                            </div>
+
+                            <div
+                                key={`mun-${shakeKey}-${!!erroresPaso0.municipio}`}
+                                className={cn(erroresPaso0.municipio && 'odisea-shake')}
+                                onClick={() => {
+                                    if (!departamento) {
+                                        setErroresPaso0((p) => ({ ...p, departamento: 'Primero elige el departamento aquí arriba.' }));
+                                        setShakeKey((k) => k + 1);
+                                        vibrarError();
+                                        enfocarCampoConError('onb-finca-depto');
+                                    }
+                                }}
+                            >
+                                <label className="block">
+                                    <Label>3. Municipio *</Label>
+                                    <select
+                                        id="onb-finca-mpio"
+                                        value={municipio}
+                                        onChange={(e) => {
+                                            setMunicipio(e.target.value);
+                                            if (erroresPaso0.municipio) setErroresPaso0((p) => ({ ...p, municipio: undefined }));
+                                        }}
+                                        disabled={!departamento}
+                                        className={cn(
+                                            inputBase,
+                                            !departamento && 'opacity-50 pointer-events-none',
+                                            erroresPaso0.municipio && 'odisea-field-error',
+                                            !erroresPaso0.municipio && municipio && 'odisea-field-ok'
+                                        )}
+                                    >
+                                        <option value="">{departamento ? 'Toca aquí para elegir…' : 'Primero elige el departamento arriba…'}</option>
+                                        {(REGIONES[departamento] || []).map((m) => (
+                                            <option key={m}>{m}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <MensajeErrorCampo mensaje={erroresPaso0.municipio} />
+                            </div>
+
                             <label className="block">
-                                <Label>Nombre de la finca</Label>
-                                <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Finca La Esperanza" className={inputBase} autoFocus />
-                            </label>
-                            <label className="block">
-                                <Label>Departamento</Label>
-                                <select
-                                    value={departamento}
-                                    onChange={(e) => {
-                                        setDepartamento(e.target.value);
-                                        setMunicipio('');
-                                    }}
-                                    className={inputBase}
-                                >
-                                    <option value="">Elige…</option>
-                                    {DEPARTAMENTOS.map((d) => (
-                                        <option key={d}>{d}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="block">
-                                <Label>Municipio</Label>
-                                <select
-                                    value={municipio}
-                                    onChange={(e) => setMunicipio(e.target.value)}
-                                    disabled={!departamento}
-                                    className={cn(inputBase, !departamento && 'opacity-40')}
-                                >
-                                    <option value="">Elige…</option>
-                                    {(REGIONES[departamento] || []).map((m) => (
-                                        <option key={m}>{m}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="block">
-                                <Label>Área total aproximada</Label>
+                                <Label>4. Área total aproximada (opcional)</Label>
                                 <div className="relative">
-                                    <input type="number" inputMode="decimal" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Ej: 3" className={cn(inputBase, 'pr-28')} />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg">hectáreas</span>
+                                    <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        value={area}
+                                        onChange={(e) => setArea(e.target.value)}
+                                        placeholder="Ej: 3"
+                                        className={cn(inputBase, 'pr-28')}
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg">
+                                        hectáreas
+                                    </span>
                                 </div>
                             </label>
                         </div>
@@ -305,7 +419,6 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                                     })}
                                 </div>
 
-                                {/* Variedades añadidas que no están en la lista común */}
                                 {variedades.filter((v) => !VARIEDADES_COMUNES.includes(v)).length > 0 && (
                                     <div className="flex flex-wrap gap-2 mb-3 pt-1 border-t border-gray-100">
                                         {variedades
@@ -330,7 +443,6 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                                     </div>
                                 )}
 
-                                {/* Botón o input para otra variedad */}
                                 {!mostrarOtro ? (
                                     <button
                                         type="button"
@@ -457,18 +569,25 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
             >
                 {paso === 0 && (
                     <button
-                        onClick={() => {
-                            if (!nombre.trim() || !departamento || !municipio) return toast.error('Completa nombre, departamento y municipio');
-                            setPaso(1);
-                        }}
-                        className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg"
+                        onClick={avanzarPaso0}
+                        className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg cursor-pointer"
                     >
                         Siguiente
                     </button>
                 )}
                 {paso === 1 && (
                     <>
-                        <button onClick={() => setPaso(2)} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg">
+                        <button
+                            onClick={() => {
+                                if (nuevaVar.trim() && !variedades.includes(nuevaVar.trim())) {
+                                    setVariedades([...variedades, nuevaVar.trim()]);
+                                    setNuevaVar('');
+                                    setMostrarOtro(false);
+                                }
+                                setPaso(2);
+                            }}
+                            className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg cursor-pointer"
+                        >
                             Siguiente
                         </button>
                         <button
@@ -508,7 +627,7 @@ export function ProducerOnboarding({ onListo }: { onListo: () => void }) {
                     </>
                 )}
                 {paso === 3 && (
-                    <button onClick={onListo} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg">
+                    <button onClick={onListo} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg cursor-pointer">
                         Entrar a mi finca
                     </button>
                 )}

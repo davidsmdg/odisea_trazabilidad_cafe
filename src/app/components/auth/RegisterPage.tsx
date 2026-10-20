@@ -1,7 +1,22 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sprout, Users, Leaf, Coffee, Building, PackageOpen, Check, ArrowRight, ArrowLeft, Loader2, KeyRound } from 'lucide-react';
+import {
+    Sprout,
+    Users,
+    Leaf,
+    Coffee,
+    Building,
+    PackageOpen,
+    Check,
+    ArrowRight,
+    ArrowLeft,
+    Loader2,
+    KeyRound,
+    Eye,
+    EyeOff,
+    CheckCircle2,
+} from 'lucide-react';
 import { useAuth, type UserRole } from '../../context/AuthContext';
 import { validarCodigoInvitacion, consumirCodigoInvitacion } from '../../../services/invitacionesService';
 import { Button } from '../ui/button';
@@ -9,6 +24,13 @@ import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
 import { Eyebrow } from '../ui/Eyebrow';
 import { registrarEvento } from '../../../services/telemetryService';
+import {
+    analizarCelularOCorreo,
+    AsistenteCelular,
+    MensajeErrorCampo,
+    vibrarError,
+    enfocarCampoConError,
+} from '../../utils/usabilidad';
 
 interface RoleCard {
     role: UserRole;
@@ -82,12 +104,21 @@ const ROLES: RoleCard[] = [
 
 type Step = 'role-select' | 'register-form';
 
+interface ErroresRegistro {
+    name?: string;
+    contacto?: string;
+    codigoInvitacion?: string;
+    password?: string;
+    confirmPassword?: string;
+}
+
 export function RegisterPage() {
     const navigate = useNavigate();
     const { register } = useAuth();
 
     const [step, setStep] = useState<Step>('role-select');
     const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+    const [errorRol, setErrorRol] = useState(false);
 
     // Form fields
     const [name, setName] = useState('');
@@ -95,53 +126,92 @@ export function RegisterPage() {
     const [codigoInvitacion, setCodigoInvitacion] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [erroresCampo, setErroresCampo] = useState<ErroresRegistro>({});
+    const [shakeKey, setShakeKey] = useState(0);
 
     const selectedRoleData = ROLES.find((r) => r.role === selectedRole);
+    const estadoContacto = analizarCelularOCorreo(contacto);
 
     const handleRoleSelect = (role: UserRole) => {
         setSelectedRole(role);
+        setErrorRol(false);
     };
 
     const handleContinue = () => {
-        if (!selectedRole) return;
+        if (!selectedRole) {
+            setErrorRol(true);
+            setShakeKey((k) => k + 1);
+            vibrarError();
+            return;
+        }
         setStep('register-form');
     };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim() || !contacto.trim() || !password || !confirmPassword || !codigoInvitacion.trim()) {
-            setError('Por favor completa todos los campos, incluyendo el código de invitación.');
+
+        const nuevosErrores: ErroresRegistro = {};
+
+        if (!name.trim()) {
+            nuevosErrores.name = 'Escribe aquí tu nombre y apellido.';
+        }
+
+        if (!contacto.trim()) {
+            nuevosErrores.contacto = 'Escribe tu número de celular (10 números) o correo.';
+        } else if (!estadoContacto.valido) {
+            nuevosErrores.contacto =
+                estadoContacto.modo === 'celular'
+                    ? estadoContacto.mensaje
+                    : 'Escribe un correo electrónico completo (ej: nombre@gmail.com).';
+        }
+
+        if (!codigoInvitacion.trim()) {
+            nuevosErrores.codigoInvitacion = 'Escribe el código de invitación que te dieron.';
+        }
+
+        if (!password) {
+            nuevosErrores.password = 'Crea una contraseña de al menos 6 letras o números.';
+        } else if (password.length < 6) {
+            nuevosErrores.password = `Te faltan ${6 - password.length} caracteres (mínimo 6).`;
+        }
+
+        if (!confirmPassword) {
+            nuevosErrores.confirmPassword = 'Vuelve a escribir aquí la misma contraseña.';
+        } else if (password !== confirmPassword) {
+            nuevosErrores.confirmPassword = 'Las dos contraseñas no son iguales. Usa el botón "VER" para compararlas.';
+        }
+
+        if (Object.keys(nuevosErrores).length > 0) {
+            setErroresCampo(nuevosErrores);
+            setShakeKey((k) => k + 1);
+            vibrarError();
+            if (nuevosErrores.name) enfocarCampoConError('reg-name');
+            else if (nuevosErrores.contacto) enfocarCampoConError('reg-contacto');
+            else if (nuevosErrores.codigoInvitacion) enfocarCampoConError('reg-codigo');
+            else if (nuevosErrores.password) enfocarCampoConError('reg-password');
+            else if (nuevosErrores.confirmPassword) enfocarCampoConError('reg-confirm');
             return;
         }
 
-        const rawContacto = contacto.trim();
-        const esEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawContacto);
-        const esCelular = rawContacto.replace(/\D/g, '').length >= 10;
-
-        if (!esEmail && !esCelular) {
-            setError('Ingresa un correo electrónico válido o un número de celular de al menos 10 dígitos.');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            setError('Las contraseñas no coinciden.');
-            return;
-        }
-        if (password.length < 6) {
-            setError('La contraseña debe tener al menos 6 caracteres.');
-            return;
-        }
-
+        setErroresCampo({});
         setError('');
         setIsLoading(true);
 
+        const rawContacto = contacto.trim();
+
         try {
-            // Validar código de invitación
             const resCodigo = await validarCodigoInvitacion(codigoInvitacion, selectedRole!);
             if (!resCodigo.valido) {
-                setError(resCodigo.mensaje || 'El código de invitación no es válido.');
+                setErroresCampo({
+                    codigoInvitacion: resCodigo.mensaje || 'Este código de invitación no es válido o ya venció.',
+                });
+                setShakeKey((k) => k + 1);
+                vibrarError();
+                enfocarCampoConError('reg-codigo');
                 setIsLoading(false);
                 return;
             }
@@ -156,12 +226,10 @@ export function RegisterPage() {
                 nombre: name.trim(),
                 contacto: rawContacto,
                 rol: selectedRole!,
-                detalles: { codigo: codigoInvitacion.trim().toUpperCase() }
+                detalles: { codigo: codigoInvitacion.trim().toUpperCase() },
             });
 
-            // Redirige según rol
             if (selectedRole === 'AGRICULTOR') {
-                // Productor nuevo: arranca con la finca vacía y ve el onboarding guiado.
                 [
                     'odisea_fincas',
                     'odisea_onboarding_productor',
@@ -181,20 +249,22 @@ export function RegisterPage() {
                 navigate('/catador/muestras', { replace: true });
             } else if (selectedRole === 'CERES') {
                 navigate('/odisea/lotes', { replace: true });
-            } else if (selectedRole === 'ROASTER') { // Changed from 'ROAST_CLIENT' to 'ROASTER' based on ROLES array
+            } else if (selectedRole === 'ROASTER') {
                 navigate('/tostador/explorar', { replace: true });
             } else {
                 navigate('/', { replace: true });
             }
-        } catch {
-            setError('No se pudo completar el registro. Intenta de nuevo.');
+        } catch (err: any) {
+            vibrarError();
+            setShakeKey((k) => k + 1);
+            setError(err?.message || 'No se pudo completar el registro. Verifica tus datos e intenta de nuevo.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className={cn("mx-auto w-full px-6 sm:px-0 transition-all duration-500 flex flex-col flex-1 h-full sm:h-auto", step === 'role-select' ? "max-w-6xl" : "max-w-md")}>
+        <div className={cn('mx-auto w-full px-6 sm:px-0 transition-all duration-500 flex flex-col flex-1 h-full sm:h-auto', step === 'role-select' ? 'max-w-6xl' : 'max-w-md')}>
             <AnimatePresence mode="wait">
                 {step === 'role-select' && (
                     <motion.div
@@ -205,9 +275,7 @@ export function RegisterPage() {
                         transition={{ duration: 0.3 }}
                         className="flex flex-col h-[calc(100vh-85px)] sm:h-auto"
                     >
-                        {/* Scrollable middle container (Header + Cards) */}
                         <div className="flex-1 overflow-y-auto pr-1 mb-4 space-y-6 sm:overflow-visible">
-                            {/* Header con estilo Landing */}
                             <div className="text-left relative space-y-3">
                                 <div>
                                     <Link
@@ -225,13 +293,23 @@ export function RegisterPage() {
                                         ¿Cuál es tu rol en la cadena de café?
                                     </h1>
                                     <p className="mt-1.5 text-[#4A2E3D]/80 text-base font-medium">
-                                        Selecciona la actividad principal que desempeñas.
+                                        Toca uno de los cuadros de abajo (si tienes finca cafetera, toca <strong>Agricultor</strong>).
                                     </p>
                                 </div>
                             </div>
 
+                            {errorRol && (
+                                <div key={shakeKey} className="odisea-shake rounded-2xl bg-red-50 border-2 border-red-300 p-4 text-red-800 font-extrabold text-sm flex items-center gap-2.5">
+                                    <span className="text-lg">👆</span>
+                                    <span>Primero toca una de las opciones de abajo (por ejemplo: <strong>Agricultor</strong>) para poder continuar.</span>
+                                </div>
+                            )}
+
                             {/* Role Cards */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
+                            <div
+                                key={`roles-${shakeKey}-${errorRol}`}
+                                className={cn('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-2', errorRol && 'odisea-shake')}
+                            >
                                 {ROLES.map((roleCard) => {
                                     const Icon = roleCard.icon;
                                     const isSelected = selectedRole === roleCard.role;
@@ -250,18 +328,18 @@ export function RegisterPage() {
                                                     isDisabled
                                                         ? 'opacity-60 bg-gray-50 border-gray-200 cursor-not-allowed filter grayscale'
                                                         : isSelected
-                                                        ? `${roleCard.borderColor} shadow-lg cursor-pointer`
+                                                        ? `${roleCard.borderColor} shadow-lg cursor-pointer ring-2 ring-[#5f705f]/20`
+                                                        : errorRol
+                                                        ? 'border-red-300 bg-red-50/30 cursor-pointer'
                                                         : 'border-gray-200 hover:border-gray-300 hover:shadow-md cursor-pointer'
                                                 )}
                                             >
-                                                {/* Badge si está deshabilitado */}
                                                 {isDisabled && (
                                                     <span className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-wider bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
                                                         Próximamente
                                                     </span>
                                                 )}
 
-                                                {/* Check badge */}
                                                 <AnimatePresence>
                                                     {isSelected && !isDisabled && (
                                                         <motion.div
@@ -269,16 +347,15 @@ export function RegisterPage() {
                                                             animate={{ scale: 1, opacity: 1 }}
                                                             exit={{ scale: 0, opacity: 0 }}
                                                             className={cn(
-                                                                'absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center',
+                                                                'absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center shadow',
                                                                 roleCard.bgColor
                                                             )}
                                                         >
-                                                            <Check className="h-3.5 w-3.5 text-white" />
+                                                            <Check className="h-4 w-4 text-white stroke-[3]" />
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
 
-                                                {/* Icon */}
                                                 <div
                                                     className={cn(
                                                         'w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors',
@@ -301,10 +378,9 @@ export function RegisterPage() {
                                                     />
                                                 </div>
 
-                                                {/* Text */}
                                                 <h3
                                                     className={cn(
-                                                        'font-bold text-base mb-1 transition-colors',
+                                                        'font-extrabold text-lg mb-1 transition-colors',
                                                         isDisabled
                                                             ? 'text-gray-500'
                                                             : isSelected
@@ -319,7 +395,6 @@ export function RegisterPage() {
                                                 </p>
                                             </motion.button>
 
-                                            {/* Warning notice directly below this card if selected and not Agricultor */}
                                             <AnimatePresence>
                                                 {isSelected && !isDisabled && roleCard.role !== 'AGRICULTOR' && (
                                                     <motion.div
@@ -341,29 +416,27 @@ export function RegisterPage() {
                             </div>
                         </div>
 
-                        {/* Fixed actions at the bottom (never scrolls) */}
                         <div className="shrink-0 -mx-6 px-6 pt-5 pb-8 bg-[#e8efe8] border-t border-[#ccdccd] rounded-t-[28px] mt-auto shadow-[0_-8px_24px_rgba(95,112,95,0.08)]">
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <Button
+                                    type="button"
                                     onClick={handleContinue}
-                                    disabled={!selectedRole}
                                     className={cn(
-                                        'w-full sm:flex-1 h-12 rounded-xl font-bold gap-2 text-sm transition-all cursor-pointer',
+                                        'w-full sm:flex-1 h-14 rounded-2xl font-extrabold gap-2 text-base uppercase tracking-wide transition-all cursor-pointer',
                                         selectedRole
-                                            ? 'bg-[#5f705f] hover:bg-[#234d24] text-white shadow-md'
-                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            ? 'bg-[#BD4A1F] hover:bg-[#a53e19] text-white shadow-lg shadow-[#BD4A1F]/25'
+                                            : 'bg-[#5f705f] text-white opacity-90'
                                     )}
                                 >
-                                    Continuar con{' '}
-                                    {selectedRoleData ? selectedRoleData.title : 'selección'}
-                                    <ArrowRight className="h-4 w-4" />
+                                    {selectedRoleData ? `Continuar como ${selectedRoleData.title}` : 'Toca tu rol arriba y continúa'}
+                                    <ArrowRight className="h-5 w-5" />
                                 </Button>
                             </div>
 
                             <p className="mt-4 text-center text-sm text-[#415341] font-semibold">
                                 ¿Ya tienes cuenta?{' '}
-                                <Link to="/auth/login" className="text-[#2a562a] font-bold hover:underline">
-                                    Iniciar sesión
+                                <Link to="/auth/login" className="text-[#BD4A1F] font-extrabold hover:underline">
+                                    Iniciar sesión →
                                 </Link>
                             </p>
                         </div>
@@ -377,16 +450,15 @@ export function RegisterPage() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 24 }}
                         transition={{ duration: 0.3 }}
-                        className="max-w-md mx-auto"
+                        className="max-w-md mx-auto pb-8"
                     >
-                        {/* Header */}
                         <div className="mb-6">
                             <button
                                 onClick={() => setStep('role-select')}
-                                className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#5f705f] transition-colors mb-4 cursor-pointer font-medium"
+                                className="inline-flex items-center gap-2 text-sm text-[#2D3E33] hover:text-[#BD4A1F] transition-colors mb-4 cursor-pointer font-extrabold"
                             >
                                 <ArrowLeft className="h-4 w-4" />
-                                Cambiar rol
+                                Cambiar actividad / rol
                             </button>
 
                             <div className="flex items-center justify-between gap-3 mb-3">
@@ -410,116 +482,210 @@ export function RegisterPage() {
                                 Crea tu cuenta
                             </h1>
                             <p className="text-[#4A2E3D]/80 text-base font-medium mt-1.5">
-                                Ingresa tus datos básicos y tu código de invitación para comenzar.
+                                Llena estos 5 datos para registrar tu cuenta.
                             </p>
                         </div>
 
-                        <form onSubmit={handleRegister} className="space-y-5 bg-white p-6 sm:p-10 rounded-[2rem] shadow-xl border border-[#2D3E33]/10">
-                            <div className="space-y-2">
+                        <form onSubmit={handleRegister} noValidate className="space-y-5 bg-white p-6 sm:p-8 rounded-[2rem] shadow-xl border border-[#2D3E33]/10">
+                            {/* 1. Nombre */}
+                            <div
+                                key={`name-${shakeKey}-${!!erroresCampo.name}`}
+                                className={cn('space-y-1.5', erroresCampo.name && 'odisea-shake')}
+                            >
                                 <label htmlFor="reg-name" className="block text-sm sm:text-base font-extrabold text-[#2D3E33]">
-                                    Tu nombre completo
+                                    1. Tu nombre y apellido
                                 </label>
                                 <Input
                                     id="reg-name"
                                     type="text"
                                     placeholder="Ej: María González"
                                     value={name}
-                                    onChange={(e) => setName(e.target.value)}
+                                    onChange={(e) => {
+                                        setName(e.target.value);
+                                        if (erroresCampo.name) setErroresCampo((p) => ({ ...p, name: undefined }));
+                                    }}
                                     autoComplete="name"
-                                    className="h-14 rounded-2xl text-base font-bold bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33] px-4 shadow-sm"
+                                    className={cn(
+                                        'h-14 rounded-2xl text-base font-bold bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33] px-4 shadow-sm',
+                                        erroresCampo.name && 'odisea-field-error',
+                                        !erroresCampo.name && name.trim().length >= 3 && 'odisea-field-ok'
+                                    )}
                                 />
+                                <MensajeErrorCampo mensaje={erroresCampo.name} />
                             </div>
 
-                            <div className="space-y-2">
+                            {/* 2. Celular o Correo */}
+                            <div
+                                key={`cont-${shakeKey}-${!!erroresCampo.contacto}`}
+                                className={cn('space-y-1.5', erroresCampo.contacto && 'odisea-shake')}
+                            >
                                 <label htmlFor="reg-contacto" className="block text-sm sm:text-base font-extrabold text-[#2D3E33]">
-                                    Número de celular o correo
+                                    2. Tu número de celular (10 números) o correo
                                 </label>
                                 <Input
                                     id="reg-contacto"
                                     type="text"
-                                    placeholder="Ej: 301 530 3014 ó tu@correo.com"
+                                    placeholder="Ej: 301 530 3014"
                                     value={contacto}
-                                    onChange={(e) => setContacto(e.target.value)}
+                                    onChange={(e) => {
+                                        setContacto(e.target.value);
+                                        if (erroresCampo.contacto) setErroresCampo((p) => ({ ...p, contacto: undefined }));
+                                    }}
                                     autoComplete="username"
-                                    className="h-14 rounded-2xl text-base font-bold bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33] px-4 shadow-sm"
+                                    className={cn(
+                                        'h-14 rounded-2xl text-base font-bold bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33] px-4 shadow-sm',
+                                        erroresCampo.contacto && 'odisea-field-error',
+                                        !erroresCampo.contacto && estadoContacto.valido && 'odisea-field-ok'
+                                    )}
                                 />
-                                <p className="text-xs text-[#4A2E3D]/70 font-semibold">
-                                    Si eres productor, te recomendamos usar tu celular para entrar más fácil.
-                                </p>
+                                <AsistenteCelular valor={contacto} />
+                                <MensajeErrorCampo mensaje={erroresCampo.contacto} />
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label htmlFor="reg-codigo" className="text-sm font-semibold text-gray-700 flex items-center justify-between">
-                                    <span>Código de invitación</span>
-                                    <span className="text-xs font-normal text-gray-400">Requerido</span>
+                            {/* 3. Código de invitación */}
+                            <div
+                                key={`cod-${shakeKey}-${!!erroresCampo.codigoInvitacion}`}
+                                className={cn('space-y-1.5', erroresCampo.codigoInvitacion && 'odisea-shake')}
+                            >
+                                <label htmlFor="reg-codigo" className="text-sm sm:text-base font-extrabold text-[#2D3E33] flex items-center justify-between">
+                                    <span>3. Código de invitación</span>
+                                    <span className="text-xs font-bold text-[#BD4A1F] bg-[#BD4A1F]/10 px-2.5 py-0.5 rounded-full">Obligatorio</span>
                                 </label>
                                 <div className="relative">
                                     <Input
                                         id="reg-codigo"
                                         type="text"
-                                        placeholder="Ej: CAFE-PILOTO o ODISEA-VIP"
+                                        placeholder="Ej: EXPO2026"
                                         value={codigoInvitacion}
-                                        onChange={(e) => setCodigoInvitacion(e.target.value.toUpperCase())}
-                                        className="h-11 rounded-xl font-mono uppercase tracking-wider pl-10"
+                                        onChange={(e) => {
+                                            setCodigoInvitacion(e.target.value.toUpperCase());
+                                            if (erroresCampo.codigoInvitacion) setErroresCampo((p) => ({ ...p, codigoInvitacion: undefined }));
+                                        }}
+                                        className={cn(
+                                            'h-14 rounded-2xl font-mono text-base font-extrabold uppercase tracking-wider pl-11 bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33]',
+                                            erroresCampo.codigoInvitacion && 'odisea-field-error',
+                                            !erroresCampo.codigoInvitacion && codigoInvitacion.trim().length >= 4 && 'odisea-field-ok'
+                                        )}
                                     />
-                                    <KeyRound className="h-4 w-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                    <KeyRound className="h-5 w-5 text-[#2D3E33]/50 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                 </div>
-                                <p className="text-xs text-gray-400">
-                                    Ingresa el código proporcionado por el administrador de Odisea.
-                                </p>
+                                <MensajeErrorCampo mensaje={erroresCampo.codigoInvitacion} />
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label htmlFor="reg-password" className="text-sm font-semibold text-gray-700">
-                                    Contraseña
+                            {/* 4. Contraseña con Ojito */}
+                            <div
+                                key={`pw-${shakeKey}-${!!erroresCampo.password}`}
+                                className={cn('space-y-1.5', erroresCampo.password && 'odisea-shake')}
+                            >
+                                <label htmlFor="reg-password" className="block text-sm sm:text-base font-extrabold text-[#2D3E33]">
+                                    4. Crea una contraseña (mínimo 6 letras o números)
                                 </label>
-                                <Input
-                                    id="reg-password"
-                                    type="password"
-                                    placeholder="Mínimo 6 caracteres"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    className="h-11 rounded-xl"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="reg-password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder="Mínimo 6 caracteres"
+                                        value={password}
+                                        onChange={(e) => {
+                                            setPassword(e.target.value);
+                                            if (erroresCampo.password) setErroresCampo((p) => ({ ...p, password: undefined }));
+                                        }}
+                                        autoComplete="new-password"
+                                        className={cn(
+                                            'h-14 rounded-2xl text-base font-bold bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33] pr-28 px-4',
+                                            erroresCampo.password && 'odisea-field-error',
+                                            !erroresCampo.password && password.length >= 6 && 'odisea-field-ok'
+                                        )}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-[#2D3E33]/10 hover:bg-[#2D3E33]/20 text-[#2D3E33] px-3 py-2 cursor-pointer rounded-xl text-xs font-extrabold uppercase tracking-wider transition-colors"
+                                    >
+                                        {showPassword ? <><EyeOff className="h-4 w-4" /><span>Ocultar</span></> : <><Eye className="h-4 w-4" /><span>Ver</span></>}
+                                    </button>
+                                </div>
+                                {password.length > 0 && password.length < 6 && !erroresCampo.password && (
+                                    <p className="text-xs font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+                                        Llevas {password.length} de 6 caracteres (te faltan {6 - password.length}).
+                                    </p>
+                                )}
+                                {password.length >= 6 && !erroresCampo.password && (
+                                    <p className="text-xs font-extrabold text-emerald-800 flex items-center gap-1.5">
+                                        <CheckCircle2 size={14} className="text-emerald-600" /> ¡Contraseña de buen tamaño!
+                                    </p>
+                                )}
+                                <MensajeErrorCampo mensaje={erroresCampo.password} />
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label htmlFor="reg-confirm" className="text-sm font-semibold text-gray-700">
-                                    Confirmar contraseña
+                            {/* 5. Confirmar Contraseña con Ojito */}
+                            <div
+                                key={`conf-${shakeKey}-${!!erroresCampo.confirmPassword}`}
+                                className={cn('space-y-1.5', erroresCampo.confirmPassword && 'odisea-shake')}
+                            >
+                                <label htmlFor="reg-confirm" className="block text-sm sm:text-base font-extrabold text-[#2D3E33]">
+                                    5. Repite la misma contraseña
                                 </label>
-                                <Input
-                                    id="reg-confirm"
-                                    type="password"
-                                    placeholder="Repite tu contraseña"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    className="h-11 rounded-xl"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="reg-confirm"
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        placeholder="Escribe otra vez la contraseña"
+                                        value={confirmPassword}
+                                        onChange={(e) => {
+                                            setConfirmPassword(e.target.value);
+                                            if (erroresCampo.confirmPassword) setErroresCampo((p) => ({ ...p, confirmPassword: undefined }));
+                                        }}
+                                        autoComplete="new-password"
+                                        className={cn(
+                                            'h-14 rounded-2xl text-base font-bold bg-[#F6F2EC]/40 border-2 border-[#DAD6CF] text-[#2D3E33] pr-28 px-4',
+                                            erroresCampo.confirmPassword && 'odisea-field-error',
+                                            !erroresCampo.confirmPassword && confirmPassword.length >= 6 && confirmPassword === password && 'odisea-field-ok'
+                                        )}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-[#2D3E33]/10 hover:bg-[#2D3E33]/20 text-[#2D3E33] px-3 py-2 cursor-pointer rounded-xl text-xs font-extrabold uppercase tracking-wider transition-colors"
+                                    >
+                                        {showConfirmPassword ? <><EyeOff className="h-4 w-4" /><span>Ocultar</span></> : <><Eye className="h-4 w-4" /><span>Ver</span></>}
+                                    </button>
+                                </div>
+                                {confirmPassword.length > 0 && confirmPassword === password && (
+                                    <p className="text-xs font-extrabold text-emerald-800 flex items-center gap-1.5">
+                                        <CheckCircle2 size={14} className="text-emerald-600" /> ¡Las dos contraseñas coinciden!
+                                    </p>
+                                )}
+                                {confirmPassword.length > 0 && confirmPassword !== password && !erroresCampo.confirmPassword && (
+                                    <p className="text-xs font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+                                        Todavía no es igual a la contraseña de arriba.
+                                    </p>
+                                )}
+                                <MensajeErrorCampo mensaje={erroresCampo.confirmPassword} />
                             </div>
 
                             {error && (
-                                <motion.p
+                                <motion.div
                                     initial={{ opacity: 0, y: -4 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="text-sm text-[#a35c5c] bg-[#a35c5c]/5 px-4 py-2 rounded-lg"
+                                    className="text-sm font-bold text-red-800 bg-red-50 border-2 border-red-300 px-4 py-3 rounded-2xl flex items-start gap-2"
                                 >
-                                    {error}
-                                </motion.p>
+                                    <span>⚠️</span>
+                                    <span>{error}</span>
+                                </motion.div>
                             )}
 
                             <Button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full h-12 rounded-xl font-bold gap-2 bg-[#5f705f] hover:bg-[#234d24] text-white mt-2"
+                                className="w-full h-14 rounded-full font-extrabold text-base uppercase tracking-wider gap-2 bg-[#BD4A1F] hover:bg-[#a53e19] text-white mt-2 shadow-lg shadow-[#BD4A1F]/25 cursor-pointer"
                             >
                                 {isLoading ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <Loader2 className="h-5 w-5 animate-spin" />
                                 ) : (
                                     <>
-                                        Crear cuenta
-                                        <ArrowRight className="h-4 w-4" />
+                                        Crear mi cuenta
+                                        <ArrowRight className="h-5 w-5" />
                                     </>
                                 )}
                             </Button>

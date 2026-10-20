@@ -6,12 +6,10 @@ import {
     MoreHorizontal,
     Sun,
     Coffee,
-    Sprout,
     BarChart3,
     Megaphone,
     Star,
     Settings2,
-    Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
@@ -19,7 +17,6 @@ import { BottomSheet } from '../components/BottomSheet';
 import { TimelineCosecha } from '../components/TimelineCosecha';
 import { Eyebrow } from '../../components/ui/Eyebrow';
 import { formatoNumero } from '../utils/formato';
-import type { Cosecha } from '../../../types/cosecha';
 import { getCosechas, saveCosechas } from '../../../services/cosechasService';
 import {
     getValidationStageForLote,
@@ -29,6 +26,11 @@ import {
 import { detectAnomaly } from '../../../services/anomaliesService';
 import { registrarEvento } from '../../../services/telemetryService';
 import { useAuth } from '../../context/AuthContext';
+import {
+    MensajeErrorCampo,
+    vibrarError,
+    describirKilosCafe,
+} from '../../utils/usabilidad';
 
 type AccionTipo =
     | 'sumar_cereza'
@@ -88,7 +90,7 @@ function kilosActuales(lote: any) {
     if (lote.fase === 3) return Number(lote.pesos?.verde) || 0;
     if (lote.fase === 2) {
         const p = Number(lote.pesos?.pergamino);
-        return p > 0 ? p : (Number(lote.pesos?.cereza) || 0);
+        return p > 0 ? p : Number(lote.pesos?.cereza) || 0;
     }
     return Number(lote.pesos?.cereza) || 0;
 }
@@ -100,32 +102,47 @@ function NumeroGrande({
     sufijo = 'kilos',
     color = 'text-[#5f705f]',
     autoFocus,
+    error,
+    shakeKey,
 }: {
     value: string;
     onChange: (v: string) => void;
     sufijo?: string;
     color?: string;
     autoFocus?: boolean;
+    error?: string | null;
+    shakeKey?: number;
 }) {
+    const equivKilos = sufijo === 'kilos' ? describirKilosCafe(value) : '';
     return (
-        <div className="relative">
-            <input
-                type="number"
-                inputMode="decimal"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                autoFocus={autoFocus}
-                placeholder="0"
-                className={cn(
-                    'w-full h-20 rounded-2xl bg-white border-2 border-gray-200 text-center text-4xl font-black outline-none focus:border-[#5f705f] pr-24',
-                    color
+        <div key={`ng-${shakeKey}-${!!error}`} className={cn('space-y-1.5', error && 'odisea-shake')}>
+            <div className="relative">
+                <input
+                    type="number"
+                    inputMode="decimal"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    autoFocus={autoFocus}
+                    placeholder="0"
+                    className={cn(
+                        'w-full h-20 rounded-2xl bg-white border-2 border-gray-200 text-center text-4xl font-black outline-none focus:border-[#5f705f] pr-24 transition-all',
+                        color,
+                        error && 'odisea-field-error',
+                        !error && Number(value) > 0 && 'odisea-field-ok'
+                    )}
+                />
+                {sufijo && (
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                        {sufijo}
+                    </span>
                 )}
-            />
-            {sufijo && (
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-[#5f705f] bg-[#5f705f]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">
-                    {sufijo}
-                </span>
+            </div>
+            {equivKilos && !error && (
+                <p className="text-center text-xs font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                    ✓ {equivKilos}
+                </p>
             )}
+            <MensajeErrorCampo mensaje={error} />
         </div>
     );
 }
@@ -143,6 +160,8 @@ export function CosechasPage() {
     const [inputValue, setInputValue] = useState('');
     const [selectValue, setSelectValue] = useState('');
     const [factorValue, setFactorValue] = useState('');
+    const [modalError, setModalError] = useState<string | null>(null);
+    const [shakeKey, setShakeKey] = useState(0);
 
     // Corrección de lote rechazado
     const [correccion, setCorreccion] = useState<any | null>(null);
@@ -177,6 +196,7 @@ export function CosechasPage() {
         setInputValue('');
         setSelectValue('');
         setFactorValue('');
+        setModalError(null);
         setModal({ tipo, lote });
     };
 
@@ -222,7 +242,12 @@ export function CosechasPage() {
         const num = parseFloat(inputValue);
 
         if (tipo === 'sumar_cereza') {
-            if (!num || num <= 0) return toast.error('Escribe cuántos kilos entraron');
+            if (!num || num <= 0) {
+                setModalError('Escribe cuántos kilos de cereza recolectaste hoy (mayor a 0).');
+                setShakeKey((k) => k + 1);
+                vibrarError();
+                return;
+            }
             let total = 0;
             const next = cosechas.map((l) => {
                 if (l.id !== lote.id) return l;
@@ -255,7 +280,12 @@ export function CosechasPage() {
                     });
             } catch {}
         } else if (tipo === 'avanzar_seco') {
-            if (!num || num <= 0) return toast.error('Escribe los kilos de pergamino seco');
+            if (!num || num <= 0) {
+                setModalError('Escribe cuántos kilos pesó tu café pergamino seco.');
+                setShakeKey((k) => k + 1);
+                vibrarError();
+                return;
+            }
             const factor = parseFloat(factorValue);
             await guardar(
                 cosechas.map((l) =>
@@ -286,7 +316,12 @@ export function CosechasPage() {
                 if (a) toast.warning('Peso poco usual', { description: 'Se registró para revisión.' });
             } catch {}
         } else if (tipo === 'avanzar_verde') {
-            if (!num || num <= 0) return toast.error('Escribe los kilos de café verde');
+            if (!num || num <= 0) {
+                setModalError('Escribe cuántos kilos de café verde (trillado) salieron.');
+                setShakeKey((k) => k + 1);
+                vibrarError();
+                return;
+            }
             const factor = parseFloat(factorValue);
             await guardar(
                 cosechas.map((l) =>
@@ -313,7 +348,12 @@ export function CosechasPage() {
             });
             toast.success(`${lote.codigo} trillado: ${num} kilos de verde ☕`);
         } else if (tipo === 'anotar_proceso') {
-            if (!selectValue) return toast.error('Elige un proceso');
+            if (!selectValue) {
+                setModalError('Toca uno de los procesos de arriba (por ejemplo: Lavado).');
+                setShakeKey((k) => k + 1);
+                vibrarError();
+                return;
+            }
             await guardar(
                 cosechas.map((l) =>
                     l.id === lote.id
@@ -323,11 +363,21 @@ export function CosechasPage() {
             );
             toast.success(`Proceso ${selectValue} asignado`);
         } else if (tipo === 'anotar_cata') {
-            if (!num || num < 50 || num > 100) return toast.error('Escribe un puntaje entre 50 y 100');
+            if (!num || num < 50 || num > 100) {
+                setModalError('El puntaje de cata va de 50 a 100 puntos (por ejemplo: 84).');
+                setShakeKey((k) => k + 1);
+                vibrarError();
+                return;
+            }
             await guardar(cosechas.map((l) => (l.id === lote.id ? { ...l, calificacion: num } : l)));
             toast.success(`Puntaje ${num} guardado ⭐`);
         } else if (tipo === 'anotar_factor') {
-            if (!num || num <= 0) return toast.error('Escribe el factor de rendimiento');
+            if (!num || num <= 0) {
+                setModalError('Escribe el factor de rendimiento (por ejemplo: 91.5).');
+                setShakeKey((k) => k + 1);
+                vibrarError();
+                return;
+            }
             await guardar(cosechas.map((l) => (l.id === lote.id ? { ...l, factorRendimiento: num } : l)));
             toast.success(`Factor ${num} guardado`);
             const nombreProd = user?.name || lote.productor || 'Productor';
@@ -403,7 +453,6 @@ export function CosechasPage() {
                 <Plus size={24} /> Registrar nueva cosecha
             </button>
 
-            {/* Filtros estilo píldora de landing */}
             <div className="grid grid-cols-4 gap-2 bg-[#DAD6CF]/40 p-1.5 rounded-2xl border border-[#2D3E33]/10">
                 {FILTROS.map((f) => (
                     <button
@@ -421,7 +470,6 @@ export function CosechasPage() {
                 ))}
             </div>
 
-            {/* Lista: En móvil apilada, en PC en cuadrícula */}
             {cargando ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {[1, 2, 3].map((i) => (
@@ -460,7 +508,6 @@ export function CosechasPage() {
 
                         return (
                             <div key={lote.id} className="rounded-[2rem] bg-white border-2 border-[#DAD6CF]/60 shadow-md p-5 space-y-4">
-                                {/* Cabecera */}
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
                                         <span className="h-9 px-3 rounded-full bg-[#F6F2EC] border border-[#2D3E33]/15 flex items-center justify-center font-heading text-base text-[#BD4A1F]">
@@ -507,10 +554,8 @@ export function CosechasPage() {
                                     </p>
                                 )}
 
-                                {/* Línea de Tiempo y Trazabilidad de la Cosecha */}
                                 <TimelineCosecha lote={lote} />
 
-                                {/* Progreso de meta */}
                                 {lote.modalidad === 'objetivo' && lote.pesos.objetivo > 0 && (
                                     <div className="rounded-2xl bg-[#5f705f]/5 p-3">
                                         <div className="flex justify-between items-center text-[12px] font-black text-gray-600">
@@ -530,7 +575,6 @@ export function CosechasPage() {
                                     </div>
                                 )}
 
-                                {/* Rechazo */}
                                 {rechazado && (
                                     <div className="rounded-2xl bg-rose-50 border border-rose-100 p-3 space-y-2">
                                         <p className="text-[12px] font-black text-rose-800 flex items-center gap-1.5">
@@ -546,7 +590,6 @@ export function CosechasPage() {
                                     </div>
                                 )}
 
-                                {/* Acciones */}
                                 {!rechazado && <AccionesLote lote={lote} onAbrir={abrir} onSecado={iniciarSecado} onOfrecer={toggleOfrecer} />}
                             </div>
                         );
@@ -564,8 +607,18 @@ export function CosechasPage() {
                 <p className="text-center text-[14px] text-gray-500 mb-4">
                     Lote <span className="font-black text-gray-800">{modal?.lote.codigo}</span>. ¿Cuántos kilos de cereza entraron hoy?
                 </p>
-                <NumeroGrande value={inputValue} onChange={setInputValue} color="text-[#bb8d3b]" autoFocus />
-                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5">
+                <NumeroGrande
+                    value={inputValue}
+                    onChange={(v) => {
+                        setInputValue(v);
+                        if (modalError) setModalError(null);
+                    }}
+                    color="text-[#bb8d3b]"
+                    autoFocus
+                    error={modalError}
+                    shakeKey={shakeKey}
+                />
+                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5 cursor-pointer">
                     Guardar
                 </button>
             </BottomSheet>
@@ -575,7 +628,17 @@ export function CosechasPage() {
                     Pesa tu café seco y anota los kilos de <span className="font-black">pergamino</span> del lote{' '}
                     <span className="font-black text-gray-800">{modal?.lote.codigo}</span>.
                 </p>
-                <NumeroGrande value={inputValue} onChange={setInputValue} color="text-[#bb8d3b]" autoFocus />
+                <NumeroGrande
+                    value={inputValue}
+                    onChange={(v) => {
+                        setInputValue(v);
+                        if (modalError) setModalError(null);
+                    }}
+                    color="text-[#bb8d3b]"
+                    autoFocus
+                    error={modalError}
+                    shakeKey={shakeKey}
+                />
                 <label className="block text-[12px] font-black uppercase tracking-wide text-gray-400 mt-4 mb-1">
                     Factor de rendimiento (opcional)
                 </label>
@@ -587,7 +650,7 @@ export function CosechasPage() {
                     placeholder="Ej: 91.5"
                     className="w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 text-center text-lg font-bold outline-none focus:border-[#5f705f]"
                 />
-                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5">
+                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5 cursor-pointer">
                     Guardar
                 </button>
             </BottomSheet>
@@ -597,7 +660,16 @@ export function CosechasPage() {
                     Anota los kilos de café verde (trillado) del lote{' '}
                     <span className="font-black text-gray-800">{modal?.lote.codigo}</span>.
                 </p>
-                <NumeroGrande value={inputValue} onChange={setInputValue} autoFocus />
+                <NumeroGrande
+                    value={inputValue}
+                    onChange={(v) => {
+                        setInputValue(v);
+                        if (modalError) setModalError(null);
+                    }}
+                    autoFocus
+                    error={modalError}
+                    shakeKey={shakeKey}
+                />
                 <label className="block text-[12px] font-black uppercase tracking-wide text-gray-400 mt-4 mb-1">
                     Factor de rendimiento (opcional)
                 </label>
@@ -609,7 +681,7 @@ export function CosechasPage() {
                     placeholder="Ej: 91.5"
                     className="w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 text-center text-lg font-bold outline-none focus:border-[#5f705f]"
                 />
-                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5">
+                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5 cursor-pointer">
                     Guardar
                 </button>
             </BottomSheet>
@@ -619,34 +691,55 @@ export function CosechasPage() {
                     ¿Cómo vas a procesar la cereza del lote{' '}
                     <span className="font-black text-gray-800">{modal?.lote.codigo}</span>?
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div
+                    key={`proc-${shakeKey}-${!!modalError}`}
+                    className={cn(
+                        'grid grid-cols-2 gap-2 p-1 rounded-2xl transition-all',
+                        modalError && 'odisea-shake bg-red-50 border-2 border-red-300'
+                    )}
+                >
                     {PROCESOS.map((p) => (
                         <button
                             key={p}
-                            onClick={() => setSelectValue(p)}
+                            onClick={() => {
+                                setSelectValue(p);
+                                if (modalError) setModalError(null);
+                            }}
                             className={cn(
-                                'rounded-2xl border-2 p-3 text-[13px] font-bold text-left transition-all',
+                                'rounded-2xl border-2 p-3 text-[13px] font-bold text-left transition-all cursor-pointer',
                                 selectValue === p
-                                    ? 'border-[#5f705f] bg-[#5f705f]/5 text-gray-900'
-                                    : 'border-gray-200 bg-white text-gray-500'
+                                    ? 'border-[#5f705f] bg-[#5f705f]/10 text-gray-900'
+                                    : 'border-gray-200 bg-white text-gray-600'
                             )}
                         >
                             {p}
                         </button>
                     ))}
                 </div>
-                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5">
+                <MensajeErrorCampo mensaje={modalError} />
+                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5 cursor-pointer">
                     Asignar proceso
                 </button>
             </BottomSheet>
 
             <BottomSheet open={modal?.tipo === 'anotar_cata'} onClose={() => setModal(null)} title="Puntaje de cata">
                 <p className="text-center text-[14px] text-gray-500 mb-4">
-                    Puntaje SCA que le dio el catador al lote{' '}
+                    Puntaje SCA (entre 50 y 100) que le dio el catador al lote{' '}
                     <span className="font-black text-gray-800">{modal?.lote.codigo}</span>.
                 </p>
-                <NumeroGrande value={inputValue} onChange={setInputValue} sufijo="puntos" color="text-gray-900" autoFocus />
-                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5">
+                <NumeroGrande
+                    value={inputValue}
+                    onChange={(v) => {
+                        setInputValue(v);
+                        if (modalError) setModalError(null);
+                    }}
+                    sufijo="puntos"
+                    color="text-gray-900"
+                    autoFocus
+                    error={modalError}
+                    shakeKey={shakeKey}
+                />
+                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5 cursor-pointer">
                     Guardar puntaje
                 </button>
             </BottomSheet>
@@ -656,8 +749,19 @@ export function CosechasPage() {
                     Factor de rendimiento del lote{' '}
                     <span className="font-black text-gray-800">{modal?.lote.codigo}</span>.
                 </p>
-                <NumeroGrande value={inputValue} onChange={setInputValue} sufijo="" color="text-emerald-600" autoFocus />
-                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5">
+                <NumeroGrande
+                    value={inputValue}
+                    onChange={(v) => {
+                        setInputValue(v);
+                        if (modalError) setModalError(null);
+                    }}
+                    sufijo=""
+                    color="text-emerald-600"
+                    autoFocus
+                    error={modalError}
+                    shakeKey={shakeKey}
+                />
+                <button onClick={confirmar} className="pr-tap w-full rounded-2xl bg-[#5f705f] text-white font-black text-lg mt-5 cursor-pointer">
                     Guardar factor
                 </button>
             </BottomSheet>

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { motion, AnimatePresence } from 'motion/react';
 import {
     User,
     Camera,
     Mic,
-    Type,
     Save,
     Home,
     LogOut,
@@ -18,9 +16,17 @@ import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
+import {
+    vibrarError,
+    vibrarExito,
+    enfocarCampoConError,
+    analizarCelularOCorreo,
+    MensajeErrorCampo,
+    AsistenteCelular,
+} from '../../utils/usabilidad';
 
 const selectClass =
-    'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 font-bold text-gray-800 outline-none focus:border-[#5f705f]';
+    'w-full h-14 rounded-2xl bg-white border-2 border-gray-200 px-4 font-bold text-gray-800 outline-none focus:border-[#5f705f] transition-colors';
 
 function Seccion({ title, children }: { title: string; children: React.ReactNode }) {
     return (
@@ -64,6 +70,11 @@ export function PerfilPage() {
     const [historia, setHistoria] = useState('');
     const [isRecording, setIsRecording] = useState(false);
     const [transcribing, setTranscribing] = useState(false);
+
+    // Estados de usabilidad y validación
+    const [errores, setErrores] = useState<{ nombre?: string; celular?: string }>({});
+    const [shakeKey, setShakeKey] = useState(0);
+    const [confirmarSalida, setConfirmarSalida] = useState(false);
 
     useEffect(() => {
         const cargarPerfil = async () => {
@@ -133,6 +144,31 @@ export function PerfilPage() {
     };
 
     const handleSave = async () => {
+        const nuevosErrores: { nombre?: string; celular?: string } = {};
+        if (!nombre.trim()) {
+            nuevosErrores.nombre = 'Escribe tu nombre completo para que aparezca en tu finca.';
+        }
+
+        if (celular.trim()) {
+            const infoCel = analizarCelularOCorreo(celular);
+            if (!infoCel.valido) {
+                nuevosErrores.celular = infoCel.mensaje;
+            }
+        }
+
+        if (Object.keys(nuevosErrores).length > 0) {
+            setErrores(nuevosErrores);
+            setShakeKey((k) => k + 1);
+            vibrarError();
+            if (nuevosErrores.nombre) {
+                enfocarCampoConError('campo-perfil-nombre');
+            } else if (nuevosErrores.celular) {
+                enfocarCampoConError('campo-perfil-celular');
+            }
+            return;
+        }
+
+        setErrores({});
         setIsSaving(true);
         const payload = {
             nombre,
@@ -181,13 +217,16 @@ export function PerfilPage() {
         }
 
         setIsSaving(false);
-        toast.success('Perfil guardado');
+        vibrarExito();
+        toast.success('¡Listo! Tus datos quedaron guardados.');
     };
 
     const cerrarSesion = () => {
         logout();
         navigate('/auth/login');
     };
+
+    const infoCelular = analizarCelularOCorreo(celular);
 
     return (
         <div className="space-y-5 pb-6">
@@ -213,11 +252,9 @@ export function PerfilPage() {
                         <Camera size={16} />
                     </button>
                 </div>
-                <input
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    className="text-center text-xl md:text-2xl font-black text-gray-900 bg-transparent outline-none border-b-2 border-transparent focus:border-gray-200 pb-1"
-                />
+                <p className="text-center text-xl md:text-2xl font-black text-gray-900 pb-1">
+                    {nombre || 'Mi Perfil'}
+                </p>
             </div>
 
             {/* Grid responsivo de secciones: 1 columna en móvil, 2 columnas en PC */}
@@ -225,15 +262,42 @@ export function PerfilPage() {
                 {/* ── COLUMNA IZQUIERDA (Datos personales y Mi historia) ── */}
                 <div className="space-y-5">
                     <Seccion title="Datos personales">
-                        <Campo label="Número de celular">
-                            <input
-                                value={celular}
-                                onChange={(e) => setCelular(e.target.value)}
-                                placeholder="Sin datos"
-                                className={selectClass}
-                                inputMode="tel"
-                            />
-                        </Campo>
+                        <div id="campo-perfil-nombre" key={`nom-${shakeKey}`} className={cn(errores.nombre && 'odisea-shake')}>
+                            <Campo label="Tu nombre completo *">
+                                <input
+                                    value={nombre}
+                                    onChange={(e) => {
+                                        setNombre(e.target.value);
+                                        if (errores.nombre) setErrores((prev) => ({ ...prev, nombre: undefined }));
+                                    }}
+                                    placeholder="Ej. María Gómez"
+                                    className={cn(selectClass, errores.nombre && 'odisea-field-error')}
+                                />
+                            </Campo>
+                            <MensajeErrorCampo mensaje={errores.nombre} />
+                        </div>
+
+                        <div id="campo-perfil-celular" key={`cel-${shakeKey}`} className={cn(errores.celular && 'odisea-shake')}>
+                            <Campo label="Número de celular (10 números)">
+                                <input
+                                    value={celular}
+                                    onChange={(e) => {
+                                        setCelular(e.target.value);
+                                        if (errores.celular) setErrores((prev) => ({ ...prev, celular: undefined }));
+                                    }}
+                                    placeholder="Ej. 310 123 4567"
+                                    className={cn(
+                                        selectClass,
+                                        errores.celular && 'odisea-field-error',
+                                        !errores.celular && infoCelular.tipo === 'celular' && infoCelular.valido && 'odisea-field-ok'
+                                    )}
+                                    inputMode="tel"
+                                />
+                            </Campo>
+                            <AsistenteCelular valor={celular} />
+                            <MensajeErrorCampo mensaje={errores.celular} />
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3">
                             <Campo label="Género">
                                 <select
@@ -443,12 +507,39 @@ export function PerfilPage() {
                     >
                         <Home size={18} /> Sitio público
                     </Link>
-                    <button
-                        onClick={cerrarSesion}
-                        className="w-full h-12 rounded-full bg-white border-2 border-rose-200 text-rose-600 font-extrabold text-sm uppercase tracking-wider gap-2 hover:bg-rose-50 transition-colors flex items-center justify-center shadow-sm cursor-pointer"
-                    >
-                        <LogOut size={18} /> Cerrar sesión
-                    </button>
+                    {!confirmarSalida ? (
+                        <button
+                            onClick={() => setConfirmarSalida(true)}
+                            className="w-full h-12 rounded-full bg-white border-2 border-rose-200 text-rose-600 font-extrabold text-sm uppercase tracking-wider gap-2 hover:bg-rose-50 transition-colors flex items-center justify-center shadow-sm cursor-pointer"
+                        >
+                            <LogOut size={18} /> Cerrar sesión
+                        </button>
+                    ) : (
+                        <div className="sm:col-span-2 rounded-2xl bg-rose-50 border-2 border-rose-300 p-4 space-y-3">
+                            <p className="text-sm font-black text-rose-900 text-center">
+                                ¿Seguro que quieres salir de tu cuenta?
+                            </p>
+                            <p className="text-xs font-bold text-rose-700 text-center">
+                                Para volver a entrar necesitarás escribir tu celular y tu contraseña.
+                            </p>
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmarSalida(false)}
+                                    className="h-12 rounded-xl bg-white border-2 border-gray-200 font-extrabold text-gray-700 text-sm cursor-pointer"
+                                >
+                                    No, quedarme
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={cerrarSesion}
+                                    className="h-12 rounded-xl bg-rose-600 text-white font-extrabold text-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                    <LogOut size={16} /> Sí, salir
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

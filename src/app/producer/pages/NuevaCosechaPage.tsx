@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Target, ClipboardList, Loader2, ArrowRight, Check } from 'lucide-react';
+import { ChevronLeft, Target, ClipboardList, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../components/ui/utils';
 import { addLote } from '../../../services/lotesService';
@@ -11,6 +11,12 @@ import { detectAnomaly, detectHarvestDateAnomaly } from '../../../services/anoma
 import { registrarEvento } from '../../../services/telemetryService';
 import { Eyebrow } from '../../components/ui/Eyebrow';
 import { useAuth } from '../../context/AuthContext';
+import {
+    MensajeErrorCampo,
+    vibrarError,
+    enfocarCampoConError,
+    describirKilosCafe,
+} from '../../utils/usabilidad';
 
 const VARIEDADES = [
     'Castillo',
@@ -48,7 +54,17 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const selectClass =
-    'w-full h-14 rounded-2xl bg-white border-2 border-stone-200 px-4 font-bold text-[16px] text-[#2D3E33] outline-none focus:border-[#2D3E33] transition-colors';
+    'w-full h-14 rounded-2xl bg-white border-2 border-stone-200 px-4 font-bold text-[16px] text-[#2D3E33] outline-none focus:border-[#2D3E33] transition-all';
+
+interface ErroresCosecha {
+    finca?: string;
+    parcela?: string;
+    modalidad?: string;
+    variedad?: string;
+    proceso?: string;
+    kilosObjetivo?: string;
+    peso?: string;
+}
 
 export function NuevaCosechaPage() {
     const navigate = useNavigate();
@@ -59,11 +75,12 @@ export function NuevaCosechaPage() {
     const [finca, setFinca] = useState('');
     const [parcela, setParcela] = useState('');
     const [modalidad, setModalidad] = useState<'objetivo' | 'diario' | null>(null);
+    const [errores, setErrores] = useState<ErroresCosecha>({});
+    const [shakeKey, setShakeKey] = useState(0);
 
     const paso2Ref = useRef<HTMLDivElement>(null);
     const paso3Ref = useRef<HTMLDivElement>(null);
 
-    // Scroll automático al Paso 2 cuando finca y parcela están seleccionadas
     useEffect(() => {
         if (finca && parcela) {
             const timer = setTimeout(() => {
@@ -73,7 +90,6 @@ export function NuevaCosechaPage() {
         }
     }, [finca, parcela]);
 
-    // Scroll automático al Paso 3 cuando se selecciona modalidad
     useEffect(() => {
         if (modalidad) {
             const timer = setTimeout(() => {
@@ -106,25 +122,37 @@ export function NuevaCosechaPage() {
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
 
     const handleSave = async () => {
-        if (!finca || !parcela) {
-            toast.error('Elige la finca y la parcela');
-            return;
-        }
+        const err: ErroresCosecha = {};
+        if (!finca) err.finca = 'Elige de cuál finca es el café.';
+        if (!parcela) err.parcela = finca ? 'Elige de cuál parcela es el café.' : 'Primero elige la finca arriba.';
+        if (!modalidad) err.modalidad = 'Toca una de las dos opciones de registro.';
+
         if (modalidad === 'objetivo') {
-            if (!variedad || !proceso || !kilosObjetivo) {
-                toast.error('Completa los datos del plan');
-                return;
+            if (!variedad) err.variedad = 'Elige la variedad de café que vas a procesar.';
+            if (!proceso) err.proceso = 'Elige el proceso (Lavado, Natural, Honey…).';
+            if (!kilosObjetivo || Number(kilosObjetivo) <= 0) {
+                err.kilosObjetivo = 'Escribe cuántos kilos de café verde esperas sacar.';
             }
         } else if (modalidad === 'diario') {
-            if (!peso) {
-                toast.error('Escribe cuántos kilos recolectaste');
-                return;
+            if (!peso || Number(peso) <= 0) {
+                err.peso = 'Escribe cuántos kilos de cereza recolectaste hoy.';
             }
-        } else {
-            toast.error('Elige cómo quieres registrar el café');
+        }
+
+        if (Object.keys(err).length > 0) {
+            setErrores(err);
+            setShakeKey((k) => k + 1);
+            vibrarError();
+            if (err.finca) enfocarCampoConError('nc-finca');
+            else if (err.parcela) enfocarCampoConError('nc-parcela');
+            else if (err.variedad) enfocarCampoConError('nc-variedad');
+            else if (err.proceso) enfocarCampoConError('nc-proceso');
+            else if (err.kilosObjetivo) enfocarCampoConError('nc-kilos-obj');
+            else if (err.peso) enfocarCampoConError('nc-peso');
             return;
         }
 
+        setErrores({});
         setIsLoading(true);
         try {
             const randomCode = `LOT-HUI-${Math.floor(100 + Math.random() * 900)}`;
@@ -188,7 +216,7 @@ export function NuevaCosechaPage() {
                 id: randomCode,
                 productor: nombreProductor,
                 finca,
-                municipio: fincasUsuario.find(f => f.nombre === finca)?.municipio || 'San Agustín, Huila',
+                municipio: fincasUsuario.find((f) => f.nombre === finca)?.municipio || 'San Agustín, Huila',
                 variedad: variedad || 'Bourbon Rosado',
                 proceso: proceso || 'Lavado',
                 estado: 'En Finca',
@@ -221,12 +249,15 @@ export function NuevaCosechaPage() {
         }
     };
 
+    const equivalenciaKilosDiario = describirKilosCafe(peso);
+    const equivalenciaKilosObjetivo = describirKilosCafe(kilosObjetivo);
+
     return (
         <div className="max-w-2xl mx-auto space-y-6 pb-10">
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => navigate(-1)}
-                    className="h-12 w-12 rounded-2xl bg-white border border-[#2D3E33]/15 flex items-center justify-center text-[#2D3E33] shadow-sm hover:bg-[#F6F2EC] transition-colors"
+                    className="h-12 w-12 rounded-2xl bg-white border border-[#2D3E33]/15 flex items-center justify-center text-[#2D3E33] shadow-sm hover:bg-[#F6F2EC] transition-colors cursor-pointer"
                     aria-label="Volver"
                 >
                     <ChevronLeft size={26} />
@@ -245,41 +276,75 @@ export function NuevaCosechaPage() {
                     <span className="bg-[#2D3E33] text-[#F6F2EC] px-2.5 py-0.5 rounded-full text-xs font-mono font-bold">01</span>
                     <p className="text-[17px] font-bold text-[#2D3E33]">¿De dónde es el café?</p>
                 </div>
-                <Campo label="Finca">
-                    <select
-                        value={finca}
-                        onChange={(e) => {
-                            setFinca(e.target.value);
-                            const found = fincasUsuario.find((f) => f.nombre === e.target.value);
-                            if (found?.lotesDeCafe && found.lotesDeCafe.length === 1) {
-                                setParcela(found.lotesDeCafe[0].nombre);
-                            } else {
-                                setParcela('');
-                            }
-                        }}
-                        className={selectClass}
-                    >
-                        <option value="">{fincasUsuario.length === 0 ? 'Cargando fincas…' : 'Elige tu finca…'}</option>
-                        {fincasUsuario.map((f) => (
-                            <option key={f.id} value={f.nombre}>{f.nombre}</option>
-                        ))}
-                    </select>
-                </Campo>
-                <Campo label="Parcela">
-                    <select
-                        value={parcela}
-                        onChange={(e) => setParcela(e.target.value)}
-                        disabled={!finca}
-                        className={cn(selectClass, !finca && 'opacity-40')}
-                    >
-                        <option value="">Elige la parcela…</option>
-                        {fincasUsuario
-                            .find((f) => f.nombre === finca)
-                            ?.lotesDeCafe?.map((p) => (
-                                <option key={p.id} value={p.nombre}>{p.nombre}</option>
+
+                <div key={`f-${shakeKey}-${!!errores.finca}`} className={cn(errores.finca && 'odisea-shake')}>
+                    <Campo label="Finca *">
+                        <select
+                            id="nc-finca"
+                            value={finca}
+                            onChange={(e) => {
+                                setFinca(e.target.value);
+                                if (errores.finca) setErrores((p) => ({ ...p, finca: undefined }));
+                                const found = fincasUsuario.find((f) => f.nombre === e.target.value);
+                                if (found?.lotesDeCafe && found.lotesDeCafe.length === 1) {
+                                    setParcela(found.lotesDeCafe[0].nombre);
+                                    setErrores((p) => ({ ...p, parcela: undefined }));
+                                } else {
+                                    setParcela('');
+                                }
+                            }}
+                            className={cn(
+                                selectClass,
+                                errores.finca && 'odisea-field-error',
+                                !errores.finca && finca && 'odisea-field-ok'
+                            )}
+                        >
+                            <option value="">{fincasUsuario.length === 0 ? 'Cargando fincas…' : 'Toca aquí para elegir tu finca…'}</option>
+                            {fincasUsuario.map((f) => (
+                                <option key={f.id} value={f.nombre}>{f.nombre}</option>
                             ))}
-                    </select>
-                </Campo>
+                        </select>
+                    </Campo>
+                    <MensajeErrorCampo mensaje={errores.finca} />
+                </div>
+
+                <div
+                    key={`p-${shakeKey}-${!!errores.parcela}`}
+                    className={cn(errores.parcela && 'odisea-shake')}
+                    onClick={() => {
+                        if (!finca) {
+                            setErrores((p) => ({ ...p, finca: 'Primero elige la finca aquí arriba.' }));
+                            setShakeKey((k) => k + 1);
+                            vibrarError();
+                        }
+                    }}
+                >
+                    <Campo label="Parcela *">
+                        <select
+                            id="nc-parcela"
+                            value={parcela}
+                            onChange={(e) => {
+                                setParcela(e.target.value);
+                                if (errores.parcela) setErrores((p) => ({ ...p, parcela: undefined }));
+                            }}
+                            disabled={!finca}
+                            className={cn(
+                                selectClass,
+                                !finca && 'opacity-40 pointer-events-none',
+                                errores.parcela && 'odisea-field-error',
+                                !errores.parcela && parcela && 'odisea-field-ok'
+                            )}
+                        >
+                            <option value="">{finca ? 'Toca aquí para elegir la parcela…' : 'Primero elige tu finca arriba…'}</option>
+                            {fincasUsuario
+                                .find((f) => f.nombre === finca)
+                                ?.lotesDeCafe?.map((p) => (
+                                    <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                                ))}
+                        </select>
+                    </Campo>
+                    <MensajeErrorCampo mensaje={errores.parcela} />
+                </div>
             </div>
 
             {/* 2. Modalidad */}
@@ -297,9 +362,13 @@ export function NuevaCosechaPage() {
                             <p className="text-[17px] font-bold text-[#2D3E33]">¿Cómo lo quieres registrar?</p>
                         </div>
                         <button
-                            onClick={() => setModalidad('objetivo')}
+                            type="button"
+                            onClick={() => {
+                                setModalidad('objetivo');
+                                setErrores((p) => ({ ...p, modalidad: undefined }));
+                            }}
                             className={cn(
-                                'w-full flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all',
+                                'w-full flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all cursor-pointer',
                                 modalidad === 'objetivo' ? 'border-[#2D3E33] bg-[#2D3E33]/5 ring-2 ring-[#2D3E33]/15' : 'border-stone-200 hover:border-stone-300'
                             )}
                         >
@@ -319,9 +388,13 @@ export function NuevaCosechaPage() {
                             </span>
                         </button>
                         <button
-                            onClick={() => setModalidad('diario')}
+                            type="button"
+                            onClick={() => {
+                                setModalidad('diario');
+                                setErrores((p) => ({ ...p, modalidad: undefined }));
+                            }}
                             className={cn(
-                                'w-full flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all',
+                                'w-full flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all cursor-pointer',
                                 modalidad === 'diario' ? 'border-[#BD4A1F] bg-[#BD4A1F]/5 ring-2 ring-[#BD4A1F]/15' : 'border-stone-200 hover:border-stone-300'
                             )}
                         >
@@ -340,6 +413,7 @@ export function NuevaCosechaPage() {
                                 </span>
                             </span>
                         </button>
+                        <MensajeErrorCampo mensaje={errores.modalidad} />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -359,35 +433,85 @@ export function NuevaCosechaPage() {
                             <span className="bg-[#2D3E33] text-[#F6F2EC] px-2.5 py-0.5 rounded-full text-xs font-mono font-bold">03</span>
                             <p className="text-[17px] font-bold text-[#2D3E33]">¿Qué vas a procesar?</p>
                         </div>
-                        <Campo label="Variedad">
-                            <select value={variedad} onChange={(e) => setVariedad(e.target.value)} className={selectClass}>
-                                <option value="">Elige…</option>
-                                {VARIEDADES.map((v) => (
-                                    <option key={v}>{v}</option>
-                                ))}
-                            </select>
-                        </Campo>
-                        <Campo label="Proceso">
-                            <select value={proceso} onChange={(e) => setProceso(e.target.value)} className={selectClass}>
-                                <option value="">Elige…</option>
-                                {PROCESOS.map((p) => (
-                                    <option key={p}>{p}</option>
-                                ))}
-                            </select>
-                        </Campo>
-                        <Campo label="Kilos de café verde que esperas sacar">
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    inputMode="decimal"
-                                    value={kilosObjetivo}
-                                    onChange={(e) => setKilosObjetivo(e.target.value)}
-                                    placeholder="100"
-                                    className="w-full h-16 rounded-2xl bg-[#F6F2EC]/40 border-2 border-stone-200 text-center font-['Anton'] text-3xl text-[#2D3E33] outline-none focus:border-[#2D3E33] pr-24"
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-xs text-[#2D3E33] bg-[#2D3E33]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
-                            </div>
-                        </Campo>
+
+                        <div key={`var-${shakeKey}-${!!errores.variedad}`} className={cn(errores.variedad && 'odisea-shake')}>
+                            <Campo label="Variedad *">
+                                <select
+                                    id="nc-variedad"
+                                    value={variedad}
+                                    onChange={(e) => {
+                                        setVariedad(e.target.value);
+                                        if (errores.variedad) setErrores((p) => ({ ...p, variedad: undefined }));
+                                    }}
+                                    className={cn(
+                                        selectClass,
+                                        errores.variedad && 'odisea-field-error',
+                                        !errores.variedad && variedad && 'odisea-field-ok'
+                                    )}
+                                >
+                                    <option value="">Toca aquí para elegir variedad…</option>
+                                    {VARIEDADES.map((v) => (
+                                        <option key={v}>{v}</option>
+                                    ))}
+                                </select>
+                            </Campo>
+                            <MensajeErrorCampo mensaje={errores.variedad} />
+                        </div>
+
+                        <div key={`proc-${shakeKey}-${!!errores.proceso}`} className={cn(errores.proceso && 'odisea-shake')}>
+                            <Campo label="Proceso *">
+                                <select
+                                    id="nc-proceso"
+                                    value={proceso}
+                                    onChange={(e) => {
+                                        setProceso(e.target.value);
+                                        if (errores.proceso) setErrores((p) => ({ ...p, proceso: undefined }));
+                                    }}
+                                    className={cn(
+                                        selectClass,
+                                        errores.proceso && 'odisea-field-error',
+                                        !errores.proceso && proceso && 'odisea-field-ok'
+                                    )}
+                                >
+                                    <option value="">Toca aquí para elegir proceso…</option>
+                                    {PROCESOS.map((p) => (
+                                        <option key={p}>{p}</option>
+                                    ))}
+                                </select>
+                            </Campo>
+                            <MensajeErrorCampo mensaje={errores.proceso} />
+                        </div>
+
+                        <div key={`kobj-${shakeKey}-${!!errores.kilosObjetivo}`} className={cn(errores.kilosObjetivo && 'odisea-shake')}>
+                            <Campo label="Kilos de café verde que esperas sacar *">
+                                <div className="relative">
+                                    <input
+                                        id="nc-kilos-obj"
+                                        type="number"
+                                        inputMode="decimal"
+                                        value={kilosObjetivo}
+                                        onChange={(e) => {
+                                            setKilosObjetivo(e.target.value);
+                                            if (errores.kilosObjetivo) setErrores((p) => ({ ...p, kilosObjetivo: undefined }));
+                                        }}
+                                        placeholder="100"
+                                        className={cn(
+                                            'w-full h-16 rounded-2xl bg-[#F6F2EC]/40 border-2 border-stone-200 text-center font-["Anton"] text-3xl text-[#2D3E33] outline-none focus:border-[#2D3E33] pr-24 transition-all',
+                                            errores.kilosObjetivo && 'odisea-field-error',
+                                            !errores.kilosObjetivo && Number(kilosObjetivo) > 0 && 'odisea-field-ok'
+                                        )}
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-xs text-[#2D3E33] bg-[#2D3E33]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
+                                </div>
+                            </Campo>
+                            {equivalenciaKilosObjetivo && (
+                                <p className="mt-1.5 text-xs font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                                    ✓ {equivalenciaKilosObjetivo}
+                                </p>
+                            )}
+                            <MensajeErrorCampo mensaje={errores.kilosObjetivo} />
+                        </div>
+
                         {Number(kilosObjetivo) > 0 && (
                             <div className="rounded-2xl bg-[#2D3E33]/5 border border-[#2D3E33]/10 p-3.5 text-[14px] font-bold text-[#2D3E33] flex justify-between items-center">
                                 <span>Meta en cereza a recolectar</span>
@@ -410,19 +534,37 @@ export function NuevaCosechaPage() {
                             <span className="bg-[#2D3E33] text-[#F6F2EC] px-2.5 py-0.5 rounded-full text-xs font-mono font-bold">03</span>
                             <p className="text-[17px] font-bold text-[#2D3E33]">Anota la recolección</p>
                         </div>
-                        <Campo label="Kilos de cereza recolectados hoy">
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    inputMode="decimal"
-                                    value={peso}
-                                    onChange={(e) => setPeso(e.target.value)}
-                                    placeholder="0"
-                                    className="w-full h-16 rounded-2xl bg-[#F6F2EC]/40 border-2 border-stone-200 text-center font-['Anton'] text-3xl text-[#BD4A1F] outline-none focus:border-[#BD4A1F] pr-24"
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-xs text-[#BD4A1F] bg-[#BD4A1F]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
-                            </div>
-                        </Campo>
+
+                        <div key={`peso-${shakeKey}-${!!errores.peso}`} className={cn(errores.peso && 'odisea-shake')}>
+                            <Campo label="Kilos de cereza recolectados hoy *">
+                                <div className="relative">
+                                    <input
+                                        id="nc-peso"
+                                        type="number"
+                                        inputMode="decimal"
+                                        value={peso}
+                                        onChange={(e) => {
+                                            setPeso(e.target.value);
+                                            if (errores.peso) setErrores((p) => ({ ...p, peso: undefined }));
+                                        }}
+                                        placeholder="0"
+                                        className={cn(
+                                            'w-full h-16 rounded-2xl bg-[#F6F2EC]/40 border-2 border-stone-200 text-center font-["Anton"] text-3xl text-[#BD4A1F] outline-none focus:border-[#BD4A1F] pr-24 transition-all',
+                                            errores.peso && 'odisea-field-error',
+                                            !errores.peso && Number(peso) > 0 && 'odisea-field-ok'
+                                        )}
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-xs text-[#BD4A1F] bg-[#BD4A1F]/10 px-2.5 py-1 rounded-lg uppercase tracking-wider">kilos</span>
+                                </div>
+                            </Campo>
+                            {equivalenciaKilosDiario && (
+                                <p className="mt-1.5 text-xs font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                                    ✓ {equivalenciaKilosDiario}
+                                </p>
+                            )}
+                            <MensajeErrorCampo mensaje={errores.peso} />
+                        </div>
+
                         <Campo label="Fecha">
                             <input
                                 type="date"
@@ -431,6 +573,7 @@ export function NuevaCosechaPage() {
                                 className={selectClass}
                             />
                         </Campo>
+
                         {/* Madurez del grano con cereza de café interactiva */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
@@ -452,12 +595,9 @@ export function NuevaCosechaPage() {
                                 })()}
                             </div>
 
-                            {/* Contenedor visual con la cereza de café y el slider */}
                             <div className="rounded-2xl border-2 border-gray-100 bg-[#FDFDF8] p-4 flex items-center gap-4 shadow-sm">
-                                {/* Cereza de café SVG dinámica */}
                                 <div className="shrink-0 flex flex-col items-center">
                                     {(() => {
-                                        // 1: Verde | 2: Maduro | 3: Pasado
                                         const paletas: Record<number, { c1: string; c2: string; brillo: string; navel: string }> = {
                                             1: { c1: '#6ee7b7', c2: '#15803d', brillo: '#a7f3d0', navel: '#052e16' },
                                             2: { c1: '#f87171', c2: '#b91c1c', brillo: '#fca5a5', navel: '#450a0a' },
@@ -474,20 +614,16 @@ export function NuevaCosechaPage() {
                                                     className="transition-transform duration-300 transform group-hover:scale-105 filter drop-shadow-md"
                                                 >
                                                     <defs>
-                                                        {/* Gradiente del cuerpo de la cereza */}
                                                         <radialGradient id={`cerezaGrad-${madurez}`} cx="35%" cy="35%" r="65%">
                                                             <stop offset="0%" stopColor={p.c1} />
                                                             <stop offset="60%" stopColor={p.c2} />
                                                             <stop offset="100%" stopColor={p.navel} />
                                                         </radialGradient>
-                                                        {/* Gradiente de brillo especular */}
                                                         <linearGradient id={`brilloGrad-${madurez}`} x1="0%" y1="0%" x2="100%" y2="100%">
                                                             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.75" />
                                                             <stop offset="100%" stopColor={p.c1} stopOpacity="0" />
                                                         </linearGradient>
                                                     </defs>
-
-                                                    {/* Pedúnculo / ramita verde */}
                                                     <path
                                                         d="M32 14 C32 8, 38 6, 44 4 C40 8, 36 10, 33 14"
                                                         fill="none"
@@ -495,8 +631,6 @@ export function NuevaCosechaPage() {
                                                         strokeWidth="2.5"
                                                         strokeLinecap="round"
                                                     />
-
-                                                    {/* Cuerpo de la cereza de café */}
                                                     <ellipse
                                                         cx="32"
                                                         cy="36"
@@ -505,25 +639,8 @@ export function NuevaCosechaPage() {
                                                         fill={`url(#cerezaGrad-${madurez})`}
                                                         className="transition-colors duration-300"
                                                     />
-
-                                                    {/* Ombligo de la cereza */}
-                                                    <ellipse
-                                                        cx="32"
-                                                        cy="56"
-                                                        rx="4"
-                                                        ry="2"
-                                                        fill={p.navel}
-                                                        opacity="0.8"
-                                                    />
-                                                    <circle
-                                                        cx="32"
-                                                        cy="56"
-                                                        r="1.5"
-                                                        fill="#000000"
-                                                        opacity="0.6"
-                                                    />
-
-                                                    {/* Reflejo / brillo de la cereza */}
+                                                    <ellipse cx="32" cy="56" rx="4" ry="2" fill={p.navel} opacity="0.8" />
+                                                    <circle cx="32" cy="56" r="1.5" fill="#000000" opacity="0.6" />
                                                     <ellipse
                                                         cx="25"
                                                         cy="26"
@@ -547,7 +664,6 @@ export function NuevaCosechaPage() {
                                     })()}
                                 </div>
 
-                                {/* Slider y marcas de escala: Verde, Maduro, Pasado */}
                                 <div className="flex-1 space-y-2">
                                     <input
                                         type="range"
@@ -579,7 +695,7 @@ export function NuevaCosechaPage() {
                 <button
                     onClick={handleSave}
                     disabled={isLoading}
-                    className="w-full h-16 rounded-full bg-[#BD4A1F] hover:bg-[#a33f1a] text-white font-['Anton'] text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-lg shadow-[#BD4A1F]/30 active:scale-[0.98] transition-all disabled:opacity-60"
+                    className="w-full h-16 rounded-full bg-[#BD4A1F] hover:bg-[#a33f1a] text-white font-['Anton'] text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-lg shadow-[#BD4A1F]/30 active:scale-[0.98] transition-all disabled:opacity-60 cursor-pointer"
                 >
                     {isLoading ? (
                         <Loader2 className="animate-spin" size={24} />
